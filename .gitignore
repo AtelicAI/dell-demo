@@ -17,3 +17,5 @@ node_modules/
 
 # Local Claude Code context (not shared)
 CLAUDE.md
+.claude/
+.mcp.json
