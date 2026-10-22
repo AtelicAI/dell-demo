@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Methane Incident Intelligence — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;padding-left:var(--rail)}
+  a{color:inherit;text-decoration:none}
+  code,.mono{font-family:var(--mono)}
+
+  /* ----- left rail ----- */
+  .rail{position:fixed;top:0;left:0;width:var(--rail);height:100vh;z-index:50;
+    background:#EEF2F7;border-right:1px solid rgba(15,23,42,.07);
+    display:flex;flex-direction:column;padding:20px 14px;gap:28px;color:#0F172A}
+  .rail .brand{display:flex;align-items:center;gap:10px;padding:4px 6px 10px;border-bottom:1px solid rgba(15,23,42,.07)}
+  .rail .brand .mk{height:26px;width:auto;flex-shrink:0}
+  .rail .brand .tg{color:#94A3B8;font-size:10.5px;margin-left:auto;text-transform:uppercase;letter-spacing:.1em;font-family:var(--mono)}
+  .rail .nv{display:flex;flex-direction:column;gap:1px}
+  .rail .nv .sec{padding:14px 10px 6px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  .rail .nv a{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;color:#475569;font-weight:500;font-size:13px;transition:color 160ms, background 160ms}
+  .rail .nv a:hover{color:#0F172A;background:rgba(15,23,42,.03)}
+  .rail .nv a[aria-current=page]{color:#0F172A;background:rgba(2,132,199,.08)}
+  .rail .nv a[aria-current=page] .nd{background:var(--accent)}
+  .rail .nv a[aria-disabled=true]{color:var(--ink-faint);cursor:default}
+  .rail .nv a[aria-disabled=true]:hover{background:transparent}
+  .rail .nv .nd{width:5px;height:5px;border-radius:50%;background:#CBD5E1;justify-self:end;margin-right:4px}
+  .rail .nv .ic{color:#94A3B8;display:grid;place-items:center}
+  .rail .nv a[aria-current=page] .ic{color:var(--accent)}
+  .rail .ft{margin-top:auto;padding:12px 6px 2px;border-top:1px solid rgba(15,23,42,.07);display:flex;align-items:center;gap:10px;color:#94A3B8;font-size:11px}
+  .rail .ft .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0284C7,#7C3AED);display:grid;place-items:center;color:#fff;font-size:10.5px;font-weight:700;flex-shrink:0}
+  .rail .ft b{color:#0F172A;font-weight:600;font-size:12px;display:block}
+
+  /* ----- top bar ----- */
+  .topbar{display:flex;align-items:center;gap:16px;padding:10px 20px;border-bottom:1px solid var(--line-strong);background:rgba(255,255,255,.82);backdrop-filter:blur(14px);position:sticky;top:0;z-index:30}
+  .crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-mute)}
+  .crumb .sep{color:var(--ink-dim)}
+  .crumb .cur{color:var(--ink);font-weight:600}
+  .right-controls{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .status-pill{font-family:var(--mono);font-size:11px;color:var(--ink-mute);display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line-strong);border-radius:999px}
+  .status-pill .dot{width:6px;height:6px;border-radius:50%}
+  .status-pill.ok .dot{background:var(--good);box-shadow:0 0 0 3px var(--good-glow)}
+  .status-pill.off .dot{background:var(--ink-faint)}
+
+  /* ----- main ----- */
+  main{max-width:1100px;margin:0 auto;padding:32px 28px 80px}
+  .page-head{display:flex;align-items:baseline;gap:14px;margin-bottom:4px}
+  .page-head h1{font-size:24px;margin:0;letter-spacing:-.01em}
+  .page-head .sub{font-size:12.5px;color:var(--ink-mute);font-family:var(--mono)}
+  .lede{color:var(--ink-mute);font-size:13.5px;max-width:720px;margin-bottom:28px}
+
+  .section-label{display:block;padding:22px 0 10px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+
+  /* 6-stage stepper */
+  .stepper{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:4px}
+  .step{padding:14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel)}
+  .step .n{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.1em}
+  .step .t{font-size:13.5px;font-weight:600;margin-top:4px}
+  .step .s{margin-top:8px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);display:flex;align-items:center;gap:6px}
+  .step .s .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
+  .step.active{border-color:var(--accent);background:linear-gradient(180deg,rgba(2,132,199,.04),transparent)}
+  .step.active .s{color:var(--accent)}
+  .step.active .s .dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+
+  /* screen cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .card{padding:16px 16px 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);transition:border-color 160ms, transform 160ms}
+  .card:hover{border-color:var(--accent)}
+  .card .kv{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.12em;text-transform:uppercase}
+  .card h3{font-size:14px;margin:4px 0 6px;font-weight:600;letter-spacing:-.005em}
+  .card p{color:var(--ink-mute);font-size:12.5px;margin:0 0 12px;line-height:1.55}
+  .card .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute)}
+
+  /* banner */
+  .notice{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border:1px solid var(--line-strong);border-left:3px solid var(--accent);border-radius:10px;background:linear-gradient(180deg,rgba(2,132,199,.04),transparent);margin:16px 0 24px}
+  .notice h4{margin:0 0 4px;font-size:13px;font-weight:600}
+  .notice p{margin:0;font-size:12.5px;color:var(--ink-mute)}
+</style>
+</head>
+<body>
+
+<aside class="rail">
+  <div class="brand">
+    <img class="mk" src="img/atelic-logo.png" alt="Atelic">
+    <span class="tg">edge</span>
+  </div>
+
+  <nav class="nv">
+    <a href="/" aria-current="page">
+      <span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 3h10v10H3z"/><path d="M5 6h6M5 9h4"/></svg></span>
+      Overview
+      <span class="nd"></span>
+    </a>
+
+    <span class="sec">Investigation</span>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h2m2 0h2M5 10h4"/></svg></span>Camera<span class="nd"></span></a>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="3" cy="8" r="1.8"/><circle cx="13" cy="3" r="1.8"/><circle cx="13" cy="13" r="1.8"/><circle cx="8" cy="8" r="1.8"/><path d="M4.5 7l2 .5M10.5 4.5 9 7M10.5 11.5 9 9"/></svg></span>Locate<span class="nd"></span></a>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 14V7M7 14V3M11 14v-5M15 14v2" stroke-linecap="round"/></svg></span>Quantify<span class="nd"></span></a>
+
+    <span class="sec">Response</span>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 4h10v8H3z"/><path d="M5 7h6"/></svg></span>Plan<span class="nd"></span></a>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8l3 3 7-7"/></svg></span>Approve<span class="nd"></span></a>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 2h6l3 3v9H4z"/><path d="M6 7h5M6 10h3"/></svg></span>Report<span class="nd"></span></a>
+
+    <span class="sec">Observability</span>
+    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/></svg></span>Glass box<span class="nd"></span></a>
+  </nav>
+
+  <div class="ft">
+    <div class="av">MK</div>
+    <div><b>Musthakeem</b><span style="color:#94A3B8">Atelic</span></div>
+  </div>
+</aside>
+
+<header class="topbar">
+  <div class="crumb">
+    <span>Atelic × Dell × NVIDIA</span>
+    <span class="sep">/</span>
+    <span class="cur">Methane Incident Intelligence</span>
+  </div>
+  <div class="right-controls">
+    <span class="status-pill ok" title="Edge runtime"><span class="dot"></span>Dell Edge · Running</span>
+    <span class="status-pill off" title="NVIDIA NIM"><span class="dot"></span>NVIDIA inference · Not connected</span>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <h1>Methane Incident Intelligence</h1>
+    <span class="sub">INC-001 · ADIPEC 2026 demo</span>
+  </div>
+  <p class="lede">
+    Detection is solved. Closing the loop isn't. Six operator stages — Detect, Locate, Quantify, Plan, Approve, Report — running on a single Dell edge node with NVIDIA inference and the Atelic plant knowledge graph.
+  </p>
+
+  <div class="notice">
+    <div>
+      <h4>Illustrative scenario</h4>
+      <p>Carbon Mapper satellite observations and METEC OGI footage are independent datasets. Equipment, sensors and maintenance workflow are illustrative.</p>
+    </div>
+  </div>
+
+  <span class="section-label">Pipeline</span>
+  <div class="stepper">
+    <div class="step active">
+      <div class="n">01</div><div class="t">Detect</div>
+      <div class="s"><span class="dot"></span>Ready for review</div>
+    </div>
+    <div class="step">
+      <div class="n">02</div><div class="t">Locate</div>
+      <div class="s"><span class="dot"></span>Not started</div>
+    </div>
+    <div class="step">
+      <div class="n">03</div><div class="t">Quantify</div>
+      <div class="s"><span class="dot"></span>Not started</div>
+    </div>
+    <div class="step">
+      <div class="n">04</div><div class="t">Plan</div>
+      <div class="s"><span class="dot"></span>Not started</div>
+    </div>
+    <div class="step">
+      <div class="n">05</div><div class="t">Approve</div>
+      <div class="s"><span class="dot"></span>Not started</div>
+    </div>
+    <div class="step">
+      <div class="n">06</div><div class="t">Report</div>
+      <div class="s"><span class="dot"></span>Not started</div>
+    </div>
+  </div>
+
+  <span class="section-label">Screens</span>
+  <div class="cards">
+    <div class="card"><div class="kv">Screen 01</div><h3>Overview / Observe</h3><p>Regional Carbon Mapper satellite observation and entry into the local example.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 02</div><h3>Detect / Camera</h3><p>METEC OGI footage with plume overlay and detection provenance.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 03</div><h3>Locate</h3><p>Equipment layout + knowledge graph tabs, ranked candidates with evidence.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 04</div><h3>Quantify</h3><p>Simulated sensor charts and emission-rate estimate with method + assumptions.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 05</div><h3>Plan</h3><p>Evidence-backed draft work order with cited sources — never executed.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 06</div><h3>Approve</h3><p>Explicit human engineer review. Approval does not operate equipment.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 07</div><h3>Report</h3><p>Source-linked record with audit timeline and OGMP 2.0-aligned export.</p><span class="pill">Scaffolding</span></div>
+    <div class="card"><div class="kv">Screen 08</div><h3>Glass box</h3><p>Real agent trace: models, tools, evidence and guardrail decisions.</p><span class="pill">Scaffolding</span></div>
+  </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+/* Atelic KG demo — shared theme tokens.
+   Superset of every page's :root block, so individual pages can drop their own :root. */
+:root{
+  /* surfaces */
+  --bg:#F6F8FB;
+  --panel:#FFFFFF;
+  --panel-2:#F1F4F9;
+  --panel-3:#E6EBF2;
+  --panel-hi:#DDE4EE;
+
+  /* lines */
+  --line:rgba(15,23,42,.07);
+  --line-strong:rgba(15,23,42,.14);
+
+  /* ink */
+  --ink:#0F172A;
+  --ink-mute:#475569;
+  --ink-dim:#94A3B8;
+  --ink-faint:#CBD5E1;
+
+  /* brand accent */
+  --accent:#0284C7;
+  --accent-strong:#0369A1;
+  --accent-glow:rgba(2,132,199,.18);
+
+  /* semantic */
+  --good:#059669;
+  --good-glow:rgba(5,150,105,.14);
+  --warn:#D97706;
+  --warn-glow:rgba(217,119,6,.14);
+  --bad:#DC2626;
+  --bad-glow:rgba(220,38,38,.16);
+
+  /* categorical */
+  --violet:#7C3AED;
+  --pink:#DB2777;
+  --blue:#2563EB;
+
+  /* graph node palette (station.html) */
+  --n-station:#7C3AED;
+  --n-well:#0284C7;
+  --n-equip:#2563EB;
+  --n-tag:#DB2777;
+  --n-wt:#059669;
+  --n-sap:#D97706;
+
+  /* type */
+  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+
+  /* layout */
+  --rail:224px;
+  --slide:460px;
+  --radius:10px;
+  --radius-sm:6px;
+  --radius-lg:14px;
+
+  /* motion */
+  --t:160ms cubic-bezier(.2,.7,.3,1);
+  --t-slow:380ms cubic-bezier(.2,.7,.3,1);
+}
