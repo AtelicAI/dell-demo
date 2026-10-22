@@ -16,7 +16,8 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 | `maintenance/history.json` | 3, 5 | synthetic | draft | Team-authored history |
 | `scenario/site.json` | all | synthetic | draft | — |
 | `scenario/release_truth.json` | 4 | synthetic | draft | — (simulation input, never shown as measured) |
-| `scenario/sensors.csv`, `weather.csv` | 4 | synthetic | generated | Run `python3 scripts/gen_scenario.py` |
+| `scenario/geometry.json` | 4 | synthetic | **draft** (assumed positions, heights, stability) | Team-reviewed skid geometry |
+| `scenario/sensors.csv`, `weather.csv` | 4 | synthetic | generated (GD-01 from the Gaussian plume model in `backend/app/plume.py`) | Run `python3 scripts/gen_scenario.py` |
 | `docs/maintenance_procedure.md`, `docs/isolation_checklist.md` | 5 | synthetic | draft | Team-authored procedures |
 
 Not stored as files on purpose: work orders, approvals, the audit log and agent traces. These are produced by the backend at runtime.

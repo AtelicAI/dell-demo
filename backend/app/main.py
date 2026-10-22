@@ -1,11 +1,16 @@
+import csv
 import json
+import math
 import os
+import statistics
+from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+from app.plume import ppm_per_kg_h
 from app.state import INCIDENTS
 
 # Docker mounts ./data at /data; locally fall back to the repo's data/ folder.
@@ -14,7 +19,7 @@ DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parents[2] / "dat
 app = FastAPI(title="Atelic x Dell x NVIDIA — Methane Incident Intelligence")
 
 # Frontend (nginx :8080) calls the API directly on :8000.
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"])
 
 
 @app.get("/health")
@@ -43,6 +48,8 @@ def get_incident(incident_id: str):
     stages = [dict(s) for s in incident["stages"]]
     stages[0]["status"] = detect_status()
     stages[1]["status"] = locate_status()
+    # A stored estimate is a model output awaiting engineer review; never "completed" on its own.
+    stages[2]["status"] = "ready_for_review" if incident.get("quantification") else "not_started"
     return {**incident, "stages": stages}
 
 
@@ -188,3 +195,183 @@ def get_candidates(incident_id: str):
         cited += [e["source_id"] for e in c.get("supporting", []) + c.get("contradicting", [])]
     data["invalid_ids"] = sorted({i for i in cited if i and i not in ids})
     return data
+
+
+# ----- Screen 4: Quantify -----
+# Interim Gaussian plume inversion over the simulated scenario. The backend team will replace it
+# with pyELQ (same response shape). Inputs are synthetic, so the result is a simulated estimate.
+
+def read_rows(name):
+    path = DATA_DIR / "scenario" / name
+    if not path.is_file():
+        return []
+    with path.open() as f:
+        return list(csv.DictReader(f))
+
+
+def sensor_series():
+    series = {"methane_ppm": [], "pressure_bara": [], "wind_speed_m_s": [], "wind_dir_deg_from_north": []}
+    sensor_of = {}
+    for r in read_rows("sensors.csv"):
+        series.setdefault(r["quantity"], []).append([r["timestamp_utc"], float(r["value"])])
+        sensor_of[r["quantity"]] = r["sensor_id"]
+    for r in read_rows("weather.csv"):
+        for q in ("wind_speed_m_s", "wind_dir_deg_from_north"):
+            series[q].append([r["timestamp_utc"], float(r[q])])
+            sensor_of[q] = r["sensor_id"]
+    return series, sensor_of
+
+
+@app.get("/incidents/{incident_id}/sensor-series")
+def get_sensor_series(incident_id: str):
+    if incident_id not in INCIDENTS:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    series, sensor_of = sensor_series()
+    return {"series": series, "sensor_of": sensor_of, "provenance": "synthetic",
+            "source": ["scenario/sensors.csv", "scenario/weather.csv"], "site": read_json("scenario", "site.json")}
+
+
+GAUSSIAN = "gaussian_plume"
+MODEL_VERSION = "gaussian-plume-v0"
+BACKGROUND_MIN = 10        # first minutes of replay assumed plume-free
+ONSET_PPM = 1.0            # enhancement over background that opens the data window
+OFF_AXIS = 0.2             # drop samples where the model gives < 20% of on-axis enhancement
+MIN_SAMPLES = 5
+FAILURE = "Insufficient concentration, wind or source geometry data to estimate the release rate reliably."
+
+
+def gaussian_inputs():
+    """What the Gaussian method needs, and which pieces are missing."""
+    missing = []
+    geo_path = DATA_DIR / "scenario" / "geometry.json"
+    geo = json.loads(geo_path.read_text()) if geo_path.is_file() else None
+    source = read_json("skid", "candidates.json").get("assessment", {}).get("asset_id")
+    series, sensor_of = sensor_series()
+    if not series["methane_ppm"]:
+        missing.append("Methane concentration series (scenario/sensors.csv)")
+    if not series["wind_speed_m_s"]:
+        missing.append("Wind speed and direction series (scenario/weather.csv)")
+    if not source:
+        missing.append("Assumed source asset (no Locate assessment)")
+    if not geo:
+        missing.append("Source and detector geometry (scenario/geometry.json)")
+    else:
+        for a in filter(None, (source, sensor_of.get("methane_ppm"))):
+            if a not in geo["assets"]:
+                missing.append(f"Position and height for {a} (scenario/geometry.json)")
+    return geo, source, series, sensor_of, missing
+
+
+def methods():
+    meta = read_json("ogi", "source_metadata.json")
+    sp = meta.get("experimental_setpoint") or {}
+    sp_missing = []
+    if sp.get("rate") is None:
+        sp_missing.append(f"Release setpoint for {meta.get('ogi_clip_id')} not on file")
+    if meta.get("status") != "verified":
+        sp_missing.append("OGI clip licence and metadata not verified")
+    return [
+        {"id": GAUSSIAN, "label": "Gaussian plume inversion", "note": "Interim, deterministic. Single point detector.",
+         "missing": gaussian_inputs()[4]},
+        {"id": "pyelq", "label": "pyELQ source inversion", "note": "Backend service", "missing": ["pyELQ service not connected"]},
+        {"id": "experimental_setpoint", "label": "Controlled-release setpoint", "note": "GasVid/METEC known release",
+         "missing": sp_missing},
+    ]
+
+
+def percentile(xs, p):
+    xs = sorted(xs)
+    k = (len(xs) - 1) * p
+    lo, hi = int(k), min(int(k) + 1, len(xs) - 1)
+    return xs[lo] + (xs[hi] - xs[lo]) * (k - lo)
+
+
+def run_gaussian():
+    geo, source, series, sensor_of, missing = gaussian_inputs()
+    base = {"method": GAUSSIAN, "model_version": MODEL_VERSION, "model_note": "Interim, pyELQ pending", "provenance": "model_estimated",
+            "input_provenance": "synthetic", "source_asset_id": source,
+            "run_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    if missing:
+        return {**base, "rate_kg_ch4_h": None, "failure": FAILURE, "missing": missing}
+
+    detector = sensor_of["methane_ppm"]
+    src, rec, stab = geo["assets"][source], geo["assets"][detector], geo["stability_class"]
+    wind = {t: (s, d) for (t, s), (_, d) in zip(series["wind_speed_m_s"], series["wind_dir_deg_from_north"])}
+    ch4 = series["methane_ppm"]
+    t0 = datetime.fromisoformat(ch4[0][0].replace("Z", "+00:00"))
+    minutes = lambda t: (datetime.fromisoformat(t.replace("Z", "+00:00")) - t0).total_seconds() / 60
+    bg = statistics.median(v for t, v in ch4 if minutes(t) < BACKGROUND_MIN)
+    onset = next((t for t, v in ch4 if minutes(t) >= BACKGROUND_MIN and v - bg > ONSET_PPM), None)
+
+    window = [(t, v) for t, v in ch4 if onset and t >= onset and t in wind]
+    rates, off_axis, samples = [], 0, []
+    for t, v in window:
+        s, d = wind[t]
+        unit = ppm_per_kg_h(src, rec, s, d, stab)
+        axis = ppm_per_kg_h(src, rec, s, d_on_axis(src, rec), stab)
+        if axis <= 0 or unit < OFF_AXIS * axis:
+            off_axis += 1
+            samples.append({"t": t, "used": False, "rate_kg_ch4_h": None})
+            continue
+        rates.append((v - bg) / unit)
+        samples.append({"t": t, "used": True, "rate_kg_ch4_h": round(rates[-1], 3)})
+
+    qc = {"background_ppm": round(bg, 2), "background_basis": f"Median, first {BACKGROUND_MIN} min",
+          "samples_in_window": len(window), "samples_used": len(rates), "samples_off_axis": off_axis,
+          "onset_rule": f"> {ONSET_PPM:g} ppm over background",
+          "off_axis_rule": f"< {OFF_AXIS:.0%} of on-axis model value"}
+    result = {**base, "detector_id": detector, "wind_sensor_id": sensor_of["wind_speed_m_s"],
+              "data_window": {"start_utc": onset, "end_utc": window[-1][0] if window else None}, "qc": qc,
+              "samples": samples,
+              "assumptions": [
+                  f"Source assumed at {source}, the top Locate candidate (unconfirmed hypothesis).",
+                  f"Source and detector positions and heights from draft geometry ({geo['mapping_version']}).",
+                  f"Steady-state Gaussian plume, ground reflection, stability class {stab} ({geo['stability_note']}).",
+                  "Constant release rate over the data window; wind measured at one anemometer applies to the whole skid.",
+                  "CH₄ ppm from mg/m³ at 25 °C, 1 atm.",
+                  "Uncertainty interval reflects sample-to-sample scatter only; it excludes stability-class "
+                  "and geometry error.",
+                  "Sensor traces were generated with this same plume model, so agreement with the simulated "
+                  "release checks the pipeline, not the method's real-world accuracy.",
+              ]}
+    if len(rates) < MIN_SAMPLES:
+        return {**result, "rate_kg_ch4_h": None, "failure": FAILURE,
+                "missing": [f"Only {len(rates)} usable concentration samples (need {MIN_SAMPLES})"]}
+    return {**result, "rate_kg_ch4_h": round(statistics.median(rates), 2),
+            "interval": {"low": round(percentile(rates, 0.1), 2), "high": round(percentile(rates, 0.9), 2),
+                         "basis": f"P10–P90 of {len(rates)} per-sample estimates"}}
+
+
+def d_on_axis(src, rec):
+    """Wind-from bearing that puts rec on the plume centreline."""
+    return (math.degrees(math.atan2(rec["x_m"] - src["x_m"], rec["y_m"] - src["y_m"])) + 180) % 360
+
+
+def release_check():
+    truth = read_json("scenario", "release_truth.json")
+    return {"rate_kg_ch4_h": truth["rate_kg_ch4_h"], "source_asset_id": truth["source_asset_id"],
+            "provenance": truth["provenance"]}
+
+
+@app.get("/incidents/{incident_id}/quantification")
+def get_quantification(incident_id: str):
+    incident = INCIDENTS.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    q = incident.get("quantification")
+    return {"result": q, "methods": methods(), "release_check": release_check() if q else None}
+
+
+@app.post("/incidents/{incident_id}/quantify")
+def post_quantify(incident_id: str, body: dict = Body(default={})):
+    incident = INCIDENTS.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    method = body.get("method", GAUSSIAN)
+    m = next((m for m in methods() if m["id"] == method), None)
+    if m is None:
+        raise HTTPException(status_code=400, detail="Unknown method")
+    if method != GAUSSIAN or m["missing"]:
+        raise HTTPException(status_code=409, detail={"failure": FAILURE, "missing": m["missing"]})
+    incident["quantification"] = run_gaussian()
+    return {"result": incident["quantification"], "methods": methods(), "release_check": release_check()}

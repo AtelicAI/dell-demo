@@ -35,7 +35,7 @@
     { sec: 'Investigation' },
     { page: 'detection', label: 'Camera', href: 'detection.html' },
     { page: 'locate', label: 'Locate', href: 'locate.html' },
-    { page: 'quantify', label: 'Quantify', href: null },
+    { page: 'quantify', label: 'Quantify', href: 'quantify.html' },
     { sec: 'Response' },
     { page: 'plan', label: 'Plan', href: null },
     { page: 'review', label: 'Approve', href: null },
@@ -153,7 +153,12 @@
     }
   }
 
-  window.AtelicShell = { API, INCIDENT_ID, get, setReplayStatus };
+  // Re-read stage status after a page action changes backend state (e.g. an estimate ran).
+  async function refresh() {
+    try { renderIncident(await get(`/incidents/${INCIDENT_ID}`)); } catch (e) { console.error(e); }
+  }
+
+  window.AtelicShell = { API, INCIDENT_ID, get, setReplayStatus, refresh };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
