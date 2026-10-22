@@ -13,6 +13,8 @@
     not_started: 'Not started', in_progress: 'In progress',
     ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked',
   };
+  // Stage → rail page, so stepper boxes can link to their screen.
+  const STAGE_PAGE = { detect: 'detection', locate: 'locate', quantify: 'quantify', plan: 'plan', approve: 'review', report: 'report' };
   const DELL_LABELS = { running: 'Running', target_deployment: 'Target deployment' };
   const NVIDIA_LABELS = { local_nim: 'Local NIM', hosted_api: 'Hosted API', not_connected: 'Not connected' };
   const DISCLOSURE = 'Composite demonstration. Satellite observations and METEC OGI footage are independent. Equipment, sensors and maintenance workflow are illustrative.';
@@ -32,7 +34,7 @@
     { page: 'overview', label: 'Overview', href: 'index.html' },
     { sec: 'Investigation' },
     { page: 'detection', label: 'Camera', href: 'detection.html' },
-    { page: 'locate', label: 'Locate', href: null },
+    { page: 'locate', label: 'Locate', href: 'locate.html' },
     { page: 'quantify', label: 'Quantify', href: null },
     { sec: 'Response' },
     { page: 'plan', label: 'Plan', href: null },
@@ -107,12 +109,18 @@
     if (stepper) {
       // data-stage marks the stage this page shows; its status still comes from the backend.
       const viewing = document.body.dataset.stage;
-      stepper.innerHTML = inc.stages.map((st, i) => ({ ...st, status: replayStatus[st.stage] || st.status })).map((st, i) => `
-        <div class="step st-${st.status}${st.stage === viewing ? ' current' : ''}"${st.stage === viewing ? ' aria-current="step"' : ''}>
+      // A stage whose screen exists links to it (same href as the rail); the current one does not.
+      stepper.innerHTML = inc.stages.map((st, i) => ({ ...st, status: replayStatus[st.stage] || st.status })).map((st, i) => {
+        const cur = st.stage === viewing;
+        const href = !cur && (NAV.find((n) => n.page === STAGE_PAGE[st.stage]) || {}).href;
+        const tag = href ? 'a' : 'div';
+        return `
+        <${tag} class="step st-${st.status}${cur ? ' current' : ''}"${cur ? ' aria-current="step"' : ''}${href ? ` href="${href}" title="Open ${STAGE_LABELS[st.stage]}"` : ''}>
           <div class="n">${String(i + 1).padStart(2, '0')}</div>
           <div class="t">${STAGE_LABELS[st.stage]}</div>
           <div class="s"><span class="dot"></span>${STATUS_LABELS[st.status]}</div>
-        </div>`).join('');
+        </${tag}>`;
+      }).join('');
     }
   }
 
@@ -146,5 +154,7 @@
   }
 
   window.AtelicShell = { API, INCIDENT_ID, get, setReplayStatus };
-  document.addEventListener('DOMContentLoaded', init);
+  // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
+  // page transition from flashing an empty rail.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

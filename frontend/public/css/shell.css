@@ -70,6 +70,10 @@ main.fit > .fill{flex:1;min-height:0}
 .step.st-blocked .s{color:var(--bad)}
 .step.st-blocked .s .dot{background:var(--bad)}
 .step.current{border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+a.step{transition:border-color var(--t), box-shadow var(--t)}
+a.step:hover{border-color:var(--accent);box-shadow:0 2px 8px var(--accent-glow)}
+a.step:hover .t{color:var(--accent)}
+a.step:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .step.current .t{color:var(--accent)}
 .stepper.compact{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
 .stepper.compact .step{padding:5px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
@@ -114,3 +118,16 @@ main.fit > .fill{flex:1;min-height:0}
 .modal p{margin:0 0 18px;color:var(--ink-mute);font-size:13.5px}
 .modal .actions{display:flex;justify-content:flex-end;gap:10px}
 @keyframes pop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+
+/* ----- page-to-page transition (cross-document View Transitions; browsers without it just navigate) ----- */
+@view-transition{navigation:auto}
+.rail{view-transition-name:rail}
+.topbar{view-transition-name:topbar}
+#stepper{view-transition-name:stepper}
+#incident-strip{view-transition-name:incident}
+#disclosure{view-transition-name:disclosure}
+::view-transition-old(root){animation:vt-out 160ms cubic-bezier(.4,0,1,1) both}
+::view-transition-new(root){animation:vt-in 340ms cubic-bezier(.2,.7,.3,1) both}
+@keyframes vt-out{to{opacity:0;transform:translateY(-6px)}}
+@keyframes vt-in{from{opacity:0;transform:translateY(12px)}}
+@media (prefers-reduced-motion:reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}

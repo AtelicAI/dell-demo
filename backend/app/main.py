@@ -42,7 +42,19 @@ def get_incident(incident_id: str):
         raise HTTPException(status_code=404, detail="Incident not found")
     stages = [dict(s) for s in incident["stages"]]
     stages[0]["status"] = detect_status()
+    stages[1]["status"] = locate_status()
     return {**incident, "stages": stages}
+
+
+def locate_status():
+    # Candidates on file (sample ones count; the page labels them Simulated) -> ready for review.
+    # Completed only with a named reviewer on real (non-sample) candidates.
+    data = read_json("skid", "candidates.json")
+    if not data.get("candidates"):
+        return "not_started"
+    if data.get("reviewed_by") and data.get("status") != "sample":
+        return "completed"
+    return "ready_for_review"
 
 
 def detect_status():
@@ -109,3 +121,70 @@ def ogi_clip(request: Request):
     if rng:
         headers["Content-Range"] = f"bytes {start}-{end}/{size}"
     return Response(body, status_code=206 if rng else 200, media_type="video/mp4", headers=headers)
+
+
+# ----- Screen 3: Locate -----
+# JSON only for now; the backend developer will move these queries to Neo4j (same response shape).
+
+def skid_graph():
+    eq = read_json("skid", "equipment.json")
+    rois = read_json("skid", "camera_rois.json")
+    history = read_json("maintenance", "history.json")
+    src, ver = eq["source"], eq["mapping_version"]
+
+    nodes, edges = [], []
+    for group in ("areas", "equipment", "sensors", "cameras"):
+        for a in eq.get(group, []):
+            nodes.append({**a, "source": src, "provenance": eq["provenance"], "mapping_version": ver})
+    for r in history["records"]:
+        nodes.append({"asset_id": r["record_id"], "display_name": r["summary"], "asset_type": "WorkOrder",
+                      "date": r["date"], "work_type": r["type"], "work_status": r["status"],
+                      "source": "maintenance/history.json", "provenance": history["provenance"], "mapping_version": None})
+
+    def edge(kind, a, b, source, method, version=ver):
+        edges.append({"type": kind, "from": a, "to": b, "source": source, "provenance": "synthetic",
+                      "method": method, "mapping_version": version})
+
+    for a in eq["equipment"]:
+        edge("CONTAINS", eq["facility_id"], a["asset_id"], src, "manually configured")
+    for p in eq["piping"]:
+        # Direction is gas flow, so from = upstream.
+        edge("CONNECTED_TO", p["from"], p["to"], f"{src} (piping)", "manually configured")
+    for s in eq["sensors"]:
+        edge("MONITORS", s["asset_id"], s["monitors"], src, "manually configured")
+    for r in rois["regions"]:
+        edge("CAN_OBSERVE", rois["camera_id"], r["asset_id"], "skid/camera_rois.json",
+             rois["mapping_method"], rois["mapping_version"])
+    for r in history["records"]:
+        edge("HAS_WORK_ORDER", r["asset_id"], r["record_id"], "maintenance/history.json", "manually configured", None)
+    return nodes, edges
+
+
+@app.get("/incidents/{incident_id}/graph")
+def get_graph(incident_id: str):
+    if incident_id not in INCIDENTS:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    nodes, edges = skid_graph()
+    # Full skid graph (~20 nodes); the UI starts from the selected asset's one-hop neighbourhood.
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "layout": read_json("skid", "layout.json"),
+        "camera_rois": read_json("skid", "camera_rois.json"),
+        "store": "json",
+    }
+
+
+@app.get("/incidents/{incident_id}/candidates")
+def get_candidates(incident_id: str):
+    if incident_id not in INCIDENTS:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    data = read_json("skid", "candidates.json")
+    # PRD acceptance: all IDs valid. Report any that are not in the graph instead of hiding them.
+    ids = {n["asset_id"] for n in skid_graph()[0]}
+    cited = [data.get("assessment", {}).get("asset_id")]
+    for c in data.get("candidates", []):
+        cited.append(c["asset_id"])
+        cited += [e["source_id"] for e in c.get("supporting", []) + c.get("contradicting", [])]
+    data["invalid_ids"] = sorted({i for i in cited if i and i not in ids})
+    return data

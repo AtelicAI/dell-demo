@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/shell.css?v=18">
-<script src="js/shell.js?v=18" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=20">
+<script src="js/shell.js?v=21" defer></script>
 <script src="js/detection.js?v=18" defer></script>
 <style>
   [hidden]{display:none!important}
@@ -28,10 +28,11 @@
 
   /* ----- video panel ----- */
   .vid-panel{display:flex;flex-direction:column;overflow:hidden}
-  .stage{flex:1;min-height:0;container-type:size;display:grid;place-items:center;padding:12px;
-    background:radial-gradient(ellipse at 50% 40%,rgba(2,132,199,.10),transparent 65%),var(--ink)}
+  /* Light mount (same as Locate): only the footage itself is dark. */
+  .stage{flex:1;min-height:0;container-type:size;display:grid;place-items:center;padding:12px;background:var(--panel-2)}
   /* Frame takes the video's own aspect (16:9 until loaded), fitted to the stage both ways. */
-  .frame{--ar:1.7778;position:relative;aspect-ratio:var(--ar);width:min(100cqw - 24px,(100cqh - 24px) * var(--ar));background:#000;border-radius:4px;overflow:hidden}
+  .frame{--ar:1.7778;position:relative;aspect-ratio:var(--ar);width:min(100cqw - 24px,(100cqh - 24px) * var(--ar));background:#000;border-radius:6px;overflow:hidden;
+    box-shadow:0 0 0 1px var(--line-strong),0 12px 32px rgba(15,23,42,.18)}
   .frame video{position:absolute;inset:0;width:100%;height:100%;display:block}
   .frame svg.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .overlay .mask{fill:var(--warn);fill-opacity:.32;stroke:var(--warn);stroke-width:1.5;vector-effect:non-scaling-stroke}
@@ -195,7 +196,7 @@
       <div id="meta-body"><div class="status">Loading…</div></div>
       <div class="meta-actions">
         <div class="caveat">The plume image alone does not identify a particular component or quantify emissions.</div>
-        <button class="btn primary" id="btn-investigate" disabled aria-disabled="true" title="Locate screen not built yet">Investigate possible source →</button>
+        <a class="btn primary" id="btn-investigate" href="locate.html">Investigate possible source →</a>
       </div>
     </section>
   </div>
