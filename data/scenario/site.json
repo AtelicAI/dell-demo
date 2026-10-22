@@ -1,0 +1,10 @@
+{
+  "_comment": "Synthetic representative site. No real location: never place it at the Carbon Mapper coordinates.",
+  "local_incident_id": "INC-001",
+  "facility_id": "SKID-A",
+  "display_name": "Representative gas-handling skid",
+  "camera_id": "CAM-01",
+  "replay_start_utc": "2026-01-15T06:00:00Z",
+  "replay_end_utc": "2026-01-15T07:00:00Z",
+  "provenance": "synthetic"
+}

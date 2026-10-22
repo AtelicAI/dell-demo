@@ -1,0 +1,46 @@
+{
+  "_comment": "DRAFT for team review. Atelic-authored representative skid. Not a survey of METEC or any Carbon Mapper site.",
+  "facility_id": "SKID-A",
+  "mapping_version": "skid-v0.1-draft",
+  "source": "Atelic-authored skid/equipment.json",
+  "provenance": "synthetic",
+
+  "areas": [
+    { "asset_id": "SKID-A", "display_name": "Representative gas-handling skid", "asset_type": "EquipmentArea" }
+  ],
+
+  "equipment": [
+    { "asset_id": "P-100",   "display_name": "Inlet line",                  "asset_type": "PipeSegment" },
+    { "asset_id": "XV-101",  "display_name": "Inlet isolation valve",       "asset_type": "Valve" },
+    { "asset_id": "V-101",   "display_name": "Inlet separator",             "asset_type": "Vessel" },
+    { "asset_id": "P-101",   "display_name": "Outlet line",                 "asset_type": "PipeSegment" },
+    { "asset_id": "XV-104",  "display_name": "Isolation valve",             "asset_type": "Valve" },
+    { "asset_id": "PSV-102", "display_name": "Pressure safety valve",       "asset_type": "Valve" },
+    { "asset_id": "BDV-103", "display_name": "Blowdown valve",              "asset_type": "Valve" },
+    { "asset_id": "P-102",   "display_name": "Vent header",                 "asset_type": "PipeSegment" },
+    { "asset_id": "VENT-01", "display_name": "Vertical release assembly",   "asset_type": "Vent" }
+  ],
+
+  "sensors": [
+    { "asset_id": "PT-101", "display_name": "Separator pressure transmitter", "asset_type": "Sensor", "measures": "Process pressure (bar absolute)", "monitors": "V-101" },
+    { "asset_id": "GD-01",  "display_name": "Point methane detector",         "asset_type": "Sensor", "measures": "Methane concentration (ppm)",     "monitors": "VENT-01" },
+    { "asset_id": "WS-01",  "display_name": "Anemometer",                      "asset_type": "Sensor", "measures": "Wind speed (m/s) and direction (° from north)", "monitors": "SKID-A" }
+  ],
+
+  "cameras": [
+    { "asset_id": "CAM-01", "display_name": "OGI camera", "asset_type": "Camera" }
+  ],
+
+  "_piping_comment": "Each entry: gas flows from 'from' to 'to'. Loader creates CONNECTED_TO and UPSTREAM_OF.",
+  "piping": [
+    { "from": "P-100",   "to": "XV-101" },
+    { "from": "XV-101",  "to": "V-101" },
+    { "from": "V-101",   "to": "P-101" },
+    { "from": "P-101",   "to": "XV-104" },
+    { "from": "V-101",   "to": "PSV-102" },
+    { "from": "V-101",   "to": "BDV-103" },
+    { "from": "PSV-102", "to": "P-102" },
+    { "from": "BDV-103", "to": "P-102" },
+    { "from": "P-102",   "to": "VENT-01" }
+  ]
+}

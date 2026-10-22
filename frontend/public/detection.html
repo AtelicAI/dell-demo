@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera observation — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/shell.css?v=18">
+<script src="js/shell.js?v=18" defer></script>
+<script src="js/detection.js?v=18" defer></script>
+<style>
+  [hidden]{display:none!important}
+  .page-head .incident-strip{margin-left:auto;padding:3px 10px;font-size:11px}
+  main.fit .lede{margin-bottom:10px}
+  #stepper{margin-bottom:10px}
+  main.fit .disclosure{margin:0 0 12px}
+
+  /* PRD Screen 2: 65% video / 35% detection metadata */
+  .det-grid{display:grid;grid-template-columns:minmax(0,65fr) minmax(0,35fr);gap:14px;min-height:0}
+  .det-grid > .panel{min-height:0}
+  .panel-head .badge{margin-left:auto}
+  .panel-head .badge + .meta{margin-left:0}
+  .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+  .panel-head .badges .badge{margin-left:0}
+
+  /* ----- video panel ----- */
+  .vid-panel{display:flex;flex-direction:column;overflow:hidden}
+  .stage{flex:1;min-height:0;container-type:size;display:grid;place-items:center;padding:12px;
+    background:radial-gradient(ellipse at 50% 40%,rgba(2,132,199,.10),transparent 65%),var(--ink)}
+  /* Frame takes the video's own aspect (16:9 until loaded), fitted to the stage both ways. */
+  .frame{--ar:1.7778;position:relative;aspect-ratio:var(--ar);width:min(100cqw - 24px,(100cqh - 24px) * var(--ar));background:#000;border-radius:4px;overflow:hidden}
+  .frame video{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .frame svg.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .overlay .mask{fill:var(--warn);fill-opacity:.32;stroke:var(--warn);stroke-width:1.5;vector-effect:non-scaling-stroke}
+  .overlay .bbox{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4;vector-effect:non-scaling-stroke}
+  .overlay .origin line{stroke:#fff;stroke-width:1.5;vector-effect:non-scaling-stroke}
+  .overlay .origin circle{fill:none;stroke:#fff;stroke-width:1.5;vector-effect:non-scaling-stroke}
+
+  /* viewfinder HUD */
+  .hud{position:absolute;inset:0;pointer-events:none;font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.82);letter-spacing:.06em}
+  .hud .br{position:absolute;width:18px;height:18px;border:0 solid rgba(255,255,255,.55)}
+  .hud .tl{top:8px;left:8px;border-top-width:1.5px;border-left-width:1.5px}
+  .hud .tr{top:8px;right:8px;border-top-width:1.5px;border-right-width:1.5px}
+  .hud .bl{bottom:8px;left:8px;border-bottom-width:1.5px;border-left-width:1.5px}
+  .hud .brr{bottom:8px;right:8px;border-bottom-width:1.5px;border-right-width:1.5px}
+  .hud .row{position:absolute;left:16px;right:16px;display:flex;gap:10px;align-items:center}
+  .hud .row.top{top:14px}
+  .hud .row.bot{bottom:14px;flex-wrap:wrap-reverse;row-gap:6px}
+  .hud .chip{padding:2px 7px;border-radius:4px;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);white-space:nowrap}
+  .hud .r{margin-left:auto}
+  .hud .rec{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink-dim);margin-right:6px;vertical-align:1px}
+  .hud .ann{color:#fff}
+  .hud .ann i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-right:6px;vertical-align:0}
+
+  .stage-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:6px;padding:24px;color:rgba(255,255,255,.86)}
+  .stage-empty b{font-size:15px;font-weight:600}
+  .stage-empty span{font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+
+  /* transport */
+  .transport{display:flex;align-items:center;gap:6px;padding:8px 12px;border-top:1px solid var(--line)}
+  .ctl{display:inline-grid;place-items:center;width:32px;height:30px;border-radius:7px;border:1px solid var(--line-strong);background:var(--panel);cursor:pointer;color:var(--ink);transition:border-color var(--t)}
+  .ctl:hover:not(:disabled){border-color:var(--accent)}
+  .ctl:disabled{opacity:.4;cursor:not-allowed}
+  .ctl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tc{font-family:var(--mono);font-size:12px;color:var(--ink);margin-left:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tc small{color:var(--ink-dim);font-size:11px;margin-left:8px}
+  .toggles{margin-left:auto;display:flex;gap:4px}
+  .tg{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-mute);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .tg i{width:8px;height:8px;border-radius:2px;border:1.5px solid currentColor}
+  .tg[aria-pressed=true]{color:var(--ink);border-color:var(--accent);background:var(--accent-glow)}
+  .tg[data-k=mask][aria-pressed=true] i{background:var(--warn);border-color:var(--warn)}
+  .tg[data-k=bbox][aria-pressed=true] i{border-color:var(--accent);border-style:dashed}
+  .tg[data-k=origin] i{border-radius:50%}
+  .tg:disabled{opacity:.4;cursor:not-allowed}
+
+  /* bottom timeline */
+  .timeline{padding:4px 14px 10px}
+  .track{position:relative;height:22px;border-radius:5px;background:var(--panel-2);border:1px solid var(--line-strong);cursor:pointer;touch-action:none}
+  .track[aria-disabled=true]{cursor:default}
+  .track:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .track .played{position:absolute;left:0;top:0;bottom:0;background:var(--accent-glow);border-radius:5px 0 0 5px}
+  .track .seg{position:absolute;top:5px;bottom:5px;background:var(--warn);opacity:.7;border-radius:2px;min-width:2px}
+  .track .head{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--accent);border-radius:1px}
+  .track .head::before{content:"";position:absolute;top:-3px;left:-4px;width:10px;height:6px;border-radius:2px;background:var(--accent)}
+  .tl-foot{display:flex;align-items:center;gap:14px;margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .tl-foot .key{display:flex;align-items:center;gap:6px}
+  .tl-foot .key i{width:10px;height:6px;border-radius:2px;background:var(--warn);opacity:.7}
+  .tl-foot .r{margin-left:auto}
+
+  /* ----- metadata panel ----- */
+  .meta-panel{display:flex;flex-direction:column}
+  #meta-body{flex:1;min-height:0;overflow-y:auto}
+  .status{padding:10px 18px 10px;border-bottom:1px solid var(--line)}
+  .status .lbl,.kv .k{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .status .big{display:flex;align-items:center;gap:10px;margin-top:3px;font-size:clamp(20px,2.6vh,28px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
+  .status .big .sig{width:10px;height:10px;border-radius:50%;background:var(--ink-faint);flex-shrink:0}
+  .status.observed .big .sig{background:var(--warn);box-shadow:0 0 0 4px var(--warn-glow)}
+  .status.unconfirmed .big{color:var(--ink-mute)}
+  .status .by{margin-top:5px;line-height:1.4;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-mute)}
+
+  .origin-line{display:flex;align-items:center;gap:8px;padding:7px 18px;white-space:nowrap;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-mute);background:var(--panel-2)}
+  .origin-line b{color:var(--ink);font-weight:600}
+  .origin-line a{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;white-space:nowrap}
+  .origin-line .na{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+
+  .kv{display:grid;grid-template-columns:auto 1fr;padding:2px 18px 8px}
+  .kv .k{padding:4px 14px 4px 0;white-space:nowrap;border-bottom:1px dashed var(--line);align-self:stretch;display:flex;align-items:center}
+  .kv .v{padding:4px 0;white-space:nowrap;border-bottom:1px dashed var(--line);font-family:var(--mono);font-size:12px;color:var(--ink);display:flex;align-items:center;justify-content:flex-end;gap:7px;text-align:right;min-width:0}
+  .kv .v.na{color:var(--ink-dim)}
+  .kv .k:nth-last-child(2),.kv .v:last-child{border-bottom:0}
+  .pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--ink-faint)}
+  .pdot.experimental_setpoint{background:var(--blue)}
+  .pdot.manual_annotation{background:var(--pink)}
+  .pdot.model_estimated{background:var(--violet)}
+  .pdot.provider_reported{background:var(--accent)}
+  .pdot.simulated{background:var(--warn)}
+
+  .caveat{margin:0 0 10px;padding:8px 12px;border-radius:8px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.5}
+  .meta-actions{padding:10px 18px 12px;border-top:1px solid var(--line)}
+  .meta-actions .btn{width:100%;justify-content:center;padding:11px 16px}
+  .meta-actions small{display:block;text-align:center;margin-top:4px;font-size:11px;color:var(--ink-dim)}
+
+  @media (max-width:1100px){.det-grid{grid-template-columns:1fr}main.fit{height:auto}.stage{height:56vw}}
+</style>
+</head>
+<body data-page="detection" data-stage="detect">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide fit">
+  <div class="page-head">
+    <h1>Camera observation</h1>
+    <div class="incident-strip" id="incident-strip"></div>
+  </div>
+  <p class="lede">Review the infrared recording and the observation that initiated the investigation.</p>
+
+  <div class="stepper compact" id="stepper"></div>
+  <div class="disclosure" id="disclosure"></div>
+
+  <div class="det-grid fill">
+    <!-- 65%: video + overlay + timeline -->
+    <section class="panel vid-panel" aria-label="Camera recording">
+      <div class="panel-head">
+        <h2>CAM-01 | METEC controlled-release footage</h2>
+        <span id="clip-badge"></span>
+        <span class="meta" id="clip-id">—</span>
+      </div>
+      <div class="stage">
+        <div class="frame" id="frame">
+          <div class="stage-empty" id="stage-empty"><b>Loading recording…</b></div>
+        </div>
+      </div>
+      <div class="transport">
+        <button class="ctl" id="btn-play" disabled aria-label="Play" title="Play / pause (Space)">
+          <svg id="ic-play" width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M3 1.5v11l9-5.5z"/></svg>
+          <svg id="ic-pause" width="14" height="14" viewBox="0 0 14 14" fill="currentColor" hidden><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z"/></svg>
+        </button>
+        <button class="ctl" id="btn-prev" disabled aria-label="Previous frame" title="Previous frame (←)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M2 2h2v10H2zM12 2v10L5 7z"/></svg>
+        </button>
+        <button class="ctl" id="btn-next" disabled aria-label="Next frame" title="Next frame (→)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M10 2h2v10h-2zM2 2v10l7-5z"/></svg>
+        </button>
+        <span class="tc" id="timecode">--:--.-- <small>frame —</small></span>
+        <div class="toggles" role="group" aria-label="Overlay layers">
+          <button class="tg" data-k="mask" aria-pressed="true" disabled title="Plume mask (M)"><i></i>Mask</button>
+          <button class="tg" data-k="bbox" aria-pressed="true" disabled title="Bounding box (B)"><i></i>Box</button>
+          <button class="tg" data-k="origin" aria-pressed="true" disabled title="Plume origin (O)"><i></i>Origin</button>
+        </div>
+      </div>
+      <div class="timeline">
+        <div class="track" id="track" role="slider" tabindex="0" aria-label="Recording position" aria-disabled="true" aria-valuemin="0" aria-valuenow="0">
+          <div class="played" id="played" style="width:0"></div>
+          <div id="segs"></div>
+          <div class="head" id="head" style="left:0"></div>
+        </div>
+        <div class="tl-foot">
+          <span class="key"><i></i>Frames with a plume region</span>
+          <span id="tl-note"></span>
+          <span class="r" id="tl-dur">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 35%: detection metadata -->
+    <section class="panel meta-panel" aria-label="Detection metadata">
+      <div class="panel-head">
+        <h2>Detection</h2>
+        <span class="badges" id="meta-badge"></span>
+      </div>
+      <div id="meta-body"><div class="status">Loading…</div></div>
+      <div class="meta-actions">
+        <div class="caveat">The plume image alone does not identify a particular component or quantify emissions.</div>
+        <button class="btn primary" id="btn-investigate" disabled aria-disabled="true" title="Locate screen not built yet">Investigate possible source →</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+</body>
+</html>

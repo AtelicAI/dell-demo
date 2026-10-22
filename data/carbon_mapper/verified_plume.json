@@ -1,0 +1,15 @@
+{
+  "_comment": "SAMPLE VALUES for UI development. Not a real Carbon Mapper record. The UI shows a 'Simulated' badge while status is 'sample'. Replace with a team-verified record and set status 'verified' + provenance 'provider_reported'. Status 'pending' (all nulls) shows the PRD missing-data message.",
+  "status": "sample",
+  "satellite_observation_id": "SAMPLE-PLUME-001",
+  "provider": "Carbon Mapper",
+  "observed_at": "2026-03-14T07:12:00Z",
+  "coordinates": { "lat": 22.5, "lon": 50.5 },
+  "instrument": "Tanager-1",
+  "rate_kg_ch4_h": 120,
+  "uncertainty_kg_ch4_h": 35,
+  "source_url": null,
+  "license": null,
+  "license_status": "pending",
+  "provenance": "simulated"
+}
