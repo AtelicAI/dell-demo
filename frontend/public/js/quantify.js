@@ -243,9 +243,9 @@
     }).join('') || '<div class="note">No methods reported by the backend.</div>';
     $('btn-run').disabled = !method;
     $('btn-run').textContent = Q && Q.result ? 'Re-run estimate' : 'Run estimate';
-    $('next-note').textContent = Q && Q.result && Q.result.rate_kg_ch4_h != null
-      ? 'Estimate ready for engineer review. The Plan screen is not built yet.'
-      : 'Run an estimate first. The Plan screen is not built yet.';
+    const ready = Q && Q.result && Q.result.rate_kg_ch4_h != null;
+    $('next-note').textContent = ready ? 'Estimate ready for engineer review.' : 'Run an estimate first.';
+    $('btn-plan').setAttribute('aria-disabled', String(!ready));
   }
 
   function renderInputs() {
@@ -287,6 +287,7 @@
 
   $('methods').addEventListener('change', (e) => { method = e.target.value; renderMethods(); });
   $('btn-run').addEventListener('click', run);
+  $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
   window.addEventListener('resize', () => { if (traces) traces.resize(); if (qcChart) qcChart.resize(); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.
   new ResizeObserver(() => { if (qcChart) qcChart.resize(); }).observe($('qc'));

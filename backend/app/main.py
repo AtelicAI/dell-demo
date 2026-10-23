@@ -10,6 +10,7 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+from app.plan import GENERATOR, build_draft, version_hash
 from app.plume import ppm_per_kg_h
 from app.state import INCIDENTS
 
@@ -50,6 +51,9 @@ def get_incident(incident_id: str):
     stages[1]["status"] = locate_status()
     # A stored estimate is a model output awaiting engineer review; never "completed" on its own.
     stages[2]["status"] = "ready_for_review" if incident.get("quantification") else "not_started"
+    # Draft exists -> in progress; submitted -> awaiting engineer review. Only Approve can go further.
+    wo = incident.get("work_order")
+    stages[3]["status"] = ("ready_for_review" if wo["submitted"] else "in_progress") if wo else "not_started"
     return {**incident, "stages": stages}
 
 
@@ -375,3 +379,155 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
         raise HTTPException(status_code=409, detail={"failure": FAILURE, "missing": m["missing"]})
     incident["quantification"] = run_gaussian()
     return {"result": incident["quantification"], "methods": methods(), "release_check": release_check()}
+
+
+# ----- Screen 5: Plan -----
+# Rule-template draft (app/plan.py) until a Nemotron drafter is wired. Versions, flags and the
+# submission live in memory. Nothing here can reach plant equipment.
+
+EDITABLE = ("problem", "proposed_inspection", "priority", "required_permits")
+OPERATOR = "Operator (not signed in)"
+
+
+def now_utc():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def make_draft(incident):
+    det = {"metadata": read_json("ogi", "source_metadata.json"), "annotations": read_json("ogi", "plume_annotations.json")}
+    docs = [(DATA_DIR / "docs" / n, f"docs/{n}") for n in ("maintenance_procedure.md", "isolation_checklist.md")]
+    return build_draft(read_json("skid", "candidates.json"), incident.get("quantification"), det,
+                       read_json("maintenance", "history.json"), [d for d in docs if d[0].is_file()])
+
+
+def draft_inputs(incident):
+    """What the drafter reads right now, so the page can show its real inputs before and after drafting."""
+    cands = read_json("skid", "candidates.json")
+    a = cands.get("assessment", {})
+    q = incident.get("quantification")
+    meta, ann = read_json("ogi", "source_metadata.json"), read_json("ogi", "plume_annotations.json")
+    marked = bool(ann.get("ranges") or ann.get("frames")) and ann.get("ogi_clip_id") == meta.get("ogi_clip_id")
+    docs = [n for n in ("maintenance_procedure.md", "isolation_checklist.md") if (DATA_DIR / "docs" / n).is_file()]
+    records = read_json("maintenance", "history.json")["records"]
+    rate = q and q.get("rate_kg_ch4_h")
+    return [
+        {"id": "source", "label": "Likely source", "value": a.get("asset_id") if a.get("result") == "likely_source" else None,
+         "detail": f"Ranked first of {len(cands.get('candidates', []))} candidates, unconfirmed",
+         "provenance": "hypothesis", "screen": "locate.html"},
+        {"id": "rate", "label": "Emission rate", "value": f"{rate} kg CH₄/h" if rate is not None else None,
+         "detail": (f"P10–P90 {q['interval']['low']}–{q['interval']['high']} · simulated inputs" if rate is not None
+                    else "Not estimated yet"), "provenance": "model_estimated" if rate is not None else "pending",
+         "screen": "quantify.html"},
+        {"id": "detection", "label": "Camera observation", "value": meta.get("ogi_clip_id") if marked else None,
+         "detail": ("Plume region marked, " + ("reviewed" if ann.get("reviewed_by") else "not yet reviewed")) if marked
+                   else "No plume region marked", "provenance": "manual_annotation" if marked else "pending",
+         "screen": "detection.html"},
+        {"id": "docs", "label": "Procedures", "value": f"{len(docs)} documents",
+         "detail": f"Illustrative procedure and checklist, plus {len(records)} maintenance records",
+         "provenance": "synthetic", "screen": None},
+    ]
+
+
+def work_order_view(incident):
+    wo = incident.get("work_order")
+    q = incident.get("quantification")
+    _, missing = make_draft(incident)
+    view = {"generator": GENERATOR, "can_draft": not missing, "missing": missing, "inputs": draft_inputs(incident),
+            "nvidia_inference": status()["nvidia_inference"]}
+    if not wo:
+        return {**view, "draft": None, "versions": [], "flags": {}, "submitted": None, "stale": False}
+    latest = wo["versions"][-1]
+    stale = latest["draft"]["basis"]["quantification_run_at"] != (q.get("run_at_utc") if q else None)
+    return {**view, "draft": {**latest["draft"], "fields": latest["fields"], "version": latest["version"],
+                              "hash": latest["hash"], "status": "Draft"},
+            "versions": [{k: v[k] for k in ("version", "hash", "created_at", "author", "changed")} for v in wo["versions"]],
+            "flags": wo["flags"], "submitted": wo["submitted"], "stale": stale}
+
+
+def incident_or_404(incident_id):
+    incident = INCIDENTS.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return incident
+
+
+def add_version(incident, draft, fields, author, changed):
+    wo = incident.setdefault("work_order", {"versions": [], "flags": {}, "submitted": None})
+    wo["versions"].append({"version": len(wo["versions"]) + 1, "draft": draft, "fields": fields, "author": author,
+                           "changed": changed, "created_at": now_utc(), "hash": version_hash(fields, draft["sections"])})
+    # A new version replaces what the reviewer would see, so any earlier submission no longer applies.
+    wo["submitted"] = None
+
+
+@app.get("/incidents/{incident_id}/work-order")
+def get_work_order(incident_id: str):
+    return work_order_view(incident_or_404(incident_id))
+
+
+@app.post("/incidents/{incident_id}/work-order/draft")
+def post_work_order_draft(incident_id: str):
+    incident = incident_or_404(incident_id)
+    draft, missing = make_draft(incident)
+    if missing:
+        raise HTTPException(status_code=409, detail={"missing": missing})
+    fields = draft.pop("fields")
+    old = incident.get("work_order")
+    add_version(incident, draft, fields, f"{GENERATOR['id']} {GENERATOR['version']}", ["Generated"] if not old else ["Regenerated"])
+    # Flags point at claims of the replaced text, so they go with it.
+    incident["work_order"]["flags"] = {}
+    return work_order_view(incident)
+
+
+@app.post("/incidents/{incident_id}/work-order/edit")
+def post_work_order_edit(incident_id: str, body: dict = Body(...)):
+    incident = incident_or_404(incident_id)
+    wo = incident.get("work_order")
+    if not wo:
+        raise HTTPException(status_code=409, detail="No draft to edit")
+    latest = wo["versions"][-1]
+    if body.get("base_version") != latest["version"]:
+        raise HTTPException(status_code=409, detail=f"Draft changed since you opened it (now v{latest['version']}). Reload.")
+    fields = dict(latest["fields"])
+    for k, v in (body.get("fields") or {}).items():
+        if k in EDITABLE:
+            fields[k] = [s.strip() for s in v if s.strip()] if k == "required_permits" else (v.strip() or None if v else None)
+    changed = [k for k in EDITABLE if fields[k] != latest["fields"][k]]
+    if not changed:
+        raise HTTPException(status_code=400, detail="No changes")
+    add_version(incident, latest["draft"], fields, OPERATOR, changed)
+    return work_order_view(incident)
+
+
+@app.post("/incidents/{incident_id}/work-order/flag")
+def post_work_order_flag(incident_id: str, body: dict = Body(...)):
+    incident = incident_or_404(incident_id)
+    wo = incident.get("work_order")
+    if not wo:
+        raise HTTPException(status_code=409, detail="No draft")
+    cid = body.get("claim_id")
+    ids = {c["id"] for cs in wo["versions"][-1]["draft"]["sections"].values() for c in cs}
+    if cid not in ids:
+        raise HTTPException(status_code=400, detail="Unknown claim")
+    if body.get("flagged", True):
+        wo["flags"][cid] = {"note": (body.get("note") or "").strip() or None, "by": OPERATOR, "at": now_utc()}
+    else:
+        wo["flags"].pop(cid, None)
+    wo["submitted"] = None
+    return work_order_view(incident)
+
+
+@app.post("/incidents/{incident_id}/work-order/submit")
+def post_work_order_submit(incident_id: str, body: dict = Body(...)):
+    incident = incident_or_404(incident_id)
+    wo = incident.get("work_order")
+    if not wo:
+        raise HTTPException(status_code=409, detail="No draft")
+    latest = wo["versions"][-1]
+    if body.get("version") != latest["version"]:
+        raise HTTPException(status_code=409, detail=f"Not the latest draft (now v{latest['version']}). Reload.")
+    if not latest["fields"]["priority"]:
+        raise HTTPException(status_code=409, detail="Set a priority before submitting")
+    # Submission only queues the draft for engineer review. It approves nothing and operates nothing.
+    wo["submitted"] = {"version": latest["version"], "hash": latest["hash"], "at": now_utc(), "by": OPERATOR,
+                       "open_flags": sorted(wo["flags"])}
+    return work_order_view(incident)

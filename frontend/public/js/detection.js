@@ -89,7 +89,7 @@
     let by;
     if (now) {
       by = annP === 'manual_annotation'
-        ? `${ann.annotator ? `Drawn by ${esc(ann.annotator)}` : 'Drawn by hand'} · ${ann.reviewed_by ? `reviewed by ${esc(ann.reviewed_by)}` : 'not yet reviewed'}`
+        ? `<span class="drawn"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8.5 1.5l2 2-6.5 6.5H2V8z"/></svg>Manually drawn</span>${ann.reviewed_by ? ` · reviewed by ${esc(ann.reviewed_by)}` : ''}`
         : (meta.model_version ? `Output of ${esc(meta.model_version)}` : 'Model output');
     } else if (firstFrame != null) {
       by = `Plume first marked at ${fmt(times ? times[firstFrame] : firstFrame / fps)} in this recording.`;

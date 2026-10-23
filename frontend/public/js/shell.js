@@ -37,7 +37,7 @@
     { page: 'locate', label: 'Locate', href: 'locate.html' },
     { page: 'quantify', label: 'Quantify', href: 'quantify.html' },
     { sec: 'Response' },
-    { page: 'plan', label: 'Plan', href: null },
+    { page: 'plan', label: 'Plan', href: 'plan.html' },
     { page: 'review', label: 'Approve', href: null },
     { page: 'report', label: 'Report', href: null },
     { sec: 'Observability' },
