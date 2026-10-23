@@ -17,6 +17,30 @@
   const STAGE_PAGE = { detect: 'detection', locate: 'locate', quantify: 'quantify', plan: 'plan', approve: 'review', report: 'report' };
   const DELL_LABELS = { running: 'Running', target_deployment: 'Target deployment' };
   const NVIDIA_LABELS = { local_nim: 'Local NIM', hosted_api: 'Hosted API', not_connected: 'Not connected' };
+  // Partner roles for the Dell / NVIDIA pills. Status lines come from /status; nothing here claims a live connection.
+  const PARTNERS = {
+    dell: {
+      title: 'Dell PowerEdge XR7620',
+      role: 'Rugged edge server at the plant site. The whole system is designed to run on it, with no cloud. Dell NativeEdge rolls it out to more sites with zero-touch setup.',
+      status: (s) => s.dell_edge === 'running'
+        ? ['ok', 'Running on the edge server (reported by the backend).']
+        : ['off', 'Target deployment. This demo is not running on the XR7620 yet.'],
+    },
+    nvidia: {
+      title: 'NVIDIA AI stack',
+      role: 'Planned components:',
+      parts: [
+        ['NIM · Nemotron', 'drafts work orders and answers questions'],
+        ['Speech NIM', 'Arabic and English voice'],
+        ['NeMo Retriever', 'finds the right plant documents'],
+        ['NeMo Guardrails', 'blocks unsafe or out-of-scope actions'],
+        ['VSS', 'video understanding for the camera'],
+      ],
+      status: (s) => s.nvidia_inference === 'local_nim' ? ['ok', 'Local NIM: inference runs on the edge server.']
+        : s.nvidia_inference === 'hosted_api' ? ['ok', 'Hosted API: inference runs on NVIDIA-hosted endpoints.']
+        : ['off', 'Not connected. No NVIDIA model is used in this demo yet; the Plan draft comes from a fixed template.'],
+    },
+  };
   const DISCLOSURE = 'Composite demonstration. Satellite observations and METEC OGI footage are independent. Equipment, sensors and maintenance workflow are illustrative.';
 
   const ICONS = {
@@ -60,7 +84,8 @@
     el.innerHTML = `
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
-      <div class="ft"><div class="av">MK</div><div><b>Musthakeem</b><span>Atelic</span></div></div>`;
+      <div class="hw"><span class="k">Built for</span><b>Dell PowerEdge XR7620</b><b>NVIDIA NIM · NeMo</b></div>
+      <div class="ft"><div class="av">CR</div><div><b>Control-room engineer</b><span>Demo operator</span></div></div>`;
   }
 
   function renderTopbar() {
@@ -69,10 +94,39 @@
     el.innerHTML = `
       <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span></div>
       <div class="right-controls">
-        <span id="pill-dell" class="status-pill" title="Edge runtime"><span class="dot"></span>Dell Edge · …</span>
-        <span id="pill-nvidia" class="status-pill" title="NVIDIA inference"><span class="dot"></span>NVIDIA inference · …</span>
+        <button type="button" id="pill-dell" class="status-pill" data-partner="dell" title="About the Dell edge server" aria-expanded="false"><span class="dot"></span>Dell Edge · …</button>
+        <button type="button" id="pill-nvidia" class="status-pill" data-partner="nvidia" title="About the NVIDIA AI stack" aria-expanded="false"><span class="dot"></span>NVIDIA inference · …</button>
         <span id="pill-replay" class="status-pill" title="Replay clock (UTC)"><span class="dot"></span>Replay · …</span>
-      </div>`;
+      </div>
+      <div class="hw-pop" id="hw-pop" role="dialog" hidden></div>`;
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-partner]');
+      if (b) togglePartner(b);
+    });
+    document.addEventListener('click', (e) => { if (!e.target.closest('[data-partner], #hw-pop')) closePartner(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePartner(); });
+  }
+
+  let lastStatus = null;
+  function closePartner() {
+    const pop = $('hw-pop');
+    if (!pop || pop.hidden) return;
+    pop.hidden = true;
+    document.querySelectorAll('[data-partner]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  }
+  function togglePartner(btn) {
+    const pop = $('hw-pop'), key = btn.dataset.partner;
+    if (!pop.hidden && pop.dataset.for === key) { closePartner(); return; }
+    const p = PARTNERS[key];
+    const [kind, line] = lastStatus ? p.status(lastStatus) : ['err', 'Unknown: the backend is not reachable.'];
+    pop.innerHTML = `<b class="t">${p.title}</b><p>${p.role}</p>${p.parts
+      ? `<ul>${p.parts.map(([n, d]) => `<li><b>${n}</b>${d}</li>`).join('')}</ul>` : ''}
+      <div class="st ${kind}"><span class="dot"></span>${line}</div>`;
+    pop.dataset.for = key;
+    pop.hidden = false;
+    document.querySelectorAll('[data-partner]').forEach((b) => b.setAttribute('aria-expanded', String(b === btn)));
+    const bar = $('topbar').getBoundingClientRect(), r = btn.getBoundingClientRect();
+    pop.style.left = `${Math.max(12, Math.min(r.left - bar.left, bar.width - pop.offsetWidth - 12))}px`;
   }
 
   function pill(el, text, kind) {
@@ -82,6 +136,7 @@
   }
 
   function renderStatus(s) {
+    lastStatus = s;
     pill($('pill-dell'), `Dell Edge · ${DELL_LABELS[s.dell_edge] || 'Unknown'}`,
       s.dell_edge === 'running' ? 'ok' : 'off');
     pill($('pill-nvidia'), `NVIDIA inference · ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}`,
