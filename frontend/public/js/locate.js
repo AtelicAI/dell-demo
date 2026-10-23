@@ -8,6 +8,7 @@
   const BADGE = {
     simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
     experimental_setpoint: 'Experimental setpoint', hypothesis: 'Hypothesis', pending: 'Pending',
+    model_estimated: 'Model estimated',
   };
   const badge = (p, title) => `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
   const METHOD = { manual_illustrative: 'Manually configured (illustrative)', 'manually configured': 'Manually configured' };
@@ -314,9 +315,8 @@
 
     const svg = $('cam-svg');
     if (!svg) return;
-    const box = D && D.box;
-    svg.innerHTML = `${box ? `<rect class="bbox" x="${box[0]}" y="${box[1]}" width="${box[2]}" height="${box[3]}"/>` : ''}
-      ${drawn.map((r) => `<polygon class="roi${r.asset_id === selected ? ' sel' : ''}" points="${r.polygon_normalized.map((p) => p.join(',')).join(' ')}"/>`).join('')}`;
+    // The plume itself is shown by the heat map canvas; the SVG only carries equipment ROIs.
+    svg.innerHTML = `${drawn.map((r) => `<polygon class="roi${r.asset_id === selected ? ' sel' : ''}" points="${r.polygon_normalized.map((p) => p.join(',')).join(' ')}"/>`).join('')}`;
   }
 
   function initCam(d) {
@@ -335,22 +335,36 @@
       : [];
     const first = ranges.sort((a, b) => a.frame - b.frame)[0];
     D = { box: first ? first.bbox_normalized : null };
-    $('cam-badge').innerHTML = badge(prov, 'Clip') + (first ? badge('manual_annotation', 'Plume region') : '');
+    $('cam-badge').innerHTML = badge(prov, 'Clip') + (first ? badge('manual_annotation', 'Plume region') + badge('model_estimated', 'Heat map') : '');
 
     const times = d.frame_times && d.frame_times.frame_start_s;
     const f = first ? first.frame : 0;
     frameTime = times && times[f] != null ? (times[f] + (times[f + 1] ?? times[f] + 0.05)) / 2 : (meta.frame_rate ? (f + 0.5) / meta.frame_rate : 0);
     $('cam-frame').innerHTML = `
-      <video id="cam-video" preload="auto" playsinline muted src="${window.AtelicShell.API}/ogi/clip"></video>
+      <video id="cam-video" crossorigin="anonymous" preload="auto" playsinline muted src="${window.AtelicShell.API}/ogi/clip"></video>
+      <canvas class="heat" id="cam-heat" aria-hidden="true"></canvas>
       <svg id="cam-svg" viewBox="0 0 1 1" preserveAspectRatio="none"></svg>
       <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br bR"></span>
-      <div class="cam-chip top"><span>CAM-01 · STILL · FRAME ${f}</span></div>
+      <div class="cam-chip top"><span>CAM-01 · REPLAY</span></div>
       <div class="cam-chip bot">${first ? '<span><i></i>Plume region · manual</span>' : ''}</div>`;
     const m = Math.floor(frameTime / 60), s = (frameTime % 60).toFixed(2).padStart(5, '0');
-    $('cam-time').textContent = `· ${String(m).padStart(2, '0')}:${s}`;
+    $('cam-time').textContent = `· from ${String(m).padStart(2, '0')}:${s}, looped`;
     video = $('cam-video');
     renderCam();
-    // Resolves when the still frame is really on screen (seeked), so the loader reports the truth.
+    // Replays from the first annotated frame on a loop, with the same heat map as the Camera screen.
+    // The heat map is drawn only on frames that an annotation range covers.
+    const inRange = (fr) => ranges.some((r) => fr >= r.frame && fr <= (r.end_frame ?? r.frame));
+    const frameOf = (t) => {
+      if (!times) return meta.frame_rate ? Math.floor(t * meta.frame_rate) : -1;
+      let lo = 0, hi = times.length - 1;
+      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (times[mid] <= t + 1e-4) lo = mid; else hi = mid - 1; }
+      return lo;
+    };
+    const step = window.PlumeHeat.create(video, $('cam-heat'));
+    window.PlumeHeat.eachFrame(video, (t) => step(inRange(frameOf(t)) ? D.box : null));
+    video.addEventListener('ended', () => { video.currentTime = frameTime; video.play().catch(() => {}); });
+    video.addEventListener('seeked', () => video.play().catch(() => {}), { once: true });
+    // Resolves when the first annotated frame is really on screen (seeked), so the loader reports the truth.
     return new Promise((ok, fail) => {
       video.addEventListener('loadedmetadata', () => {
         if (video.videoWidth && video.videoHeight) $('cam-frame').style.setProperty('--ar', video.videoWidth / video.videoHeight);
@@ -358,7 +372,7 @@
       }, { once: true });
       video.addEventListener('seeked', () => ok(`${meta.ogi_clip_id} · frame ${f}`), { once: true });
       video.addEventListener('error', () => { $('cam-frame').innerHTML = '<div class="cam-empty">Clip could not be played</div>'; fail(new Error('Clip could not be played')); }, { once: true });
-      setTimeout(() => fail(new Error('Frame still loading')), 6000);
+      setTimeout(() => fail(new Error('Frame not loaded yet')), 6000);
     });
   }
 

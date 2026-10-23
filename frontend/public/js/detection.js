@@ -1,4 +1,5 @@
-// Screen 2 — Detect / Camera. Reads GET /incidents/:id/detections and plays GET /ogi/clip.
+// Screen 2 — Detect / Camera. Reads GET /incidents/:id/detections. A 2×2 wall plays all skid cameras;
+// CAM-01 replays GET /ogi/clip, the others loop GET /ogi/cams/:id.
 // Overlays are drawn only for frames that have an annotation; nothing is interpolated or inferred.
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -23,7 +24,6 @@
   const badge = (p) => `<span class="badge ${p}">${BADGE[p] || 'Pending'}</span>`;
 
   let meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
-  const layers = { mask: true, bbox: true, origin: true };
 
   // ----- data rules -----
   const hasRegion = (a) => a && ((a.mask_polygon_normalized || []).length > 2 || a.bbox_normalized || a.origin_normalized);
@@ -60,7 +60,7 @@
       : '<span class="na">Source link pending</span>';
 
     // Header badges double as the legend for the value dots below.
-    const used = [...new Set([prov, observed && annP].filter((p) => p && p !== 'pending'))];
+    const used = [...new Set([prov, observed && annP, observed && 'model_estimated'].filter((p) => p && p !== 'pending'))];
     $('meta-badge').innerHTML = (used.length ? used : ['pending']).map(badge).join('');
 
     $('meta-body').innerHTML = `
@@ -68,6 +68,7 @@
       <div class="origin-line"><b>OGI footage: METEC controlled release</b>${origin}</div>
       <div class="kv">
         <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
+        ${observed ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
         ${row('Source', meta.ogi_clip_id ? `${meta.origin || 'METEC'} · ${meta.ogi_clip_id}${meta.source_segment ? ` (${meta.source_segment.start}–${meta.source_segment.end})` : ''}` : null, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
       </div>
@@ -85,79 +86,9 @@
       </details>`;
   }
 
-  // Camera row: every skid camera, so the viewer sees that only CAM-01 raised something.
-  // CAM-01 is the clip below. Others loop a recorded METEC segment picked as plume-free ("Watching"),
-  // or say they have no feed. Built once so the loops don't restart; only CAM-01's state updates.
-  let wall = null;
-  function renderCams(now) {
-    const el = $('cams');
-    if (!el || !wall) return;
-    if (!el.childElementCount) {
-      const NO_FEED = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="4" width="9" height="8" rx="1"/><path d="M10.5 7l4-2v6l-4-2M2 2l12 12"/></svg>';
-      el.innerHTML = `<div class="cams-h"><b>Skid cameras</b>${badge(wall.status === 'sample' ? 'simulated' : wall.provenance)}</div>${wall.cameras.map((c) => {
-        const live = c.feed === 'ogi_clip';
-        const loop = c.feed && typeof c.feed === 'object' && c.feed.file;
-        const tip = live ? `${c.camera_id} · detection replay`
-          : loop ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded METEC clip ${c.feed.ogi_clip_id} ${c.feed.segment.start}–${c.feed.segment.end}, looped · ${c.feed.picked_by}`
-          : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed in this demo`;
-        const scr = live ? '<i class="rec"></i>'
-          : loop ? `<video src="${window.AtelicShell.API}/ogi/cams/${encodeURIComponent(c.camera_id)}" muted autoplay loop playsinline preload="auto"></video><i class="rec"></i>`
-          : NO_FEED;
-        return `<div class="cam${live ? ' on' : loop ? ' watch' : ''}" data-cam="${esc(c.camera_id)}" data-tip="${esc(tip)}" title="${esc(tip)}"${live || loop ? ' role="button" tabindex="0"' : ''}>
-          <span class="scr">${scr}</span>
-          <span class="tx"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
-            <span class="st"><i></i><span class="sv">${live ? 'No alert' : loop ? 'Watching' : 'No alert'}</span></span></span>
-        </div>`;
-      }).join('')}`;
-      el.addEventListener('click', (e) => { const t = e.target.closest('.cam.watch, .cam.on'); if (t) showCam(t.dataset.cam); });
-      el.addEventListener('keydown', (e) => {
-        const t = e.target.closest('.cam.watch, .cam.on');
-        if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); showCam(t.dataset.cam); }
-      });
-    }
-    const cam1 = el.querySelector('.cam.on');
-    if (cam1) {
-      cam1.classList.toggle('alert', !!now);
-      cam1.querySelector('.sv').textContent = now ? 'Alert' : 'No alert';
-      cam1.title = `${cam1.dataset.tip}${now ? ' · plume observed' : ''}`;
-    }
-  }
-
-  // Show another camera's loop in the same player. CAM-01 (or Esc / Back) returns to the detection
-  // replay, which is paused meanwhile. Clip and labels come from camera_wall.json only.
-  let altCam = null, mainTitle = null, mainBadge = null;
-  function showCam(id) {
-    const c = wall && wall.cameras.find((x) => x.camera_id === id);
-    const loop = c && c.feed && c.feed.file;
-    const panel = document.querySelector('.vid-panel'), v = $('alt-video');
-    if (mainTitle == null) { mainTitle = $('vid-title').textContent; mainBadge = $('clip-badge').innerHTML; }
-    document.querySelectorAll('.cam').forEach((t) => t.classList.toggle('sel', loop && t.dataset.cam === id));
-    if (!loop) {
-      if (!altCam) return;
-      altCam = null;
-      panel.classList.remove('alt');
-      v.pause(); v.removeAttribute('src'); v.load();
-      $('vid-title').textContent = mainTitle;
-      $('clip-badge').innerHTML = mainBadge;
-      return;
-    }
-    altCam = id;
-    if (video) video.pause();
-    panel.classList.add('alt');
-    $('vid-title').textContent = `${c.camera_id} | ${c.area}`;
-    $('clip-badge').innerHTML = badge(wall.status === 'sample' ? 'simulated' : wall.provenance);
-    $('alt-chip').textContent = c.camera_id;
-    $('alt-note').innerHTML = `Watches <b>${c.watches.map(esc).join(', ')}</b> · recorded METEC clip <b>${esc(c.feed.ogi_clip_id)}</b> ${esc(c.feed.segment.start)}–${esc(c.feed.segment.end)}, looped · ${esc(c.feed.picked_by)}. Not a live feed from this skid.`;
-    v.src = `${window.AtelicShell.API}/ogi/cams/${encodeURIComponent(c.camera_id)}`;
-    v.play().catch(() => {});
-  }
-  document.addEventListener('DOMContentLoaded', () => {
-    $('alt-back').addEventListener('click', () => showCam('CAM-01'));
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && altCam) showCam('CAM-01'); });
-  });
 
   // Status at the current replay moment: observed only once the replay reaches the first
-  // annotated frame. Before that the detection has not happened yet in this replay.
+  // annotated frame. Before that nothing has been detected yet, so the details stay hidden.
   let noDetectionNote = '';
   function renderStatus(now) {
     const el = $('status-block');
@@ -167,12 +98,16 @@
       by = annP === 'manual_annotation'
         ? `<span class="drawn"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8.5 1.5l2 2-6.5 6.5H2V8z"/></svg>Manually drawn</span>${ann.reviewed_by ? ` · reviewed by ${esc(ann.reviewed_by)}` : ''}`
         : (meta.model_version ? `Output of ${esc(meta.model_version)}` : 'Model output');
-    } else if (firstFrame != null) {
-      by = `Plume first marked at ${fmt(times ? times[firstFrame] : firstFrame / fps)} in this recording.`;
+    } else if (byFrame.size) {
+      by = 'All cameras watching. No plume seen yet.';
     } else {
       by = noDetectionNote;
     }
-    renderCams(now);
+    setAlert(now);
+    const waiting = !now && byFrame.size > 0;
+    document.querySelector('.meta-panel').classList.toggle('waiting', waiting);
+    $('btn-investigate').classList.toggle('disabled', waiting);
+    $('btn-investigate').setAttribute('aria-disabled', String(waiting));
     el.className = `status ${now ? 'observed' : 'unconfirmed'}`;
     el.innerHTML = `<div class="lbl">Status</div>
       <div class="big"><span class="sig"></span>${now ? 'Plume observed' : 'Detection not confirmed'}</div>
@@ -181,7 +116,8 @@
 
   function applyReplay(f) {
     if (firstFrame == null) return;
-    const now = f >= firstFrame;
+    // Latched like a real alarm: once seen, the alert stays when the replay loops.
+    const now = observedNow || f >= firstFrame;
     if (now === observedNow) return;
     observedNow = now;
     renderStatus(now);
@@ -202,12 +138,51 @@
         : `<span class="pdot ${annP}"></span><span>Mask only</span>`;
   }
 
-  // ----- player -----
-  const fmt = (t) => {
-    if (!isFinite(t)) return '--:--.--';
-    const m = Math.floor(t / 60), s = t - m * 60;
-    return `${String(m).padStart(2, '0')}:${s.toFixed(2).padStart(5, '0')}`;
-  };
+  // ----- camera wall -----
+  // Every skid camera plays at once, so the viewer sees that only CAM-01 raises something.
+  // CAM-01 is the annotated replay; the others loop a recorded METEC segment picked as plume-free.
+  let wall = null;
+  const API = () => window.AtelicShell.API;
+
+  function renderWall(clipOk) {
+    const cams = wall ? wall.cameras : [{ camera_id: 'CAM-01', area: '', watches: [], feed: 'ogi_clip' }];
+    const wallP = wall ? (wall.status === 'sample' ? 'simulated' : wall.provenance) : null;
+    $('wall').innerHTML = cams.map((c) => {
+      const live = c.feed === 'ogi_clip';
+      const loop = c.feed && typeof c.feed === 'object' && c.feed.file;
+      const tip = live ? `${c.camera_id} · watches ${c.watches.join(', ')} · METEC clip ${meta.ogi_clip_id}${meta.source_segment ? ` ${meta.source_segment.start}–${meta.source_segment.end}` : ''}`
+        : loop ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded METEC clip ${c.feed.ogi_clip_id} ${c.feed.segment.start}–${c.feed.segment.end}, looped · ${c.feed.picked_by}`
+        : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed in this demo`;
+      const screen = live
+        ? (clipOk ? `<div class="frame" id="frame"><video id="video" crossorigin="anonymous" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="tcx"><i></i><span>--:--</span></span></div>`
+          : `<div class="no-feed"><b>Approved METEC clip not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`)
+        : loop ? `<div class="frame"><video muted autoplay loop playsinline preload="auto" src="${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`
+        : '<div class="no-feed"><b>No feed in this demo</b></div>';
+      return `<div class="cell${live ? ' cam1' : ''}" title="${esc(tip)}">
+        <div class="cv">${screen}</div>
+        <div class="cl"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
+          <span class="st${loop || live ? ' on' : ''}"><i></i><span class="sv">${loop || live ? 'Watching' : 'No feed'}</span></span>
+          ${badge(live ? prov : wallP)}</div>
+      </div>`;
+    }).join('');
+    // Running clock on each feed: shows the footage is moving even when the scene is still.
+    $('wall').querySelectorAll('.frame').forEach((fr) => {
+      const v = fr.querySelector('video'), out = fr.querySelector('.tcx span');
+      v.addEventListener('timeupdate', () => { out.textContent = clock(v.currentTime); });
+    });
+    $('wall-foot').textContent = 'Recorded replays, looped. CAM-02 to CAM-04 are METEC clips picked as plume-free. Not live feeds from this skid.';
+  }
+
+  const clock = (t) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+  function setAlert(now) {
+    const c = document.querySelector('.cell.cam1');
+    if (!c) return;
+    c.classList.toggle('alert', !!now);
+    c.querySelector('.sv').textContent = now ? 'Plume observed' : 'Watching';
+  }
+
+  // ----- CAM-01 replay -----
   // With a frame-time table (variable-rate clips) look the frame up; otherwise derive it from fps.
   function frameAt(t) {
     if (!times) return Math.min(total - 1, Math.max(0, Math.floor(t * fps + 1e-3)));
@@ -224,12 +199,8 @@
     let g = '';
     if (a) {
       const poly = a.mask_polygon_normalized || [];
-      if (layers.mask && poly.length > 2) g += `<polygon class="mask" points="${poly.map(([x, y]) => `${x * W},${y * H}`).join(' ')}"/>`;
-      if (layers.bbox && a.bbox_normalized) {
-        const [x, y, w, h] = a.bbox_normalized;
-        g += `<rect class="bbox" x="${x * W}" y="${y * H}" width="${w * W}" height="${h * H}"/>`;
-      }
-      if (layers.origin && a.origin_normalized) {
+      if (poly.length > 2) g += `<polygon class="mask" points="${poly.map(([x, y]) => `${x * W},${y * H}`).join(' ')}"/>`;
+      if (a.origin_normalized) {
         const [x, y] = [a.origin_normalized[0] * W, a.origin_normalized[1] * H], r = W * 0.012;
         g += `<g class="origin"><circle cx="${x}" cy="${y}" r="${r}"/><line x1="${x - r * 2.2}" y1="${y}" x2="${x - r}" y2="${y}"/><line x1="${x + r}" y1="${y}" x2="${x + r * 2.2}" y2="${y}"/><line x1="${x}" y1="${y - r * 2.2}" x2="${x}" y2="${y - r}"/><line x1="${x}" y1="${y + r}" x2="${x}" y2="${y + r * 2.2}"/></g>`;
       }
@@ -239,155 +210,33 @@
     return a;
   }
 
+  // Heat map: see plumeheat.js (computed from CAM-01's pixels, drawn only inside the drawn region).
+  let heatStep = null;
+
   function update(t) {
-    const dur = video.duration;
-    const pct = isFinite(dur) && dur > 0 ? (t / dur) * 100 : 0;
-    $('played').style.width = `${pct}%`;
-    $('head').style.left = `${pct}%`;
-    $('track').setAttribute('aria-valuenow', t.toFixed(2));
-    $('track').setAttribute('aria-valuetext', fmt(t));
-    if (fps) {
-      const f = frameAt(t);
-      const label = `frame ${String(f).padStart(String(total).length, '0')} / ${total - 1}`;
-      $('timecode').innerHTML = `${fmt(t)} <small>${label}</small>`;
-      $('hud-tc').textContent = `${fmt(t)} · F${f}`;
-      if (f !== frame) {
-        frame = f;
-        applyReplay(f);
-        renderFrameFields(drawOverlay(f));
-      }
-    } else {
-      $('timecode').innerHTML = `${fmt(t)} <small>frame rate unknown</small>`;
-      $('hud-tc').textContent = fmt(t);
-    }
-  }
-
-  // Frame-accurate updates: requestVideoFrameCallback reports the presented frame's media time.
-  function watchFrames() {
-    if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
-      const cb = (_, m) => { update(m.mediaTime); video.requestVideoFrameCallback(cb); };
-      video.requestVideoFrameCallback(cb);
-    } else {
-      const loop = () => { if (!video.paused) update(video.currentTime); requestAnimationFrame(loop); };
-      requestAnimationFrame(loop);
-    }
-    video.addEventListener('seeked', () => update(video.currentTime));
-  }
-
-  // Seek to the middle of a frame so rounding never lands on its neighbour.
-  function seekFrame(f) {
     if (!fps) return;
-    video.pause();
-    f = Math.min(total - 1, Math.max(0, f));
-    video.currentTime = times ? (times[f] + (times[f + 1] ?? video.duration)) / 2 : (f + 0.5) / fps;
-  }
-  function seekFraction(x) {
-    const t = Math.min(1, Math.max(0, x)) * video.duration;
-    if (fps) seekFrame(frameAt(t)); else video.currentTime = t;
-  }
-  function togglePlay() { video.paused ? video.play() : video.pause(); }
-
-  function drawSegments(frames) {
-    if (!fps || !total) return;
-    const idx = frames.map((a) => a.frame).filter(Number.isInteger).sort((a, b) => a - b);
-    const segs = [];
-    for (const f of idx) {
-      const last = segs[segs.length - 1];
-      if (last && f === last[1] + 1) last[1] = f; else segs.push([f, f]);
-    }
-    $('segs').innerHTML = segs.map(([a, b]) =>
-      `<div class="seg" style="left:${a / total * 100}%;width:${(b - a + 1) / total * 100}%" title="Frames ${a}–${b}"></div>`).join('');
+    const f = frameAt(t);
+    if (f === frame) return;
+    frame = f;
+    applyReplay(f);
+    const a = drawOverlay(f);
+    if (heatStep) heatStep(a && a.bbox_normalized);
+    renderFrameFields(a);
   }
 
-  function wirePlayer(frames) {
-    $('btn-play').disabled = false;
-    $('btn-prev').disabled = $('btn-next').disabled = !fps;
-    if (!fps) $('tl-note').textContent = 'Frame stepping needs frame_rate in the clip metadata.';
-    // A layer button is only usable if some annotation actually has that layer.
-    const has = {
-      mask: frames.some((a) => (a.mask_polygon_normalized || []).length > 2),
-      bbox: frames.some((a) => a.bbox_normalized),
-      origin: frames.some((a) => a.origin_normalized),
-    };
-    document.querySelectorAll('.tg').forEach((b) => {
-      b.disabled = !has[b.dataset.k] || !fps;
-      if (b.disabled) b.setAttribute('aria-pressed', 'false');
-    });
-
-    const track = $('track');
-    track.setAttribute('aria-disabled', 'false');
-    track.setAttribute('aria-valuemax', video.duration.toFixed(2));
-    $('tl-dur').textContent = `${fmt(video.duration)}${fps ? ` · ${total} frames` : ''}`;
-    drawSegments(frames);
-
-    const setIcon = () => {
-      // toggleAttribute, not .hidden: SVG elements have no .hidden property in Safari.
-      $('ic-play').toggleAttribute('hidden', !video.paused);
-      $('ic-pause').toggleAttribute('hidden', video.paused);
-      $('btn-play').setAttribute('aria-label', video.paused ? 'Play' : 'Pause');
-    };
-    video.addEventListener('play', setIcon);
-    video.addEventListener('pause', setIcon);
-    $('btn-play').addEventListener('click', togglePlay);
-    $('btn-prev').addEventListener('click', () => seekFrame(frame - 1));
-    $('btn-next').addEventListener('click', () => seekFrame(frame + 1));
-
-    const pos = (e) => (e.clientX - track.getBoundingClientRect().left) / track.clientWidth;
-    track.addEventListener('pointerdown', (e) => {
-      track.setPointerCapture(e.pointerId);
-      video.pause();
-      seekFraction(pos(e));
-    });
-    track.addEventListener('pointermove', (e) => { if (track.hasPointerCapture(e.pointerId)) seekFraction(pos(e)); });
-
-    document.querySelectorAll('.tg').forEach((b) => b.addEventListener('click', () => toggleLayer(b.dataset.k)));
-
-    document.addEventListener('keydown', (e) => {
-      const el = e.target instanceof Element ? e.target : document.body;
-      if (altCam || el.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
-      const k = e.key;
-      if (k === ' ' && !el.closest('button')) { e.preventDefault(); togglePlay(); }
-      else if (k === 'ArrowLeft' && fps) { e.preventDefault(); seekFrame(frame - 1); }
-      else if (k === 'ArrowRight' && fps) { e.preventDefault(); seekFrame(frame + 1); }
-      else if (frames.length && fps && ({ m: 'mask', b: 'bbox', o: 'origin' })[k.toLowerCase()]) toggleLayer({ m: 'mask', b: 'bbox', o: 'origin' }[k.toLowerCase()]);
-    });
-
-    watchFrames();
-    // Open on the observation that started the investigation: the first annotated frame.
-    firstFrame = frames.length && fps ? Math.min(...frames.map((a) => a.frame)) : null;
-    if (firstFrame != null) seekFrame(firstFrame); else update(0);
-  }
-
-  function toggleLayer(k) {
-    layers[k] = !layers[k];
-    document.querySelector(`.tg[data-k="${k}"]`).setAttribute('aria-pressed', String(layers[k]));
-    drawOverlay(frame);
-  }
-
-  function stageMessage(title, sub) {
-    $('stage-empty').innerHTML = `<b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}`;
-  }
-
-  function mountVideo(frames) {
-    const fr = $('frame');
-    fr.innerHTML = `
-      <video id="video" preload="auto" playsinline muted src="${window.AtelicShell.API}/ogi/clip"></video>
-      <svg class="overlay" id="overlay" aria-hidden="true"></svg>
-      <div class="hud" aria-hidden="true">
-        <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
-        <div class="row top"><span class="chip"><span class="rec"></span>CAM-01 · Recorded replay</span><span class="chip r" id="hud-tc">--:--.--</span></div>
-      </div>
-      <div class="stage-empty" id="stage-empty" hidden></div>`;
+  function wireVideo(frames) {
     video = $('video');
+    if (!video) return;
     video.addEventListener('loadedmetadata', () => {
-      fr.style.setProperty('--ar', (video.videoWidth / video.videoHeight) || 1.7778);
       if (times) total = times.length;
       else if (fps) total = Math.max(1, Math.round(video.duration * fps));
-      wirePlayer(frames);
+      firstFrame = frames.length && fps ? Math.min(...frames.map((a) => a.frame)) : null;
+      heatStep = window.PlumeHeat.create(video, $('heat'));
+      window.PlumeHeat.eachFrame(video, update);
+      update(video.currentTime);
     }, { once: true });
     video.addEventListener('error', () => {
-      $('stage-empty').hidden = false;
-      stageMessage('Recording could not be played', 'Check data/ogi/source_clip.mp4 (H.264 MP4)');
+      $('frame').outerHTML = '<div class="no-feed"><b>Recording could not be played</b><span>Check data/ogi/source_clip.mp4 (H.264 MP4)</span></div>';
     }, { once: true });
   }
 
@@ -403,17 +252,17 @@
       const frames = usableAnnotations(d);
       frames.forEach((a) => byFrame.set(a.frame, a));
 
-      $('clip-badge').innerHTML = badge(prov);
+      $('clip-badge').innerHTML = wall ? badge(wall.status === 'sample' ? 'simulated' : wall.provenance) : '';
+      renderWall(d.clip_available);
       renderMeta(d, frames);
-      renderStatus(frames.length > 0);
-
-      if (d.clip_available) mountVideo(frames);
-      else stageMessage('Approved METEC clip not loaded', `Licence status: ${meta.license_status || 'unknown'} · data/ogi/source_clip.mp4`);
+      renderStatus(false);
+      if (frames.length) window.AtelicShell.setReplayStatus('detect', 'not_started');
+      if (d.clip_available) wireVideo(frames);
     } catch (e) {
       console.error(e);
       $('meta-badge').innerHTML = badge('pending');
       $('meta-body').innerHTML = '<div class="status">Detection details are unavailable: backend is not reachable.</div>';
-      stageMessage('Recording unavailable', 'Backend is not reachable');
+      $('wall').innerHTML = '<div class="no-feed wide"><b>Cameras unavailable</b><span>Backend is not reachable</span></div>';
     }
   }
 

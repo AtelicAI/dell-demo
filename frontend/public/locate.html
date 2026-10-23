@@ -11,7 +11,8 @@
 <link rel="stylesheet" href="css/shell.css?v=30">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
 <script src="js/shell.js?v=29" defer></script>
-<script src="js/locate.js?v=24" defer></script>
+<script src="js/plumeheat.js?v=1" defer></script>
+<script src="js/locate.js?v=26" defer></script>
 <style>
   [hidden]{display:none!important}
 
@@ -53,12 +54,13 @@
   .linkish:hover{text-decoration:underline}
   .linkish:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 
-  /* ----- camera strip (top of the investigation panel): still frame + what CAM-01 can see ----- */
+  /* ----- camera strip (top of the investigation panel): looping replay with heat map + what CAM-01 can see ----- */
   .cam-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
   .cam-stage{width:150px;height:100px;container-type:size;display:grid;place-items:center}
   .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw,100cqh * var(--ar));background:#000;border-radius:6px;overflow:hidden;
     box-shadow:0 0 0 1px var(--line-strong),0 6px 16px rgba(15,23,42,.16)}
   .cam-frame video{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .cam-frame canvas.heat{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;filter:blur(2px)}
   .cam-frame svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .cam-frame .bbox{fill:none;stroke:var(--warn);stroke-width:1.5;stroke-dasharray:4 2;vector-effect:non-scaling-stroke}
   .cam-frame .roi{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke}
@@ -241,7 +243,7 @@
       <div class="cam-strip" aria-label="Camera view">
         <div class="cam-stage"><div class="cam-frame" id="cam-frame"><div class="cam-empty">Loading frame…</div></div></div>
         <div class="cam-info">
-          <div class="cam-meta"><b>CAM-01 still</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
+          <div class="cam-meta"><b>CAM-01 replay</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
           <div class="vis-row"><span class="lbl">Camera can see</span><div class="vchips" id="vis-list"></div><div class="vis-sel" id="vis-sel"></div></div>
           <div class="cam-note" id="cam-caveat" hidden></div>
         </div>
