@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/shell.css?v=23">
-<script src="js/shell.js?v=25" defer></script>
-<script src="js/detection.js?v=20" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=29">
+<script src="js/shell.js?v=28" defer></script>
+<script src="js/detection.js?v=27" defer></script>
 <style>
   [hidden]{display:none!important}
 
@@ -24,6 +24,44 @@
 
   /* ----- video panel ----- */
   .vid-panel{display:flex;flex-direction:column;overflow:hidden}
+  /* camera row: all skid cameras, CAM-01 is the one shown below */
+  .cams{display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  .cams:empty{display:none}
+  .cams-h{display:flex;flex-direction:column;justify-content:center;gap:4px;padding-right:4px}
+  .cams-h b{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .cam{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 7px;border:1px solid var(--line-strong);border-radius:8px;background:var(--panel);cursor:default}
+  .cam .scr{flex-shrink:0;width:30px;height:26px;border-radius:4px;background:#1E293B;color:#64748B;display:grid;place-items:center;position:relative;overflow:hidden}
+  .cam.watch .scr{width:48px;height:36px}
+  .cam .scr video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cam.watch .scr .rec{position:absolute;top:3px;right:3px;width:5px;height:5px;background:var(--good)}
+  .cam .scr .rec{width:7px;height:7px;border-radius:50%;background:#94A3B8}
+  .cam .tx{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+  .cam .tx b{font-family:var(--mono);font-size:11.5px;font-weight:600}
+  .cam .ar{font-size:11px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cam .st{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cam .st i{width:6px;height:6px;border-radius:50%;background:var(--ink-faint);flex-shrink:0}
+  .cam.on{border-color:var(--accent);background:rgba(2,132,199,.05)}
+  .cam.watch .st{color:var(--good)}
+  .cam.watch .st i{background:var(--good)}
+  .cam.on .scr .rec{background:var(--good)}
+  .cam.alert{border-color:var(--warn);background:rgba(217,119,6,.06)}
+  .cam.alert .scr .rec{background:var(--bad);box-shadow:0 0 0 3px rgba(220,38,38,.25);animation:camPulse 1.6s ease-in-out infinite}
+  .cam.alert .st{color:var(--warn);font-weight:600}
+  .cam.alert .st i{background:var(--warn)}
+  .cam.watch{cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
+  .cam.watch:hover{border-color:var(--good);box-shadow:0 2px 8px var(--good-glow)}
+  .cam.watch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .cam.on{cursor:pointer}
+  .cam.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+  /* Another camera shown in the same player: its loop replaces CAM-01 and the replay controls */
+  .frame.alt-frame{--ar:1.3333}
+  .alt-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-mute);line-height:1.45}
+  .alt-bar b{font-family:var(--mono);color:var(--ink);font-weight:600}
+  .alt-bar .btn{margin-left:auto;flex-shrink:0;white-space:nowrap}
+  .vid-panel.alt #frame,.vid-panel.alt .transport,.vid-panel.alt .timeline{display:none}
+  .vid-panel:not(.alt) .alt-frame,.vid-panel:not(.alt) .alt-bar{display:none}
+  @keyframes camPulse{50%{box-shadow:0 0 0 6px rgba(220,38,38,0)}}
+  @media (prefers-reduced-motion:reduce){.cam.alert .scr .rec{animation:none}}
   /* Light mount (same as Locate): only the footage itself is dark. */
   .stage{flex:1;min-height:0;container-type:size;display:grid;place-items:center;padding:12px;background:var(--panel-2)}
   /* Frame takes the video's own aspect (16:9 until loaded), fitted to the stage both ways. */
@@ -49,8 +87,6 @@
   .hud .chip{padding:2px 7px;border-radius:4px;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);white-space:nowrap}
   .hud .r{margin-left:auto}
   .hud .rec{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink-dim);margin-right:6px;vertical-align:1px}
-  .hud .ann{color:#fff}
-  .hud .ann i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-right:6px;vertical-align:0}
 
   .stage-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:6px;padding:24px;color:rgba(255,255,255,.86)}
   .stage-empty b{font-size:15px;font-weight:600}
@@ -109,6 +145,13 @@
   .kv .v{padding:4px 0;white-space:nowrap;border-bottom:1px dashed var(--line);font-family:var(--mono);font-size:12px;color:var(--ink);display:flex;align-items:center;justify-content:flex-end;gap:7px;text-align:right;min-width:0}
   .kv .v.na{color:var(--ink-dim)}
   .kv .k:nth-last-child(2),.kv .v:last-child{border-bottom:0}
+  .more{border-top:1px solid var(--line)}
+  .more summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:8px 18px;font-size:12px;font-weight:600;color:var(--ink-mute)}
+  .more summary::-webkit-details-marker{display:none}
+  .more summary::before{content:"›";display:inline-block;transition:transform var(--t);color:var(--ink-dim)}
+  .more[open] summary::before{transform:rotate(90deg)}
+  .more summary span{font-weight:400;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .more summary:hover{color:var(--accent)}
   .pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--ink-faint)}
   .pdot.experimental_setpoint{background:var(--blue)}
   .pdot.manual_annotation{background:var(--pink)}
@@ -132,7 +175,6 @@
 <main class="wide fit">
   <div class="page-head">
     <h1>Camera observation</h1>
-    <div class="incident-strip" id="incident-strip"></div>
   </div>
   <p class="lede">Review the infrared recording and the observation that initiated the investigation.</p>
 
@@ -143,15 +185,23 @@
     <!-- 65%: video + overlay + timeline -->
     <section class="panel vid-panel" aria-label="Camera recording">
       <div class="panel-head">
-        <h2>CAM-01 | METEC controlled-release footage</h2>
+        <h2 id="vid-title">CAM-01 | METEC controlled-release footage</h2>
         <span id="clip-badge"></span>
-        <span class="meta" id="clip-id">—</span>
       </div>
+      <div class="cams" id="cams"></div>
       <div class="stage">
         <div class="frame" id="frame">
           <div class="stage-empty" id="stage-empty"><b>Loading recording…</b></div>
         </div>
+        <div class="frame alt-frame">
+          <video id="alt-video" muted loop playsinline></video>
+          <div class="hud" aria-hidden="true">
+            <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
+            <div class="row top"><span class="chip"><span class="rec" style="background:var(--good)"></span><span id="alt-chip"></span> · Recorded replay · looped</span></div>
+          </div>
+        </div>
       </div>
+      <div class="alt-bar"><span id="alt-note"></span><button class="btn" id="alt-back">← Back to CAM-01</button></div>
       <div class="transport">
         <button class="ctl" id="btn-play" disabled aria-label="Play" title="Play / pause (Space)">
           <svg id="ic-play" width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M3 1.5v11l9-5.5z"/></svg>
@@ -198,6 +248,7 @@
     </section>
   </div>
 </main>
+
 
 </body>
 </html>

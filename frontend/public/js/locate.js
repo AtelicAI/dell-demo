@@ -377,19 +377,30 @@
     const bad = (C.invalid_ids || []).length
       ? `<div class="caveat" style="margin-top:8px">Unknown IDs in candidate data: ${C.invalid_ids.map(esc).join(', ')}</div>` : '';
     $('assess').className = `assess${likely ? '' : ' unresolved'}`;
-    $('assess').innerHTML = `
-      <div class="big"><span class="sig"></span>${likely ? `Likely source: ${esc(likely)} (unconfirmed)` : 'Source unresolved'}</div>
-      <div class="by">${C.status === 'sample' ? '<b style="color:var(--warn)">Sample values</b> · mock ranking, no agent has run yet' : esc(C.method || '')}</div>${bad}`;
+    // Same claim as before ("Likely source: X (unconfirmed)"), laid out as a verdict card.
+    $('assess').setAttribute('aria-label', likely ? `Likely source: ${likely} (unconfirmed)` : 'Source unresolved');
+    $('assess').innerHTML = likely ? `
+      <div class="v-k">Likely source</div>
+      <div class="v-row"><span class="v-id">${esc(likely)}</span><span class="pill"><i></i>Unconfirmed · needs field check</span></div>
+      <div class="by"><span class="v-nm">${esc(name(likely) || '')}</span>${C.status === 'sample' ? ' · <b>Sample values</b> · mock ranking, no agent has run yet' : ` · ${esc(C.method || '')}`}</div>${bad}`
+      : `<div class="v-k">Source</div><div class="v-id">Unresolved</div>
+      <div class="by">${C.status === 'sample' ? '<b>Sample values</b> · mock ranking, no agent has run yet' : esc(C.method || '')}</div>${bad}`;
   }
 
   function renderCands() {
     if (!C) return;
     const list = C.candidates || [];
+    // Meter = count of evidence items in the data (one block each). Not a score or a confidence.
+    const meter = (c) => {
+      const f = (c.supporting || []).length, a = (c.contradicting || []).length;
+      return `<span class="meter" title="${f} supporting · ${a} against (evidence items, not a score)">${'<i class="f"></i>'.repeat(f)}${'<i class="a"></i>'.repeat(a)}</span>
+        <span class="ct">${f} for · ${a} against</span>`;
+    };
     $('cands').innerHTML = list.length ? `<span class="lbl">Ranked candidates</span>${list.map((c, i) => `
       <button class="cand${c.asset_id === selected ? ' sel' : ''}" data-sel="${esc(c.asset_id)}">
-        <span class="rk">#${i + 1}</span>
-        <span class="nm"><b>${esc(c.asset_id)}</b>| ${esc(name(c.asset_id) || 'Unknown asset')}</span>
-        <span class="ct">${(c.supporting || []).length} for · ${(c.contradicting || []).length} against</span>
+        <span class="rk">${i + 1}</span>
+        <span class="nm"><b>${esc(c.asset_id)}</b><span>${esc(name(c.asset_id) || 'Unknown asset')}</span></span>
+        <span class="ev">${meter(c)}</span>
       </button>`).join('')}` : '<div class="note" style="padding:6px">No candidates.</div>';
   }
 
@@ -399,17 +410,21 @@
 
   function evidenceTab(id) {
     const c = (C && C.candidates || []).find((x) => x.asset_id === id);
-    const others = (C && C.candidates || []).filter((x) => x.asset_id !== id)
-      .map((x) => li('·', 'miss', `${assetLink(x.asset_id)} ${esc(name(x.asset_id))}`));
+    const otherIds = (C && C.candidates || []).filter((x) => x.asset_id !== id);
+    const others = otherIds.length
+      ? `<div class="chips">${otherIds.map((x) => `<span class="chip">${assetLink(x.asset_id)} ${esc(name(x.asset_id))}</span>`).join('')}</div>`
+      : '<div class="empty">None</div>';
     if (!c) {
       return `<h4>${esc(id)}</h4><div class="empty">${C ? 'This asset is not a source candidate.' : 'Candidate data not available.'}</div>
-        <h4>Other possible sources</h4>${list(others, 'None')}`;
+        <h4>Other possible sources</h4>${others}`;
     }
-    return `<h4>Why this component?</h4>
-      ${list([...(c.rationale || []).map((r) => li('·', 'miss', esc(r))), ...(c.supporting || []).map((e) => li('+', 'for', ev(e)))], 'No supporting evidence.')}
-      <h4>Evidence against</h4>${list((c.contradicting || []).map((e) => li('−', 'against', ev(e))), 'None recorded.')}
-      <h4>Missing information</h4>${list((c.missing || []).map((m) => li('?', 'miss', esc(m))), 'None recorded.')}
-      <h4>Other possible sources</h4>${list(others, 'None')}`;
+    const group = (cls, mk, title, items, empty) => `<div class="eg ${cls}"><h4><span class="mk">${mk}</span>${title}<span class="n">${items.length}</span></h4>${items.length ? `<ul>${items.join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
+    const item = (html) => `<li>${html}</li>`;
+    return `${(c.rationale || []).length ? `<p class="why">${c.rationale.map(esc).join(' ')}</p>` : ''}
+      ${group('for', '✓', 'Why this component?', (c.supporting || []).map((e) => item(ev(e))), 'No supporting evidence.')}
+      ${group('against', '✕', 'Evidence against', (c.contradicting || []).map((e) => item(ev(e))), 'None recorded.')}
+      ${group('miss', '?', 'Missing information', (c.missing || []).map((m) => item(esc(m))), 'None recorded.')}
+      <h4 class="oth">Other possible sources</h4>${others}`;
   }
 
   function kv(rows) {

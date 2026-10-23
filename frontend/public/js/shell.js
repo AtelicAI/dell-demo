@@ -79,13 +79,35 @@
       const attrs = n.href
         ? `href="${n.href}"${n.page === current ? ' aria-current="page"' : ''}`
         : 'aria-disabled="true" title="Not built yet"';
-      return `<a ${attrs}>${icon}${n.label}<span class="nd"></span></a>`;
+      return `<a ${attrs} data-label="${n.label}${n.href ? '' : ' · not built yet'}">${icon}<span class="lb">${n.label}</span><span class="nd"></span></a>`;
     }).join('');
     el.innerHTML = `
+      <button type="button" class="rail-tg" id="rail-tg" aria-label="Collapse menu" title="Collapse menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
       <div class="hw"><span class="k">Built for</span><b>Dell PowerEdge XR7620</b><b>NVIDIA NIM · NeMo</b></div>
-      <div class="ft"><div class="av">CR</div><div><b>Control-room engineer</b><span>Demo operator</span></div></div>`;
+      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Demo operator</span></div></div>`;
+    $('rail-tg').addEventListener('click', () => setRailMin(!document.documentElement.classList.contains('rail-min')));
+    setRailMin(readRailMin(), true);
+  }
+
+  // Collapsed rail (icons only) is a per-viewer preference, remembered across pages.
+  function readRailMin() {
+    try { return localStorage.getItem('atelic.railMin') === '1'; } catch (e) { return false; }
+  }
+  function setRailMin(min, initial) {
+    document.documentElement.classList.toggle('rail-min', min);
+    const b = $('rail-tg');
+    if (b) {
+      const t = min ? 'Expand menu' : 'Collapse menu';
+      b.setAttribute('aria-label', t); b.title = t; b.setAttribute('aria-expanded', String(!min));
+    }
+    if (initial) return;
+    try { localStorage.setItem('atelic.railMin', min ? '1' : '0'); } catch (e) { /* storage blocked: still works for this page */ }
+    // Animate only on a click (not on page load), then let charts re-measure their new width.
+    const root = document.documentElement;
+    root.classList.add('rail-anim');
+    setTimeout(() => { root.classList.remove('rail-anim'); window.dispatchEvent(new Event('resize')); }, 420);
   }
 
   function renderTopbar() {
@@ -158,7 +180,18 @@
     lastIncident = inc;
     const strip = $('incident-strip');
     if (strip) {
-      strip.textContent = [inc.local_incident_id, inc.site, inc.camera_id, inc.source_status, inc.scenario].join(' | ');
+      // Same words as the PRD strip, laid out as parts. Status colour follows the backend wording.
+      const e = (v) => String(v ?? '—').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const ic = (d) => `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+      const src = String(inc.source_status || '');
+      const srcKind = /unconfirmed|unresolved/i.test(src) ? 'warn' : /confirmed/i.test(src) ? 'ok' : '';
+      strip.setAttribute('aria-label', [inc.local_incident_id, inc.site, inc.camera_id, inc.source_status, inc.scenario].join(' | '));
+      strip.innerHTML = `
+        <span class="is-id"><i></i>${e(inc.local_incident_id)}</span>
+        <span class="is-seg">${ic('<path d="M2 14V7l4 2V7l4 2V4h4v10z"/>')}${e(inc.site)}</span>
+        <span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>
+        <span class="is-seg is-src ${srcKind}">${ic('<circle cx="8" cy="8" r="6"/><path d="M8 5v3.5M8 11h.01"/>')}${e(inc.source_status)}</span>
+        <span class="is-tag">${e(inc.scenario)}</span>`;
     }
     const stepper = $('stepper');
     if (stepper) {

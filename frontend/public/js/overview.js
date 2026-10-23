@@ -21,11 +21,10 @@
     const [cls, label, color] = provenanceOf(rec);
     // One badge in the header covers the record; every value carries a matching dot.
     $('src-badge').innerHTML = `<span class="badge ${cls}" title="Provenance of every value in this card">${label}</span>`;
-    const dot = `<span class="pdot ${cls}"></span>`;
     // Optional `sub` puts a second, smaller line under the value (time under date, lon under lat).
     const fact = (k, v, sub) => `<div class="fact"><div class="lbl">${k}</div>${v == null
       ? '<div class="val na">Not available</div>'
-      : `<div class="val">${dot}<span>${esc(v)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></div>`}</div>`;
+      : `<div class="val">${esc(v)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`}</div>`;
     const [obsDate, obsTime] = (fmtTime(rec.observed_at) || '').split(' ');
     const coord = fmtCoord(rec.coordinates);
     const [latTxt, lonTxt] = coord ? coord.split(', ') : [];
@@ -48,7 +47,7 @@
       }
       rate = `<div class="rate">
           <div class="lbl">Provider-reported rate (kg CH₄/h)</div>
-          <div class="num">${dot}<b>${esc(r)}</b><span>kg CH₄/h</span></div>
+          <div class="num"><b>${esc(r)}</b><span>kg CH₄/h</span></div>
           <div class="unc">Uncertainty ${u != null ? `± ${esc(u)} kg CH₄/h · range ${r - u}–${r + u}` : 'not reported'}</div>
           ${bar}
         </div>`;
@@ -74,8 +73,6 @@
     $('src-badge').innerHTML = '<span class="badge pending">Pending</span>';
     $('src-body').innerHTML = `<div class="missing">${MISSING}</div>`;
     $('map').innerHTML = '<div class="map-empty">No verified observation to display.</div>';
-    $('map-meta').textContent = '—';
-    $('toggle-footprint').disabled = true;
   }
 
   // Schematic map drawn at the container's real pixel size, so it never crops or stretches.
@@ -114,13 +111,12 @@
 
     const km = (111.32 * cosLat * step).toFixed(1);
     const sx2 = W - 24, sx1 = sx2 - step * pxLon;
-    const footHidden = !$('toggle-footprint').checked;
 
     box.innerHTML = `
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Schematic map of the observation location">
         <g class="grid">${grid}</g>
         ${ticks}
-        <g class="footprint${footHidden ? ' hidden' : ''}" id="footprint">${contours}</g>
+        <g class="footprint" id="footprint">${contours}</g>
         <g class="origin${selected ? ' selected' : ''}" id="origin" tabindex="0" role="button" aria-label="Select observation">
           <circle class="hit" cx="${cx}" cy="${cy}" r="26"/>
           <circle class="ring" cx="${cx}" cy="${cy}" r="14"/>
@@ -132,8 +128,7 @@
         <g class="scale"><line x1="${sx1}" y1="${H - 22}" x2="${sx2}" y2="${H - 22}"/>
           <line x1="${sx1}" y1="${H - 27}" x2="${sx1}" y2="${H - 17}"/><line x1="${sx2}" y1="${H - 27}" x2="${sx2}" y2="${H - 17}"/>
           <text x="${sx1}" y="${H - 30}">≈ ${km} km</text></g>
-      </svg>
-      <div class="map-corner">Schematic grid · no licensed basemap · footprint shape illustrative</div>`;
+      </svg>`;
 
     const origin = $('origin');
     const toggle = () => {
@@ -146,11 +141,6 @@
   }
 
   function renderMap(rec) {
-    $('map-meta').textContent = rec.satellite_observation_id;
-    $('toggle-footprint').addEventListener('change', (e) => {
-      const fp = $('footprint');
-      if (fp) fp.classList.toggle('hidden', !e.target.checked);
-    });
     new ResizeObserver(() => drawMap(rec)).observe($('map'));
   }
 

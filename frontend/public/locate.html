@@ -8,15 +8,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/shell.css?v=23">
+<link rel="stylesheet" href="css/shell.css?v=29">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=25" defer></script>
-<script src="js/locate.js?v=21" defer></script>
+<script src="js/shell.js?v=28" defer></script>
+<script src="js/locate.js?v=24" defer></script>
 <style>
   [hidden]{display:none!important}
 
-  /* PRD Screen 3: OGI frame | investigation | ranked candidates (max three panes) */
-  .loc-grid{position:relative;display:grid;grid-template-columns:minmax(0,22fr) minmax(0,40fr) minmax(0,38fr);gap:14px;min-height:0}
+  /* PRD Screen 3: investigation (camera strip + plant view) | ranked candidates */
+  .loc-grid{position:relative;display:grid;grid-template-columns:minmax(0,60fr) minmax(0,40fr);gap:14px;min-height:0}
 
   /* Loader: lists the real loads (graph, candidates, camera frame) and what each returned. */
   .loader{position:absolute;inset:0;z-index:5;display:grid;place-items:center;border-radius:var(--radius);
@@ -53,41 +53,37 @@
   .linkish:hover{text-decoration:underline}
   .linkish:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 
-  /* ----- camera pane: viewfinder fills the pane, compact visibility below (no scroll) ----- */
-  .cam-stage{flex:1;min-height:120px;container-type:size;display:grid;place-items:center;background:var(--panel-2);border-bottom:1px solid var(--line)}
-  .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw - 20px,(100cqh - 20px) * var(--ar));background:#000;border-radius:6px;overflow:hidden;
-    box-shadow:0 0 0 1px var(--line-strong),0 10px 28px rgba(15,23,42,.18)}
+  /* ----- camera strip (top of the investigation panel): still frame + what CAM-01 can see ----- */
+  .cam-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .cam-stage{width:150px;height:100px;container-type:size;display:grid;place-items:center}
+  .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw,100cqh * var(--ar));background:#000;border-radius:6px;overflow:hidden;
+    box-shadow:0 0 0 1px var(--line-strong),0 6px 16px rgba(15,23,42,.16)}
   .cam-frame video{position:absolute;inset:0;width:100%;height:100%;display:block}
   .cam-frame svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .cam-frame .bbox{fill:none;stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 3;vector-effect:non-scaling-stroke}
+  .cam-frame .bbox{fill:none;stroke:var(--warn);stroke-width:1.5;stroke-dasharray:4 2;vector-effect:non-scaling-stroke}
   .cam-frame .roi{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke}
   .cam-frame .roi.sel{fill-opacity:.32;stroke-width:2.2}
-  .cam-frame .br{position:absolute;width:12px;height:12px;border:0 solid rgba(255,255,255,.6);pointer-events:none}
-  .cam-frame .tl{top:6px;left:6px;border-top-width:1.5px;border-left-width:1.5px}
-  .cam-frame .tr{top:6px;right:6px;border-top-width:1.5px;border-right-width:1.5px}
-  .cam-frame .bl{bottom:6px;left:6px;border-bottom-width:1.5px;border-left-width:1.5px}
-  .cam-frame .bR{bottom:6px;right:6px;border-bottom-width:1.5px;border-right-width:1.5px}
-  .cam-chip{position:absolute;left:12px;right:12px;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:rgba(255,255,255,.9);display:flex;gap:5px;pointer-events:none}
-  .cam-chip.top{top:11px}.cam-chip.bot{bottom:11px}
-  .cam-chip span{padding:1px 6px;border-radius:4px;background:rgba(15,23,42,.66);white-space:nowrap}
-  .cam-chip i{display:inline-block;width:8px;height:8px;border:1.5px dashed var(--warn);margin-right:5px;vertical-align:-1px}
-  .cam-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:16px;color:rgba(255,255,255,.86);font-size:13px;font-weight:600}
-  .cam-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:7px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
+  .cam-frame .br,.cam-chip{display:none}
+  .cam-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:8px;color:rgba(255,255,255,.86);font-size:11px;font-weight:600}
+  .cam-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .cam-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
+  .cam-meta > b{color:var(--ink);font-weight:600}
   .cam-meta .badges{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
-  .cam-vis{padding:8px 14px 10px;display:flex;flex-direction:column;gap:6px}
+  .vis-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .vchips{display:flex;flex-wrap:wrap;gap:4px}
-  .vchip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color var(--t),background var(--t)}
+  .vchip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color var(--t),background var(--t)}
   .vchip:hover{border-color:var(--accent)}
   .vchip.sel{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
   .vchip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .vchip .d{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-dim)}
   .vchip .d.on{background:var(--accent);border-color:var(--accent)}
-  .vis-sel{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-mute);min-height:17px;white-space:nowrap}
-  .vis-sel .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .vis-sel{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-mute);white-space:nowrap;min-width:0}
+  .vis-sel:empty{display:none}
+  .vis-sel .t{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .vis-sel b{font-family:var(--mono);color:var(--ink)}
   .vis-sel .roi-tag{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;border:1px dashed var(--ink-faint);border-radius:999px}
   .vis-sel .roi-tag.on{color:var(--accent);border:1px solid var(--accent)}
-  .cam-note{font-size:10.5px;color:var(--ink-mute);line-height:1.35;padding:3px 0 3px 8px;border-left:2px solid var(--warn)}
+  .cam-note{font-size:11px;color:var(--ink-mute);line-height:1.35;padding-left:8px;border-left:2px solid var(--warn)}
 
   /* ----- investigation pane ----- */
   .tabs{display:flex;gap:2px}
@@ -97,7 +93,7 @@
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .view{flex:1;min-height:0;display:flex;flex-direction:column}
   .view-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-bottom:1px solid var(--line)}
-  .view-head > div:first-child{flex:1 1 100%}
+  .view-head > div:first-child{flex:1;min-width:0}
   .view-head h3{margin:0;font-size:12.5px;font-weight:600}
   .view-head .note{font-size:11.5px}
   .tools{display:flex;gap:4px;flex-wrap:wrap}
@@ -142,26 +138,38 @@
   .nd:focus-visible .ring{opacity:1;stroke-dasharray:3 2}
   .nd:hover .sh{stroke-width:2.2}
 
-  /* ----- candidates pane ----- */
-  .assess{padding:7px 16px;border-bottom:1px solid var(--line)}
-  .assess .big{display:flex;align-items:center;gap:9px;margin-top:2px;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
-  .assess .big .sig{width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 4px var(--warn-glow);flex-shrink:0}
-  .assess.unresolved .big{color:var(--ink-mute)}
-  .assess.unresolved .big .sig{background:var(--ink-faint);box-shadow:none}
-  .assess .by{margin-top:1px;font-size:11px;color:var(--ink-mute);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .cands{padding:4px 10px 6px;border-bottom:1px solid var(--line)}
-  .cands .lbl{display:block;padding:2px 6px 1px}
-  .cand{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:8px;width:100%;padding:3px 8px;border:1px solid transparent;border-radius:7px;background:none;cursor:pointer;text-align:left}
-  .cand:hover{border-color:var(--line-strong)}
-  .cand.sel{border-color:var(--accent);background:var(--accent-glow)}
+  /* ----- candidates pane: verdict card, scoreboard, grouped evidence ----- */
+  .assess{padding:11px 16px 10px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(217,119,6,.06),transparent 80%)}
+  .assess .v-k{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  .assess .v-row{display:flex;align-items:center;gap:12px;margin-top:2px}
+  .assess .v-id{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--ink)}
+  .assess .v-nm{font-size:12px;color:var(--ink-mute)}
+    .assess .pill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;background:var(--warn-glow);border:1px solid rgba(217,119,6,.35);color:var(--warn);font-size:11.5px;font-weight:600}
+  .assess .pill i{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+  .assess .by{margin-top:3px;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .assess .by b{color:var(--warn);font-weight:600}
+  .assess.unresolved{background:none}
+  .assess.unresolved .v-id{color:var(--ink-mute)}
+  .cands{padding:7px 10px 7px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+  .cands .lbl{display:block;padding:0 6px 3px}
+  .cand{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:none;cursor:pointer;text-align:left;transition:background var(--t),border-color var(--t)}
+  .cand:hover{background:var(--panel-2)}
+  .cand.sel{border-color:var(--accent);background:rgba(2,132,199,.06)}
   .cand:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  .cand .rk{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--warn);text-align:center}
-  .cand .nm{font-size:12.5px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cand .nm b{font-family:var(--mono);color:var(--ink);font-weight:600;margin-right:4px}
-  .cand .ct{font-family:var(--mono);font-size:10px;color:var(--ink-dim);white-space:nowrap}
-  .dtabs{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--line)}
-  .dtabs .tab{border-radius:7px 7px 0 0;font-size:10.5px;padding:4px 6px;border-bottom:0;white-space:nowrap}
-  .dtabs .tab[aria-selected=true]{background:none;border-color:var(--line-strong);border-bottom:1px solid var(--panel);margin-bottom:-1px}
+  .cand .rk{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-mute);background:var(--panel-3);border:1px solid var(--line-strong)}
+  .cand.sel .rk{background:var(--accent);border-color:var(--accent);color:#fff}
+  .cand .nm{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+  .cand .nm b{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink)}
+  .cand .nm span{font-size:11.5px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cand .ev{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .meter{display:flex;gap:2px}
+  .meter i{width:9px;height:6px;border-radius:2px}
+  .meter i.f{background:var(--good)}
+  .meter i.a{background:var(--bad);opacity:.8}
+  .cand .ct{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);white-space:nowrap}
+  .dtabs{display:flex;gap:2px;margin:8px 12px 0;padding:3px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line)}
+  .dtabs .tab{flex:1;font-size:11px;padding:4px 6px;border-radius:7px;border:1px solid transparent;white-space:nowrap}
+  .dtabs .tab[aria-selected=true]{background:var(--panel);border-color:var(--line-strong);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.06)}
   .detail{padding:2px 16px 10px}
   .detail h4{margin:10px 0 3px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
   .detail ul{margin:0;padding:0;list-style:none}
@@ -172,6 +180,18 @@
   .detail li .tx{flex:1;min-width:0}
   .detail li .src{display:block;margin-top:1px}
   .detail .empty{font-size:12px;color:var(--ink-dim);padding:4px 0}
+  .detail .why{margin:10px 0 2px;font-size:12px;line-height:1.5;color:var(--ink-mute)}
+  .eg{margin-top:10px;border-left:2px solid var(--line-strong);padding-left:10px}
+  .eg h4{display:flex;align-items:center;gap:6px;margin:0 0 2px}
+  .eg h4 .mk{font-size:11px}
+  .eg h4 .n{margin-left:auto;font-weight:600;color:var(--ink-dim)}
+  .eg.for{border-color:var(--good)}.eg.for h4 .mk{color:var(--good)}
+  .eg.against{border-color:var(--bad)}.eg.against h4 .mk{color:var(--bad)}
+  .eg.miss{border-color:var(--ink-faint);border-left-style:dashed}
+  .eg li{padding:4px 0;border-bottom:1px dashed var(--line)}
+  .detail h4.oth{margin-top:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--line-strong);border-radius:999px;font-size:11.5px;color:var(--ink-mute);background:var(--panel)}
   .kv{display:grid;grid-template-columns:auto 1fr;font-size:12px}
   .kv .k{padding:4px 12px 4px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px dashed var(--line)}
   .kv .v{padding:4px 0;font-family:var(--mono);font-size:11.5px;color:var(--ink);border-bottom:1px dashed var(--line);text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
@@ -192,7 +212,6 @@
 <main class="wide fit">
   <div class="page-head">
     <h1>Investigate the likely source</h1>
-    <div class="incident-strip" id="incident-strip"></div>
   </div>
   <p class="lede">Compare the camera observation with equipment visibility, piping connections and available records.</p>
 
@@ -210,25 +229,7 @@
         </ul>
       </div>
     </div>
-    <!-- 1: camera frame + ROI -->
-    <section class="panel" aria-label="Camera view">
-      <div class="panel-head">
-        <h2>Camera view</h2>
-        <span class="meta">CAM-01 · OGI</span>
-      </div>
-      <div class="cam-stage">
-        <div class="cam-frame" id="cam-frame"><div class="cam-empty">Loading frame…</div></div>
-      </div>
-      <div class="cam-meta"><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
-      <div class="cam-vis">
-        <span class="lbl">Camera visibility</span>
-        <div class="vchips" id="vis-list"></div>
-        <div class="vis-sel" id="vis-sel"></div>
-        <div class="cam-note" id="cam-caveat" hidden></div>
-      </div>
-    </section>
-
-    <!-- 2: equipment layout / knowledge graph (selection persists across tabs) -->
+    <!-- 1: camera strip + equipment layout / knowledge graph (selection persists across tabs) -->
     <section class="panel" aria-label="Equipment investigation">
       <div class="panel-head">
         <div class="tabs" role="tablist" aria-label="Investigation view">
@@ -236,6 +237,15 @@
           <button class="tab" role="tab" id="tab-graph" aria-controls="view-graph" aria-selected="false" tabindex="-1">Knowledge graph</button>
         </div>
         <span class="badges" id="graph-badge"></span>
+      </div>
+
+      <div class="cam-strip" aria-label="Camera view">
+        <div class="cam-stage"><div class="cam-frame" id="cam-frame"><div class="cam-empty">Loading frame…</div></div></div>
+        <div class="cam-info">
+          <div class="cam-meta"><b>CAM-01 still</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
+          <div class="vis-row"><span class="lbl">Camera can see</span><div class="vchips" id="vis-list"></div><div class="vis-sel" id="vis-sel"></div></div>
+          <div class="cam-note" id="cam-caveat" hidden></div>
+        </div>
       </div>
 
       <div class="view" id="view-layout" role="tabpanel" aria-labelledby="tab-layout">
@@ -251,8 +261,7 @@
       <div class="view" id="view-graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
         <div class="view-head">
           <div>
-            <h3>How the equipment is connected</h3>
-            <div class="note">Select an asset to inspect its connections, sensors, camera coverage and supporting records.</div>
+            <h3 title="Select an asset to inspect its connections, sensors, camera coverage and supporting records.">How the equipment is connected</h3>
           </div>
           <div class="tools" role="group" aria-label="Expand graph">
             <button class="tg" data-x="up" aria-pressed="false">Expand upstream</button>
@@ -280,7 +289,7 @@
       <div class="edge-info" id="edge-info"><span class="note">Click a connection to see where it comes from.</span></div>
     </section>
 
-    <!-- 3: ranked candidates + evidence -->
+    <!-- 2: ranked candidates + evidence -->
     <section class="panel" aria-label="Source candidates">
       <div class="panel-head">
         <h2>Source assessment</h2>

@@ -12,6 +12,8 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 | `skid/equipment.json` | 3 Locate | synthetic | draft | Team-reviewed asset list |
 | `skid/layout.json` | 3 Locate | synthetic | draft | Team-reviewed 2D layout |
 | `skid/camera_rois.json` | 2, 3 | manual_illustrative | draft, polygons empty | Polygons drawn on the approved clip |
+| `skid/camera_wall.json` | 2 Detect | simulated | **sample** (CAM-02…04 loop recorded METEC clips, picked as plume-free) | Team-reviewed camera list; real feeds if any |
+| `ogi/cam02_MOV_2571.mp4`, `cam03_MOV_2583.mp4`, `cam04_MOV_2570.mp4` | 2 Detect | — | local only (gitignored) | From the GasVid Drive folder, cut and converted: `avconvert -s MOV_2571.mp4 -p PresetHighestQuality -o data/ogi/cam02_MOV_2571.mp4 --start 0 --duration 280` (MOV_2583: 300 s, MOV_2570: 230 s) |
 | `skid/candidates.json` | 3 Locate | simulated | **sample (mock)** | Graph agent output over Neo4j |
 | `maintenance/history.json` | 3, 5 | synthetic | draft | Team-authored history |
 | `scenario/site.json` | all | synthetic | draft | — |

@@ -1,0 +1,14 @@
+{
+  "_comment": "DRAFT for team review. Cameras on the representative skid, for the camera row on the Camera screen. CAM-01 shows the detection clip. CAM-02..04 loop other real GasVid/METEC clips, cut to segments the Atelic team picked as having no visible plume; they are recorded METEC footage, not live feeds from this skid. Clips are local only (data/ogi/*.mp4 is gitignored): download from the GasVid Drive folder, cut to 'segment' and convert to H.264 with avconvert. status 'sample' -> UI shows Simulated. Kept out of equipment.json so the Locate graph is unchanged.",
+  "status": "sample",
+  "provenance": "simulated",
+  "cameras": [
+    { "camera_id": "CAM-01", "area": "Vent & outlet", "watches": ["VENT-01", "XV-104", "P-101"], "feed": "ogi_clip" },
+    { "camera_id": "CAM-02", "area": "Separator", "watches": ["P-100", "XV-101", "V-101"],
+      "feed": { "file": "cam02_MOV_2571.mp4", "ogi_clip_id": "MOV_2571", "segment": { "start": "00:00", "end": "04:40" }, "picked_by": "Atelic team (no visible plume)" } },
+    { "camera_id": "CAM-03", "area": "Relief valves", "watches": ["PSV-102", "BDV-103", "P-102"],
+      "feed": { "file": "cam03_MOV_2583.mp4", "ogi_clip_id": "MOV_2583", "segment": { "start": "00:00", "end": "05:00" }, "picked_by": "Atelic team (no visible plume)" } },
+    { "camera_id": "CAM-04", "area": "Perimeter", "watches": ["SKID-A"],
+      "feed": { "file": "cam04_MOV_2570.mp4", "ogi_clip_id": "MOV_2570", "segment": { "start": "00:00", "end": "03:50" }, "picked_by": "Atelic team (no visible plume)" } }
+  ]
+}

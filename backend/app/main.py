@@ -100,6 +100,7 @@ def get_detections(incident_id: str):
         "clip_available": (DATA_DIR / "ogi" / "source_clip.mp4").is_file(),
         # Per-frame start times from scripts/ogi_inspect.py; needed for exact frames on variable-rate clips.
         "frame_times": read_json("ogi", "frame_times.json") if (DATA_DIR / "ogi" / "frame_times.json").is_file() else None,
+        "camera_wall": read_json("skid", "camera_wall.json") if (DATA_DIR / "skid" / "camera_wall.json").is_file() else None,
     }
 
 
@@ -108,8 +109,23 @@ CHUNK = 2 * 1024 * 1024
 
 @app.get("/ogi/clip")
 def ogi_clip(request: Request):
+    return serve_mp4(DATA_DIR / "ogi" / "source_clip.mp4", request)
+
+
+@app.get("/ogi/cams/{camera_id}")
+def ogi_cam_clip(camera_id: str, request: Request):
+    # Looping clips for the other skid cameras; the file comes from skid/camera_wall.json only.
+    wall = read_json("skid", "camera_wall.json")
+    cam = next((c for c in wall["cameras"] if c["camera_id"] == camera_id), None)
+    feed = cam and cam.get("feed")
+    name = feed.get("file") if isinstance(feed, dict) else None
+    if not name or "/" in name or "\\" in name:
+        raise HTTPException(status_code=404, detail="No clip for this camera")
+    return serve_mp4(DATA_DIR / "ogi" / name, request)
+
+
+def serve_mp4(path, request):
     # Starlette 0.38 FileResponse has no Range support; the player needs it to seek and frame-step.
-    path = DATA_DIR / "ogi" / "source_clip.mp4"
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Clip not available")
     size = path.stat().st_size

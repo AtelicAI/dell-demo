@@ -68,17 +68,93 @@
       <div class="origin-line"><b>OGI footage: METEC controlled release</b>${origin}</div>
       <div class="kv">
         <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
-        <div class="k">Confidence (if supplied)</div><div class="v na" id="v-conf"><span>Not supplied</span></div>
-        ${row('Recording time', meta.recording_date, prov)}
         ${row('Source', meta.ogi_clip_id ? `${meta.origin || 'METEC'} · ${meta.ogi_clip_id}${meta.source_segment ? ` (${meta.source_segment.start}–${meta.source_segment.end})` : ''}` : null, prov)}
-        ${row('Camera type', meta.camera_type, prov)}
-        ${row('Resolution', meta.resolution, prov)}
-        ${row('Frame rate', meta.frame_rate != null ? `${meta.frame_rate} fps${meta.variable_frame_rate ? ' (variable)' : ''}` : null, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
-        ${row('Model/version', meta.model_version, prov)}
-        ${row('Licence', meta.license_status, meta.license_status === 'verified' ? prov : 'pending')}
-      </div>`;
+      </div>
+      <details class="more">
+        <summary>More details <span>confidence, recording, camera, model, licence</span></summary>
+        <div class="kv">
+          <div class="k">Confidence (if supplied)</div><div class="v na" id="v-conf"><span>Not supplied</span></div>
+          ${row('Recording time', meta.recording_date, prov)}
+          ${row('Camera type', meta.camera_type, prov)}
+          ${row('Resolution', meta.resolution, prov)}
+          ${row('Frame rate', meta.frame_rate != null ? `${meta.frame_rate} fps${meta.variable_frame_rate ? ' (variable)' : ''}` : null, prov)}
+          ${row('Model/version', meta.model_version, prov)}
+          ${row('Licence', meta.license_status, meta.license_status === 'verified' ? prov : 'pending')}
+        </div>
+      </details>`;
   }
+
+  // Camera row: every skid camera, so the viewer sees that only CAM-01 raised something.
+  // CAM-01 is the clip below. Others loop a recorded METEC segment picked as plume-free ("Watching"),
+  // or say they have no feed. Built once so the loops don't restart; only CAM-01's state updates.
+  let wall = null;
+  function renderCams(now) {
+    const el = $('cams');
+    if (!el || !wall) return;
+    if (!el.childElementCount) {
+      const NO_FEED = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="4" width="9" height="8" rx="1"/><path d="M10.5 7l4-2v6l-4-2M2 2l12 12"/></svg>';
+      el.innerHTML = `<div class="cams-h"><b>Skid cameras</b>${badge(wall.status === 'sample' ? 'simulated' : wall.provenance)}</div>${wall.cameras.map((c) => {
+        const live = c.feed === 'ogi_clip';
+        const loop = c.feed && typeof c.feed === 'object' && c.feed.file;
+        const tip = live ? `${c.camera_id} · detection replay`
+          : loop ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded METEC clip ${c.feed.ogi_clip_id} ${c.feed.segment.start}–${c.feed.segment.end}, looped · ${c.feed.picked_by}`
+          : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed in this demo`;
+        const scr = live ? '<i class="rec"></i>'
+          : loop ? `<video src="${window.AtelicShell.API}/ogi/cams/${encodeURIComponent(c.camera_id)}" muted autoplay loop playsinline preload="auto"></video><i class="rec"></i>`
+          : NO_FEED;
+        return `<div class="cam${live ? ' on' : loop ? ' watch' : ''}" data-cam="${esc(c.camera_id)}" data-tip="${esc(tip)}" title="${esc(tip)}"${live || loop ? ' role="button" tabindex="0"' : ''}>
+          <span class="scr">${scr}</span>
+          <span class="tx"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
+            <span class="st"><i></i><span class="sv">${live ? 'No alert' : loop ? 'Watching' : 'No alert'}</span></span></span>
+        </div>`;
+      }).join('')}`;
+      el.addEventListener('click', (e) => { const t = e.target.closest('.cam.watch, .cam.on'); if (t) showCam(t.dataset.cam); });
+      el.addEventListener('keydown', (e) => {
+        const t = e.target.closest('.cam.watch, .cam.on');
+        if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); showCam(t.dataset.cam); }
+      });
+    }
+    const cam1 = el.querySelector('.cam.on');
+    if (cam1) {
+      cam1.classList.toggle('alert', !!now);
+      cam1.querySelector('.sv').textContent = now ? 'Alert' : 'No alert';
+      cam1.title = `${cam1.dataset.tip}${now ? ' · plume observed' : ''}`;
+    }
+  }
+
+  // Show another camera's loop in the same player. CAM-01 (or Esc / Back) returns to the detection
+  // replay, which is paused meanwhile. Clip and labels come from camera_wall.json only.
+  let altCam = null, mainTitle = null, mainBadge = null;
+  function showCam(id) {
+    const c = wall && wall.cameras.find((x) => x.camera_id === id);
+    const loop = c && c.feed && c.feed.file;
+    const panel = document.querySelector('.vid-panel'), v = $('alt-video');
+    if (mainTitle == null) { mainTitle = $('vid-title').textContent; mainBadge = $('clip-badge').innerHTML; }
+    document.querySelectorAll('.cam').forEach((t) => t.classList.toggle('sel', loop && t.dataset.cam === id));
+    if (!loop) {
+      if (!altCam) return;
+      altCam = null;
+      panel.classList.remove('alt');
+      v.pause(); v.removeAttribute('src'); v.load();
+      $('vid-title').textContent = mainTitle;
+      $('clip-badge').innerHTML = mainBadge;
+      return;
+    }
+    altCam = id;
+    if (video) video.pause();
+    panel.classList.add('alt');
+    $('vid-title').textContent = `${c.camera_id} | ${c.area}`;
+    $('clip-badge').innerHTML = badge(wall.status === 'sample' ? 'simulated' : wall.provenance);
+    $('alt-chip').textContent = c.camera_id;
+    $('alt-note').innerHTML = `Watches <b>${c.watches.map(esc).join(', ')}</b> · recorded METEC clip <b>${esc(c.feed.ogi_clip_id)}</b> ${esc(c.feed.segment.start)}–${esc(c.feed.segment.end)}, looped · ${esc(c.feed.picked_by)}. Not a live feed from this skid.`;
+    v.src = `${window.AtelicShell.API}/ogi/cams/${encodeURIComponent(c.camera_id)}`;
+    v.play().catch(() => {});
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    $('alt-back').addEventListener('click', () => showCam('CAM-01'));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && altCam) showCam('CAM-01'); });
+  });
 
   // Status at the current replay moment: observed only once the replay reaches the first
   // annotated frame. Before that the detection has not happened yet in this replay.
@@ -96,6 +172,7 @@
     } else {
       by = noDetectionNote;
     }
+    renderCams(now);
     el.className = `status ${now ? 'observed' : 'unconfirmed'}`;
     el.innerHTML = `<div class="lbl">Status</div>
       <div class="big"><span class="sig"></span>${now ? 'Plume observed' : 'Detection not confirmed'}</div>
@@ -159,7 +236,6 @@
     }
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.innerHTML = g;
-    $('hud-ann').hidden = !a;
     return a;
   }
 
@@ -268,7 +344,7 @@
 
     document.addEventListener('keydown', (e) => {
       const el = e.target instanceof Element ? e.target : document.body;
-      if (el.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (altCam || el.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key;
       if (k === ' ' && !el.closest('button')) { e.preventDefault(); togglePlay(); }
       else if (k === 'ArrowLeft' && fps) { e.preventDefault(); seekFrame(frame - 1); }
@@ -300,8 +376,6 @@
       <div class="hud" aria-hidden="true">
         <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
         <div class="row top"><span class="chip"><span class="rec"></span>CAM-01 · Recorded replay</span><span class="chip r" id="hud-tc">--:--.--</span></div>
-        <div class="row bot"><span class="chip">OGI footage: METEC controlled release</span>
-          <span class="chip r ann" id="hud-ann" hidden><i style="background:var(--${annP === 'manual_annotation' ? 'pink' : annP === 'model_estimated' ? 'violet' : 'warn'})"></i>Overlay · ${esc(BADGE[annP] || 'Pending')}</span></div>
       </div>
       <div class="stage-empty" id="stage-empty" hidden></div>`;
     video = $('video');
@@ -320,7 +394,7 @@
   async function init() {
     try {
       const d = await window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`);
-      meta = d.metadata; ann = d.annotations;
+      meta = d.metadata; ann = d.annotations; wall = d.camera_wall;
       prov = clipProv(meta);
       annP = ann.status === 'sample' ? 'simulated' : (BADGE[ann.provenance] ? ann.provenance : 'pending');
       fps = typeof meta.frame_rate === 'number' && meta.frame_rate > 0 ? meta.frame_rate : null;
@@ -330,7 +404,6 @@
       frames.forEach((a) => byFrame.set(a.frame, a));
 
       $('clip-badge').innerHTML = badge(prov);
-      $('clip-id').textContent = meta.ogi_clip_id || 'Clip ID pending';
       renderMeta(d, frames);
       renderStatus(frames.length > 0);
 
