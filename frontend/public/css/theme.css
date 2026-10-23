@@ -1,4 +1,4 @@
-/* Atelic KG demo — shared theme tokens.
+/* Atelic — shared theme tokens.
    Superset of every page's :root block, so individual pages can drop their own :root. */
 :root{
   /* surfaces */

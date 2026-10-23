@@ -1,15 +1,146 @@
 {
-  "_comment": "SAMPLE VALUES for UI development. Not a real Carbon Mapper record. The UI shows a 'Simulated' badge while status is 'sample'. Replace with a team-verified record and set status 'verified' + provenance 'provider_reported'. Status 'pending' (all nulls) shows the PRD missing-data message.",
-  "status": "sample",
-  "satellite_observation_id": "SAMPLE-PLUME-001",
+  "_comment": "Fetched from the public Carbon Mapper API by scripts/fetch_carbon_mapper.py. Do not edit by hand; re-run the script.",
+  "status": "verified",
+  "provenance": "provider_reported",
+  "satellite_observation_id": "tan20260923t085028c30s4001-A",
   "provider": "Carbon Mapper",
-  "observed_at": "2026-03-14T07:12:00Z",
-  "coordinates": { "lat": 22.5, "lon": 50.5 },
+  "gas": "CO2",
+  "sector": "1A1",
+  "sector_label": "Energy industries",
+  "observed_at": "2026-09-23T08:50:28.300Z",
+  "coordinates": {
+    "lat": 25.18651224437876,
+    "lon": 49.307148514448414
+  },
   "instrument": "Tanager-1",
-  "rate_kg_ch4_h": 120,
-  "uncertainty_kg_ch4_h": 35,
-  "source_url": null,
+  "platform": "Planet Tanager 1",
+  "gsd_m": 33.74024673952526,
+  "scene_id": "197fde72-3bc6-413c-8dbb-e7a2e87f567a",
+  "rate_kg_h": null,
+  "uncertainty_kg_h": null,
+  "plume_bounds": [
+    49.28519578210116,
+    25.155348103123725,
+    49.325779516492226,
+    25.191807259915826
+  ],
+  "plume_image": "plume.png",
+  "source": {
+    "name": "CO2_1A1_250m_49.30777_25.18624",
+    "rate_kg_h": 433105.05455579364,
+    "uncertainty_kg_h": 85594.38589481568,
+    "persistence": 0.8620689655172413,
+    "overpasses": 29,
+    "detections": 25,
+    "plumes": 35,
+    "history": [
+      {
+        "plume_id": "emi20230421t100029p07026-A",
+        "observed_at": "2023-04-21T10:00:29Z",
+        "rate_kg_h": 145905.94385701284,
+        "uncertainty_kg_h": 60707.07185503624
+      },
+      {
+        "plume_id": "emi20230607t061924p04012-A",
+        "observed_at": "2023-06-07T06:19:24Z",
+        "rate_kg_h": 294118.59552713274,
+        "uncertainty_kg_h": 68364.66535349925
+      },
+      {
+        "plume_id": "emi20230628t070636p05025-A",
+        "observed_at": "2023-06-28T07:06:36Z",
+        "rate_kg_h": 647968.6495079041,
+        "uncertainty_kg_h": 140182.92643890655
+      },
+      {
+        "plume_id": "emi20231017t110339p07030-B",
+        "observed_at": "2023-10-17T11:03:39Z",
+        "rate_kg_h": 610966.8252020397,
+        "uncertainty_kg_h": 122112.82798604386
+      },
+      {
+        "plume_id": "emi20240722t112800p08020-B",
+        "observed_at": "2024-07-22T11:28:00Z",
+        "rate_kg_h": 236881.27268994437,
+        "uncertainty_kg_h": 73474.44031279562
+      },
+      {
+        "plume_id": "tan20250501t080726c00s4001-A",
+        "observed_at": "2025-05-01T08:07:26Z",
+        "rate_kg_h": 521921.07709317753,
+        "uncertainty_kg_h": 99085.15362529422
+      },
+      {
+        "plume_id": "tan20250715t080445c96s4001-B",
+        "observed_at": "2025-07-15T08:04:45.960000Z",
+        "rate_kg_h": 327513.5492053219,
+        "uncertainty_kg_h": 16384.222850973976
+      },
+      {
+        "plume_id": "emi20250921t104510p07048-A",
+        "observed_at": "2025-09-21T10:45:10Z",
+        "rate_kg_h": 406820.6814071734,
+        "uncertainty_kg_h": 63831.73944364346
+      },
+      {
+        "plume_id": "tan20251104t082038c10s4001-B",
+        "observed_at": "2025-11-04T08:20:38.100000Z",
+        "rate_kg_h": 844986.3029642534,
+        "uncertainty_kg_h": 84508.10368333534
+      },
+      {
+        "plume_id": "tan20260104t081847c47s4001-B",
+        "observed_at": "2026-01-04T08:18:47.470000Z",
+        "rate_kg_h": 1101794.3628641039,
+        "uncertainty_kg_h": 284920.4241482185
+      },
+      {
+        "plume_id": "tan20260111t082059c38s4001-A",
+        "observed_at": "2026-01-11T08:20:59.380000Z",
+        "rate_kg_h": 853347.8789006885,
+        "uncertainty_kg_h": 61167.89458155252
+      },
+      {
+        "plume_id": "tan20260215t083134c72s4001-B",
+        "observed_at": "2026-02-15T08:31:34.720000Z",
+        "rate_kg_h": 443611.15328319254,
+        "uncertainty_kg_h": 83718.06097236172
+      },
+      {
+        "plume_id": "tan20260313t082609c68s4001-A",
+        "observed_at": "2026-03-13T08:26:09.680000Z",
+        "rate_kg_h": 321518.83385092265,
+        "uncertainty_kg_h": 104310.234933336
+      },
+      {
+        "plume_id": "tan20260329t084426c59s4001-B",
+        "observed_at": "2026-03-29T08:44:26.590000Z",
+        "rate_kg_h": 613850.7063220224,
+        "uncertainty_kg_h": 156556.11861181277
+      },
+      {
+        "plume_id": "tan20260604t084237c42s4001-B",
+        "observed_at": "2026-06-04T08:42:37.420000Z",
+        "rate_kg_h": 514808.9760616409,
+        "uncertainty_kg_h": 151974.28520678612
+      },
+      {
+        "plume_id": "tan20260620t084036c52s4001-A",
+        "observed_at": "2026-06-20T08:40:36.520000Z",
+        "rate_kg_h": 130658.78342918072,
+        "uncertainty_kg_h": 52524.02832525765
+      },
+      {
+        "plume_id": "tan20260812t085255c53s4001-C",
+        "observed_at": "2026-08-12T08:52:55.530000Z",
+        "rate_kg_h": 524158.0836745385,
+        "uncertainty_kg_h": 64099.09151691134
+      }
+    ]
+  },
+  "source_url": "https://data.carbonmapper.org/?plume_id=tan20260923t085028c30s4001-A&details=CO2_1A1_250m_49.30777_25.18624#13.64/25.18651/49.30715",
+  "api_url": "https://api.carbonmapper.org/api/v1/catalog/plume/tan20260923t085028c30s4001-A",
+  "fetched_at": "2026-10-23T11:32:59Z",
   "license": null,
-  "license_status": "pending",
-  "provenance": "simulated"
+  "license_status": "pending"
 }

@@ -8,9 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/shell.css?v=29">
-<script src="js/shell.js?v=28" defer></script>
-<script src="js/overview.js?v=19" defer></script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/shell.css?v=30">
+<script src="js/shell.js?v=29" defer></script>
+<script src="vendor/leaflet/leaflet.js" defer></script>
+<script src="js/overview.js?v=20" defer></script>
 <style>
   /* PRD Screen 1: 65% map / 35% source details */
   .ov-grid{display:grid;grid-template-columns:65fr 35fr;gap:14px;margin-top:14px;align-items:stretch}
@@ -18,32 +20,33 @@
   .ov-grid.fill{flex:0 1 auto;height:100%;max-height:700px}
   main.fit .lede{margin-bottom:12px}
 
-  /* ----- schematic map (stretches to match the source card height) ----- */
+  /* ----- satellite map (Leaflet) ----- */
   .map-panel{overflow:hidden;display:flex;flex-direction:column}
-  .map-wrap{position:relative;flex:1;min-height:0;background:
-      radial-gradient(ellipse at 50% 45%,rgba(2,132,199,.05),transparent 70%),
-      var(--panel-2)}
-  .map-wrap svg{position:absolute;inset:0;width:100%;height:100%}
-  .map-wrap .grid line{stroke:var(--line-strong);stroke-width:1}
-  .map-wrap .grid line.major{stroke:rgba(15,23,42,.22)}
-  .map-wrap .tick{font-family:var(--mono);font-size:10px;fill:var(--ink-dim)}
-  .map-wrap .scale line{stroke:var(--ink-mute);stroke-width:1.5}
-  .map-wrap .scale text{font-family:var(--mono);font-size:10px;fill:var(--ink-mute)}
-  .map-wrap .contour{fill:var(--warn);stroke:var(--warn);stroke-width:1}
-  .map-wrap .origin{cursor:pointer}
-  .map-wrap .origin circle.core{fill:var(--panel);stroke:var(--ink);stroke-width:2}
-  .map-wrap .origin .cross{stroke:var(--ink);stroke-width:1}
-  .map-wrap .origin .ring{fill:none;stroke:var(--accent);stroke-width:2;opacity:0;transition:opacity var(--t)}
-  .map-wrap .origin.selected .ring{opacity:1;animation:pulse 2.4s ease-out infinite}
-  .map-wrap .origin .tag{font-family:var(--mono);font-size:11px;fill:var(--ink);font-weight:600}
-  .map-wrap .footprint{transition:opacity var(--t-slow);pointer-events:none}
-  .map-wrap .origin .hit{fill:transparent}
-  .map-wrap .footprint.hidden{opacity:0}
-  @keyframes pulse{0%{r:14;opacity:.9}100%{r:34;opacity:0}}
+  .map-wrap{position:relative;flex:1;min-height:0;background:var(--panel-3)}
+  .map-wrap .leaflet-container{position:absolute;inset:0;background:var(--panel-3);font-family:var(--sans)}
+  /* Muted basemap so the plume reads first (as on the Carbon Mapper portal). */
+  .map-wrap .basemap{filter:grayscale(.85) brightness(1.08) contrast(.92)}
+  .map-wrap .plume-img{transition:opacity var(--t-slow)}
+  .map-wrap .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8)}
+  .map-wrap .leaflet-bar a{color:var(--ink)}
+  .origin-pin{position:relative}
+  .origin-pin .core{position:absolute;inset:6px;border-radius:50%;background:#fff;border:2px solid var(--pink);box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+  .origin-pin .dot{position:absolute;inset:11px;border-radius:50%;background:var(--pink)}
+  .origin-pin .ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);opacity:0}
+  .origin-pin.selected .ring{opacity:1;animation:pin-pulse 2.4s ease-out infinite}
+  @keyframes pin-pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+  .origin-tag{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);background:rgba(255,255,255,.88);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;box-shadow:none}
+  .origin-tag::before{display:none}
 
-  .map-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--ink-mute);font-size:13px;padding:24px}
+  .legend{position:absolute;left:10px;bottom:24px;z-index:500;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(255,255,255,.9);font-size:10.5px;color:var(--ink-mute);line-height:1.35}
+  .legend .t{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+  .legend .bar{width:120px;height:8px;border-radius:4px;margin:5px 0 3px;background:linear-gradient(90deg,#ffffb2,#fecc5c,#fd8d3c,#f03b20,#bd0026)}
+  .legend .ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px}
+  .map-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--ink-mute);font-size:13px;padding:24px;z-index:600}
   .map-tools{display:flex;align-items:center;gap:14px;padding:9px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-mute)}
-  .map-note{margin-left:auto;flex-shrink:0;font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .map-tools label{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+  .map-tools input{accent-color:var(--accent)}
+  .map-tools .link{background:none;border:0;padding:0;cursor:pointer;color:var(--accent);font-weight:600;font-size:12.5px;white-space:nowrap}
 
   /* ----- source details ----- */
   .src-panel{display:flex;flex-direction:column;transition:border-color var(--t), box-shadow var(--t)}
@@ -80,6 +83,24 @@
   .src-actions .btn{width:100%;justify-content:center;padding:11px 16px}
   .missing{padding:22px 18px;color:var(--ink-mute);font-size:13px}
 
+  /* gas flag (non-methane observations) */
+  .gas-flag{margin:12px 18px 0;padding:6px 10px;border-radius:6px;background:var(--accent-glow);color:var(--ink-mute);font-size:11.5px;line-height:1.45}
+  .gas-flag b{color:var(--accent-strong);font-weight:600}
+  .rate .sub{font-size:11.5px;color:var(--ink-mute);margin-top:4px}
+  /* provider rate history for the source */
+  .hist{padding:10px 18px 4px;border-bottom:1px solid var(--line)}
+  .hist .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);display:flex}
+  .hist .lbl span{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500}
+  .hist svg{display:block;width:100%;margin-top:4px}
+  .hist .note{font-size:11px;color:var(--ink-dim);margin:0 0 6px}
+  .hist .ax{font-family:var(--mono);font-size:9.5px;fill:var(--ink-dim)}
+  .hist .gl{stroke:var(--line-strong);stroke-width:1}
+  .hist .ln{fill:none;stroke:var(--violet);stroke-width:1.5}
+  .hist .wk{stroke:var(--violet);stroke-opacity:.35;stroke-width:1}
+  .hist .pt{fill:var(--violet)}
+  .hist .now{stroke:var(--pink);stroke-width:1;stroke-dasharray:3 3}
+  .hist .nowt{font-family:var(--mono);font-size:9.5px;fill:var(--pink)}
+
   .boundary{font-size:11.5px;color:var(--ink-mute);display:flex;gap:8px;align-items:center;min-width:0}
   .boundary span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -93,11 +114,10 @@
 
 <main class="wide fit">
   <div class="page-head">
-    <h1>Methane observations</h1>
+    <h1 id="page-title">Methane observations</h1>
   </div>
-  <p class="lede">Review regional emissions observations and explore an illustrative equipment-level investigation.</p>
+  <p class="lede">Review regional emissions observations and explore an equipment-level investigation.</p>
 
-  <div class="disclosure" id="disclosure"></div>
 
   <div class="ov-grid fill">
     <!-- 65%: map -->
@@ -106,11 +126,13 @@
         <h2>Regional observation</h2>
       </div>
       <div class="map-wrap" id="map">
-        <div class="map-empty">Loading observation…</div>
+        <div class="map-empty" id="map-empty">Loading observation…</div>
       </div>
       <div class="map-tools">
-        <span class="boundary"><span class="badge hypothesis">Boundary</span><span>A satellite observation does not identify a specific valve or component.</span></span>
-        <span class="map-note" title="Schematic grid, no licensed basemap; footprint shape is illustrative">Schematic · illustrative footprint</span>
+        <label><input type="checkbox" id="toggle-footprint" checked> Show plume footprint</label>
+        <label title="Tanager-1 true-colour imagery from the observation pass, served by Carbon Mapper"><input type="checkbox" id="toggle-scene"> Observation-day imagery</label>
+        <button class="link" id="btn-recenter" type="button">Recenter</button>
+        <span class="boundary" style="margin-left:auto"><span class="badge hypothesis">Boundary</span><span title="A satellite observation does not identify a specific valve or component.">A satellite observation does not identify a specific valve or component.</span></span>
       </div>
     </section>
 
@@ -122,7 +144,7 @@
       </div>
       <div id="src-body"><div class="missing">Loading…</div></div>
       <div class="src-actions">
-        <button class="btn primary" id="btn-explore">Explore representative on-site investigation →</button>
+        <button class="btn primary" id="btn-explore">Explore on-site investigation →</button>
       </div>
     </section>
   </div>

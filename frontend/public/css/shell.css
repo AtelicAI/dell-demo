@@ -83,12 +83,11 @@ main.fit > .fill{flex:1;min-height:0}
 .page-head .sub{font-size:12.5px;color:var(--ink-mute);font-family:var(--mono)}
 .lede{color:var(--ink-mute);font-size:13.5px;max-width:720px;margin:0 0 20px}
 /* Incident screens (body[data-stage]) share one header block: title + incident strip, lede, stepper,
-   disclosure. Same spacing on every screen (fit or scrolling) so nothing moves on page change. */
+   Same spacing on every screen (fit or scrolling) so nothing moves on page change. */
 body[data-stage] main{padding-top:22px}
 body[data-stage] .page-head .incident-strip{margin-left:auto}
 body[data-stage] .lede{margin-bottom:10px}
 body[data-stage] #stepper{margin-bottom:10px}
-body[data-stage] .disclosure{margin:0 0 12px}
 .section-label{display:block;padding:22px 0 10px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
 
 .incident-strip{display:inline-flex;align-items:stretch;height:30px;border:1px solid var(--line-strong);border-radius:9px;background:var(--panel);overflow:hidden;font-size:12px;color:var(--ink-mute);white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.04)}
@@ -102,10 +101,7 @@ body[data-stage] .disclosure{margin:0 0 12px}
 .incident-strip .is-src.warn svg{color:var(--warn)}
 .incident-strip .is-src.ok{color:var(--good);font-weight:600;background:var(--good-glow)}
 .incident-strip .is-src.ok svg{color:var(--good)}
-.incident-strip .is-tag{display:flex;align-items:center;margin:5px 6px 5px 4px;padding:0 8px;border:1px dashed var(--ink-faint);border-radius:6px;font-size:11px;color:var(--ink-dim)}
 @media (prefers-reduced-motion:reduce){.incident-strip .is-id i{animation:none}}
-.disclosure{position:relative;font-size:11.5px;line-height:1.5;color:var(--ink-dim);padding:0 0 0 20px;margin:10px 0 0}
-.disclosure::before{content:"i";position:absolute;left:0;top:1px;width:13px;height:13px;border-radius:50%;border:1px solid var(--ink-faint);display:grid;place-items:center;font-family:var(--mono);font-size:9px;font-weight:600;font-style:normal;line-height:1;color:var(--ink-dim)}
 
 /* ----- stepper ----- */
 .stepper{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
@@ -180,7 +176,6 @@ a.step:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .topbar{view-transition-name:topbar}
 #stepper{view-transition-name:stepper}
 #incident-strip{view-transition-name:incident}
-#disclosure{view-transition-name:disclosure}
 ::view-transition-old(root){animation:vt-out 160ms cubic-bezier(.4,0,1,1) both}
 ::view-transition-new(root){animation:vt-in 340ms cubic-bezier(.2,.7,.3,1) both}
 @keyframes vt-out{to{opacity:0;transform:translateY(-6px)}}

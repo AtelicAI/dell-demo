@@ -4,7 +4,7 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 
 | File | Screen | Provenance | Status | Replace with |
 |---|---|---|---|---|
-| `carbon_mapper/verified_plume.json` | 1 Overview | provider_reported | **placeholder** | Team-verified Carbon Mapper record |
+| `carbon_mapper/verified_plume.json`, `plume.png` | 1 Overview | provider_reported | fetched (plume `tan20260923t085028c30s4001-A`, a **CO₂** plume; licence pending) | Run `python3 scripts/fetch_carbon_mapper.py [plume_id [source_name]]` (needs Pillow) |
 | `ogi/source_metadata.json` | 2 Detect | experimental_setpoint | **pending licence** (clip MOV_2566 set; file facts from `scripts/ogi_inspect.py`) | Set `status: verified` once the licence is confirmed |
 | `ogi/plume_annotations.json` | 2 Detect | manual_annotation | **placeholder** | Hand-drawn or real model output on the clip |
 | `ogi/source_clip.mp4` | 2 Detect | — | local only (gitignored) | GasVid MOV_2566 converted to H.264: `avconvert -s MOV_2566.mp4 -p PresetHighestQuality -o data/ogi/source_clip.mp4` |

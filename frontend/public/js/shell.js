@@ -1,4 +1,4 @@
-// Shared shell: left rail, top bar status pills, incident strip, disclosure, 6-stage stepper.
+// Shared shell: left rail, top bar status pills, incident strip, 6-stage stepper.
 // Everything is rendered from backend state; nothing is hard-coded.
 // A page opts in with <body data-page="overview"> and empty #rail / #topbar / #incident-strip / #stepper.
 (function () {
@@ -24,7 +24,7 @@
       role: 'Rugged edge server at the plant site. The whole system is designed to run on it, with no cloud. Dell NativeEdge rolls it out to more sites with zero-touch setup.',
       status: (s) => s.dell_edge === 'running'
         ? ['ok', 'Running on the edge server (reported by the backend).']
-        : ['off', 'Target deployment. This demo is not running on the XR7620 yet.'],
+        : ['off', 'Target deployment. Not running on the XR7620 yet.'],
     },
     nvidia: {
       title: 'NVIDIA AI stack',
@@ -38,10 +38,9 @@
       ],
       status: (s) => s.nvidia_inference === 'local_nim' ? ['ok', 'Local NIM: inference runs on the edge server.']
         : s.nvidia_inference === 'hosted_api' ? ['ok', 'Hosted API: inference runs on NVIDIA-hosted endpoints.']
-        : ['off', 'Not connected. No NVIDIA model is used in this demo yet; the Plan draft comes from a fixed template.'],
+        : ['off', 'Not connected. No NVIDIA model is in use yet; the Plan draft comes from a fixed template.'],
     },
   };
-  const DISCLOSURE = 'Composite demonstration. Satellite observations and METEC OGI footage are independent. Equipment, sensors and maintenance workflow are illustrative.';
 
   const ICONS = {
     overview: '<path d="M3 3h10v10H3z"/><path d="M5 6h6M5 9h4"/>',
@@ -86,7 +85,7 @@
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
       <div class="hw"><span class="k">Built for</span><b>Dell PowerEdge XR7620</b><b>NVIDIA NIM · NeMo</b></div>
-      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Demo operator</span></div></div>`;
+      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator</span></div></div>`;
     $('rail-tg').addEventListener('click', () => setRailMin(!document.documentElement.classList.contains('rail-min')));
     setRailMin(readRailMin(), true);
   }
@@ -185,13 +184,12 @@
       const ic = (d) => `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
       const src = String(inc.source_status || '');
       const srcKind = /unconfirmed|unresolved/i.test(src) ? 'warn' : /confirmed/i.test(src) ? 'ok' : '';
-      strip.setAttribute('aria-label', [inc.local_incident_id, inc.site, inc.camera_id, inc.source_status, inc.scenario].join(' | '));
+      strip.setAttribute('aria-label', [inc.local_incident_id, inc.site, inc.camera_id, inc.source_status].join(' | '));
       strip.innerHTML = `
         <span class="is-id"><i></i>${e(inc.local_incident_id)}</span>
         <span class="is-seg">${ic('<path d="M2 14V7l4 2V7l4 2V4h4v10z"/>')}${e(inc.site)}</span>
         <span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>
-        <span class="is-seg is-src ${srcKind}">${ic('<circle cx="8" cy="8" r="6"/><path d="M8 5v3.5M8 11h.01"/>')}${e(inc.source_status)}</span>
-        <span class="is-tag">${e(inc.scenario)}</span>`;
+        <span class="is-seg is-src ${srcKind}">${ic('<circle cx="8" cy="8" r="6"/><path d="M8 5v3.5M8 11h.01"/>')}${e(inc.source_status)}</span>`;
     }
     const stepper = $('stepper');
     if (stepper) {
@@ -229,8 +227,6 @@
   async function init() {
     renderRail(document.body.dataset.page);
     renderTopbar();
-    const disc = $('disclosure');
-    if (disc) disc.textContent = DISCLOSURE;
     try {
       const [status, incident] = await Promise.all([get('/status'), get(`/incidents/${INCIDENT_ID}`)]);
       renderStatus(status);

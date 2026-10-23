@@ -5,7 +5,7 @@ STAGES = ["detect", "locate", "quantify", "plan", "approve", "report"]
 INCIDENTS = {
     "INC-001": {
         "local_incident_id": "INC-001",
-        "site": "Representative gas-handling skid",
+        "site": "Gas-handling skid",
         "camera_id": "CAM-01",
         "source_status": "Source unconfirmed",
         "scenario": "Illustrative scenario",

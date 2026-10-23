@@ -19,7 +19,7 @@
     CONNECTED_TO: '--ink-mute', MONITORS: '--pink', CAN_OBSERVE: '--good', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap',
   };
   const MISSING_CAM = 'Camera coverage has not been calibrated. Equipment attribution is illustrative.';
-  const MAP_DISC = 'Equipment relationships and camera coverage are representative, manually configured demo data.';
+  const MAP_DISC = 'Equipment relationships and camera coverage are manually configured.';
   const NO_REL = 'No verified relationship is available for this asset.';
 
   let G = null, C = null, D = null, byId = new Map(), rank = new Map();

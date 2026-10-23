@@ -85,6 +85,15 @@ def overview_plume():
     return json.loads((DATA_DIR / "carbon_mapper" / "verified_plume.json").read_text())
 
 
+@app.get("/overview/plume/image")
+def overview_plume_image():
+    # Cached by scripts/fetch_carbon_mapper.py; the provider's own image URLs are signed and expire.
+    path = DATA_DIR / "carbon_mapper" / "plume.png"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Plume image not cached")
+    return Response(path.read_bytes(), media_type="image/png")
+
+
 def read_json(*parts):
     return json.loads((DATA_DIR.joinpath(*parts)).read_text())
 
