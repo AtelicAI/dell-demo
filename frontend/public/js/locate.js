@@ -18,7 +18,7 @@
     Sensor: '--n-tag', Camera: '--n-wt', EquipmentArea: '--ink-mute', WorkOrder: '--n-sap',
   };
   const EDGE_COLOR = {
-    CONNECTED_TO: '--ink-mute', MONITORS: '--pink', CAN_OBSERVE: '--good', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap',
+    CONNECTED_TO: '--ink-mute', MONITORS: '--ink-mute', CAN_OBSERVE: '--ink-dim', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap',
   };
   const MISSING_CAM = 'Camera coverage has not been calibrated.';
   const MAP_DISC = 'Equipment relationships and camera coverage are manually configured.';
@@ -215,7 +215,7 @@
     // Narrow columns drop the name line (it stays in the tooltip).
     const W = x1 > x0 ? kx - 12 : 132;
     const wide = W >= 96;
-    const mono = 'JetBrains Mono, monospace';
+    const mono = 'IBM Plex Mono, monospace';
     const data = [...vis].map((id) => {
       const n = byId.get(id), isSel = id === selected, r = rank.get(id), c = css(TYPE_COLOR[n.asset_type] || '--ink-dim');
       const small = n.asset_type === 'WorkOrder' || n.asset_type === 'Sensor' || n.asset_type === 'Camera';

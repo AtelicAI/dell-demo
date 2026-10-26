@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Engineer review — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/shell.css?v=40">
+<script src="js/shell.js?v=34" defer></script>
+<script src="js/review.js?v=4" defer></script>
+<style>
+  [hidden]{display:none!important}
+  .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
+  @keyframes ink{from{opacity:0;transform:scale(1.2)}}
+  .rise{animation:rise var(--t-slow) both}
+  @media (prefers-reduced-motion:reduce){.rise,.sig.just .seal{animation:none!important}}
+
+  /* PRD Screen 6, decision first: a brief of what is being approved, the points that need the
+     reviewer's judgement, the work order with its step lists folded, and the decision rail. Detail
+     stays one click away; nothing is removed. */
+  .r-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  .r-main{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .card-h{display:flex;align-items:baseline;gap:10px;padding:14px 22px 0}
+  .card-h h2{margin:0;font-size:14px;font-weight:600}
+  .card-h .meta{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+
+  /* ----- 1 · decision brief (incident evidence) ----- */
+  .brief .head{padding:12px 22px 16px}
+  .brief .eyebrow{font-size:12px;color:var(--ink-mute)}
+  .brief .eyebrow b{color:var(--ink);font-weight:600}
+  .brief h3{margin:6px 0 0;font-size:21px;font-weight:600;letter-spacing:-.015em;line-height:1.3;color:var(--ink);max-width:720px}
+  .brief h3 em{font-style:normal;font-family:var(--mono);color:var(--warn)}
+  .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}
+  .tile{padding:14px 22px 16px;border-left:1px solid var(--line);min-width:0;display:flex;flex-direction:column;gap:3px;transition:background var(--t)}
+  .tile:first-child{border-left:0}
+  a.tile:hover{background:var(--panel-2)}
+  .tile .v{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-.02em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .v.warn{color:var(--warn)}
+  .tile .v.bad{color:var(--bad)}
+  .tile .d{font-size:12px;color:var(--ink-mute)}
+  .more{border-top:1px solid var(--line)}
+  .more > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 22px;font-size:12.5px;color:var(--ink-mute)}
+  .more > summary::-webkit-details-marker{display:none}
+  .more > summary::after{content:"Show";margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--accent)}
+  .more[open] > summary::after{content:"Hide"}
+  .more > summary:hover{background:var(--panel-2)}
+  .more > summary b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+  .more .body{padding:2px 22px 14px}
+
+  /* plain reading lines: provenance and sources sit in the tooltip, not inline */
+  .plain{margin:0;padding:0;list-style:none}
+  .plain li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 8px;padding:7px 0;font-size:13px;line-height:1.5;color:var(--ink);border-top:1px solid var(--line)}
+  .plain li:first-child{border-top:0}
+  .plain .mk{width:7px;height:7px;margin-top:7px;border-radius:2px;background:var(--ink-faint)}
+  .plain li.hypothesis .mk{background:none;box-shadow:inset 0 0 0 1.5px var(--ink-dim)}
+  .plain li.gap .mk{background:none;box-shadow:inset 0 0 0 1.5px var(--warn)}
+  .plain li.flagged .mk{background:var(--bad);box-shadow:none}
+  .plain li.flagged .tx{color:var(--bad)}
+  .plain .note{grid-column:2;font-size:11.5px;color:var(--bad)}
+
+  /* ----- 2 · source uncertainty: what needs the reviewer's judgement ----- */
+  .attn .body{padding:8px 22px 14px}
+  .attn .legend{display:flex;gap:14px;padding:8px 0 0;font-size:11px;color:var(--ink-dim)}
+  .attn .legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
+  .attn .legend .f{background:var(--bad)}.attn .legend .h{box-shadow:inset 0 0 0 1.5px var(--ink-dim)}.attn .legend .g{box-shadow:inset 0 0 0 1.5px var(--warn)}
+
+  /* ----- 3 · proposed work order ----- */
+  .chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)}
+  .chip::before{content:"";width:6px;height:6px;border-radius:1px;background:currentColor}
+  .chip.sub{color:var(--accent)}.chip.ok{color:var(--good)}.chip.bad{color:var(--bad)}.chip.chg{color:var(--warn)}
+  .fields{display:grid;grid-template-columns:150px minmax(0,1fr);gap:0 18px;margin:10px 22px 10px}
+  .fields dt{padding:8px 0;font-size:12px;color:var(--ink-mute);border-top:1px solid var(--line)}
+  .fields dd{margin:0;padding:8px 0;font-size:13px;line-height:1.5;color:var(--ink);border-top:1px solid var(--line)}
+  .fields dt:first-of-type,.fields dd:first-of-type{border-top:0}
+  .fields dd.mono{font-family:var(--mono);font-weight:600}
+  .steps-acc{margin:0 22px;border:1px solid var(--line-strong);border-radius:4px;overflow:hidden}
+  .steps-acc details + details{border-top:1px solid var(--line)}
+  .steps-acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;font-weight:500}
+  .steps-acc summary::-webkit-details-marker{display:none}
+  .steps-acc summary::before{content:"▸";font-size:10px;color:var(--ink-dim);transition:transform var(--t)}
+  .steps-acc details[open] summary::before{transform:rotate(90deg)}
+  .steps-acc summary:hover{background:var(--panel-2)}
+  .steps-acc summary .n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+  .steps-acc summary .fl{font-family:var(--mono);font-size:11px;color:var(--bad)}
+  .steps-acc .plain{padding:0 14px 8px 34px}
+  .steps-acc ol.plain{counter-reset:s}
+  .steps-acc ol.plain li{grid-template-columns:22px minmax(0,1fr)}
+  .steps-acc ol.plain .mk{width:auto;height:auto;margin:1px 0 0;border-radius:0;background:none;box-shadow:none;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .steps-acc ol.plain .mk::before{counter-increment:s;content:counter(s,decimal-leading-zero)}
+  .steps-acc ol.plain li.flagged .mk{color:var(--bad)}
+  .limits-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:14px 0 0;padding:11px 22px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-mute)}
+  .limits-line .t{font-weight:600;color:var(--ink)}
+  .limits-line .sep{color:var(--ink-faint)}
+  .limits-line button{border:0;background:none;padding:0;font:inherit;color:var(--accent);cursor:pointer}
+  .limits-list{padding:0 22px 12px}
+  .empty{padding:26px 22px;font-size:13px;color:var(--ink-mute);line-height:1.6}
+  .empty a{color:var(--accent);font-weight:600}
+
+  /* ----- 4 · reviewer decision ----- */
+  .rail-d{position:sticky;top:64px}
+  .rd-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px}
+  .ask .big{font-size:16px;font-weight:600;line-height:1.35;color:var(--ink);margin:0}
+  .ask .sm{font-size:12px;color:var(--ink-mute);margin:3px 0 0;line-height:1.5}
+  .ask .sm b{color:var(--warn);font-weight:600}
+  .field label{display:block;margin-bottom:5px;font-size:12px;font-weight:500;color:var(--ink-mute)}
+  .field input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:4px;background:var(--panel);color:var(--ink)}
+  .field input:focus,.modal textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .field .hint{font-size:11px;color:var(--ink-dim);margin-top:4px}
+  .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .acts .btn{justify-content:center;padding:10px}
+  .acts .btn.go{grid-column:1/-1;padding:12px;font-size:14px;background:var(--good);border-color:var(--good);color:#fff}
+  .acts .btn.go:hover{filter:brightness(1.07)}
+  .acts .btn.no{color:var(--bad)}
+  .acts .btn.no:hover{border-color:var(--bad)}
+  .rd-note{font-size:12px;color:var(--ink-mute);line-height:1.5;margin:0}
+  .rd-note.err{color:var(--bad)}
+  .rd-body > .btn{justify-content:center}
+  .safety{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;line-height:1.45;color:var(--ink-dim);padding-top:12px;border-top:1px solid var(--line)}
+  .safety svg{flex-shrink:0;margin-top:1px}
+  .sig{border:1px solid var(--line-strong);border-radius:4px;padding:14px 16px;position:relative}
+  .sig .who{font-size:18px;font-weight:600;color:var(--ink);margin-top:4px}
+  .sig .who.blank{font-size:13px;font-weight:400;color:var(--ink-faint)}
+  .sig .when{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:2px}
+  .sig .seal{position:absolute;right:14px;top:14px}
+  .sig.just .seal{animation:ink .4s cubic-bezier(.2,.9,.3,1.3) both}
+  .sig .why{margin-top:10px;padding:8px 10px;border-radius:4px;background:var(--bad-glow);font-size:12.5px;color:var(--ink);line-height:1.5}
+  .sig.changes .why{background:var(--warn-glow)}
+  .hist > summary{list-style:none;cursor:pointer;font-size:12px;color:var(--ink-mute)}
+  .hist > summary::-webkit-details-marker{display:none}
+  .hist > summary::after{content:" ▾";color:var(--ink-dim)}
+  .hist ul{margin:6px 0 0;padding:0;list-style:none;font-size:11.5px}
+  .hist li{padding:5px 0;border-top:1px dashed var(--line);color:var(--ink-mute)}
+  .hist li b{color:var(--ink);font-weight:600}
+
+  .modal label{display:block;margin:0 0 6px;font-size:12px;color:var(--ink-mute)}
+  .modal textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line-strong);border-radius:4px;margin-bottom:16px;resize:vertical}
+  .modal .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0 0 16px;font-size:12.5px}
+  .modal .kv span:nth-child(odd){color:var(--ink-mute)}
+  .modal .kv span:nth-child(even){font-family:var(--mono);font-size:12px}
+  .modal .btn.go{background:var(--good);border-color:var(--good)}
+  .modal .btn.no{background:var(--bad);border-color:var(--bad);color:#fff}
+
+  @media (max-width:1240px){.r-grid{grid-template-columns:minmax(0,1fr) 300px}.tiles{grid-template-columns:1fr 1fr}.tile:nth-child(3){border-left:0}.tile:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+  @media (max-width:980px){.r-grid{grid-template-columns:1fr}.rail-d{position:static}.fields{grid-template-columns:1fr}}
+</style>
+</head>
+<body data-page="review" data-stage="approve">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide">
+  <div class="page-head">
+    <h1>Engineer review</h1>
+  </div>
+  <p class="lede">Confirm the evidence and proposed action. Approval does not operate equipment.</p>
+
+  <div class="stepper compact" id="stepper"></div>
+
+  <div class="r-grid">
+    <div class="r-main">
+      <!-- 1 · what is being approved, in one glance -->
+      <section class="panel brief rise" aria-label="Incident evidence">
+        <div class="card-h"><h2>Incident evidence</h2><span class="meta">INC-001</span></div>
+        <div class="head" id="brief-head"><div class="eyebrow">Loading…</div></div>
+        <div class="tiles" id="tiles"></div>
+        <details class="more" id="observed" hidden>
+          <summary>What we observed <b id="n-observed"></b></summary>
+          <div class="body"><ul class="plain" id="sec-observed"></ul></div>
+        </details>
+      </section>
+
+      <!-- 2 · the points that need the reviewer's judgement -->
+      <section class="panel attn rise" style="animation-delay:40ms" aria-label="Source uncertainty" id="attn" hidden>
+        <div class="card-h"><h2>Source uncertainty</h2><span class="meta" id="n-uncertain"></span></div>
+        <div class="body">
+          <ul class="plain" id="sec-uncertain"></ul>
+          <div class="legend"><span><i class="f"></i>Flagged on Plan</span><span><i class="h"></i>Hypothesis</span><span><i class="g"></i>Missing data</span></div>
+        </div>
+      </section>
+
+      <!-- 3 · the draft, with its step lists folded -->
+      <article class="panel rise" style="animation-delay:80ms" aria-label="Proposed work order">
+        <div class="card-h"><h2>Proposed work order</h2><span class="chip" id="wo-chip" hidden></span><span class="meta" id="doc-meta"></span></div>
+        <div id="doc-body"><div class="empty">Loading…</div></div>
+      </article>
+    </div>
+
+    <!-- 4 · reviewer decision -->
+    <aside class="panel rail-d rise" style="animation-delay:120ms" aria-label="Reviewer decision">
+      <div class="panel-head"><h2>Reviewer decision</h2><span class="meta" id="rd-meta">—</span><span class="gb-slot" data-trace="approval" data-trace-text="Trace"></span></div>
+      <div class="rd-body" id="rd-body"><p class="rd-note">Loading…</p></div>
+    </aside>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="actions">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn primary" id="modal-ok"></button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

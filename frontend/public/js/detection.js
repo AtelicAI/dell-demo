@@ -115,7 +115,8 @@
     el.className = `status ${now ? 'observed' : 'unconfirmed'}`;
     el.innerHTML = `<div class="lbl">Status</div>
       <div class="big"><span class="sig"></span>${now ? 'Plume observed' : waiting ? 'No detection' : 'Detection not confirmed'}</div>
-      <div class="by">${by}</div>`;
+      <div class="by">${by}</div>
+      ${now ? `<div class="gb">${window.AtelicShell.traceLink('camera_event')}</div>` : ''}`;
   }
 
   function applyReplay(f) {

@@ -63,10 +63,10 @@
     { page: 'quantify', label: 'Quantify', href: 'quantify.html' },
     { sec: 'Response' },
     { page: 'plan', label: 'Plan', href: 'plan.html' },
-    { page: 'review', label: 'Approve', href: null },
-    { page: 'report', label: 'Report', href: null },
+    { page: 'review', label: 'Approve', href: 'review.html' },
+    { page: 'report', label: 'Report', href: 'report.html' },
     { sec: 'Observability' },
-    { page: 'activity', label: 'Glass box', href: null },
+    { page: 'activity', label: 'Glass box', href: 'activity.html' },
   ];
 
   const $ = (id) => document.getElementById(id);
@@ -253,8 +253,20 @@
     return r.json();
   }
 
+  // "View in Glass box": opens the investigation trace focused on the step that produced a value.
+  // Pages call traceLink(step) in rendered HTML, or mark a static spot with data-trace="step".
+  const TRACE_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="3.5" cy="3.5" r="1.8"/><circle cx="3.5" cy="12.5" r="1.8"/><path d="M3.5 5.3v5.4M7.5 3.5h6M7.5 8h6M7.5 12.5h6"/></svg>';
+  function traceLink(step, text) {
+    const from = encodeURIComponent(document.body.dataset.page || '');
+    return `<a class="gb-link" href="activity.html?step=${encodeURIComponent(step)}&from=${from}" title="See how this was produced in the Glass box">${TRACE_ICON}<span>${text || 'View in Glass box'}</span></a>`;
+  }
+  function fillTraceSlots(root) {
+    (root || document).querySelectorAll('[data-trace]').forEach((el) => { el.innerHTML = traceLink(el.dataset.trace, el.dataset.traceText); });
+  }
+
   async function init() {
     renderRail(document.body.dataset.page);
+    fillTraceSlots();
     renderTopbar();
     try {
       const [status, incident] = await Promise.all([get('/status'), get(`/incidents/${INCIDENT_ID}`)]);
@@ -291,7 +303,7 @@
     try { renderIncident(await get(`/incidents/${INCIDENT_ID}`)); } catch (e) { console.error(e); }
   }
 
-  window.AtelicShell = { API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc };
+  window.AtelicShell = { API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

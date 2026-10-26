@@ -2,23 +2,23 @@
    Tokens come from theme.css — no hard-coded colours here except the rail surface (from reference). */
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;padding-left:var(--rail)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;padding-left:var(--rail);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit}
 code,.mono{font-family:var(--mono)}
 
 /* ----- left rail ----- */
 .rail{position:fixed;top:0;left:0;width:var(--rail);height:100vh;z-index:50;
-  background:#EEF2F7;border-right:1px solid var(--line);
+  background:var(--panel);border-right:1px solid var(--line-strong);
   display:flex;flex-direction:column;padding:20px 14px;gap:28px;color:var(--ink)}
 .rail .brand{display:flex;align-items:center;gap:10px;padding:4px 6px 10px;border-bottom:1px solid var(--line)}
 .rail .brand .mk{height:26px;width:auto;flex-shrink:0}
-.rail .brand .tg{color:var(--ink-dim);font-size:10.5px;margin-left:auto;text-transform:uppercase;letter-spacing:.1em;font-family:var(--mono)}
+.rail .brand .tg{color:var(--ink-dim);font-size:10.5px;margin-left:auto;text-transform:uppercase;letter-spacing:.1em;font-family:var(--mono);font-weight:400;background:none;border:0;padding:0;cursor:default}
 .rail .nv{display:flex;flex-direction:column;gap:1px}
 .rail .nv .sec{padding:14px 10px 6px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
 .rail .nv a{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);color:var(--ink-mute);font-weight:500;font-size:13px;transition:color var(--t), background var(--t)}
 .rail .nv a:hover{color:var(--ink);background:rgba(15,23,42,.03)}
-.rail .nv a[aria-current=page]{color:var(--ink);background:rgba(2,132,199,.08)}
+.rail .nv a[aria-current=page]{color:var(--ink);font-weight:600;background:var(--accent-glow);box-shadow:inset 2px 0 0 var(--accent)}
 .rail .nv a[aria-current=page] .nd{background:var(--accent)}
 .rail .nv a[aria-disabled=true]{color:var(--ink-faint);cursor:default}
 .rail .nv a[aria-disabled=true]:hover{background:transparent}
@@ -30,14 +30,14 @@ code,.mono{font-family:var(--mono)}
 .rail .hw b{font-weight:500}
 .rail .hw + .ft{margin-top:0}
 .rail .ft{margin-top:auto;padding:12px 6px 2px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;color:var(--ink-dim);font-size:11px}
-.rail .ft .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--violet));display:grid;place-items:center;color:#fff;font-size:10.5px;font-weight:700;flex-shrink:0}
+.rail .ft .av{width:28px;height:28px;border-radius:50%;background:var(--accent);display:grid;place-items:center;color:#fff;font-size:10.5px;font-weight:700;flex-shrink:0}
 .rail .ft b{color:var(--ink);font-weight:600;font-size:12px;display:block}
 
 /* ----- collapsible rail (html.rail-min = icons only, name on hover) ----- */
 html.rail-min{--rail:64px}
 .rail-anim body,.rail-anim .rail{transition:padding-left var(--t-slow), width var(--t-slow), padding var(--t-slow)}
 .rail-tg{position:absolute;top:26px;right:-11px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-mute);display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 2px 6px rgba(15,23,42,.08);z-index:2;transition:color var(--t), border-color var(--t), transform var(--t-slow)}
-.rail-tg:hover{color:var(--accent);border-color:var(--accent)}
+.rail-tg:hover{color:var(--ink);border-color:var(--ink-mute)}
 .rail-min .rail-tg{transform:rotate(180deg)}
 .rail-min .rail{padding:20px 10px}
 .rail-min .rail .brand{padding:4px 0 10px;justify-content:center}
@@ -79,7 +79,7 @@ main.wide{max-width:1360px}
 main.fit{height:calc(100dvh - 49px);min-height:560px;display:flex;flex-direction:column;padding-top:22px;padding-bottom:10px}
 main.fit > .fill{flex:1;min-height:0}
 .page-head{display:flex;align-items:baseline;gap:14px;margin-bottom:4px}
-.page-head h1{font-size:24px;margin:0;letter-spacing:-.01em}
+.page-head h1{font-size:22px;margin:0;font-weight:600;letter-spacing:-.012em}
 .page-head .sub{font-size:12.5px;color:var(--ink-mute);font-family:var(--mono)}
 .lede{color:var(--ink-mute);font-size:13.5px;max-width:720px;margin:0 0 20px}
 /* Incident screens (body[data-stage]) share one header block: title + incident strip, lede, stepper,
@@ -103,35 +103,33 @@ body[data-stage] #stepper{margin-bottom:10px}
 .incident-strip .is-src.ok svg{color:var(--good)}
 @media (prefers-reduced-motion:reduce){.incident-strip .is-id i{animation:none}}
 
-/* ----- stepper ----- */
-.stepper{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.step{padding:12px 14px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel)}
-.step .n{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.1em}
-.step .t{font-size:13.5px;font-weight:600;margin-top:2px}
-.step .s{margin-top:6px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);display:flex;align-items:center;gap:6px}
-.step .s .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
-.step.st-ready_for_review{border-color:var(--accent);background:linear-gradient(180deg,rgba(2,132,199,.04),transparent)}
-.step.st-ready_for_review .s{color:var(--accent)}
-.step.st-ready_for_review .s .dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-.step.st-in_progress{border-color:var(--good);background:linear-gradient(180deg,rgba(5,150,105,.05),transparent)}
+/* ----- stepper: one segmented bar read left to right. Arrow notches mark the flow, the numbered
+   marker carries the stage status, and the screen you are on is tinted with a blue underline. ----- */
+.stepper{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);overflow:hidden}
+.step{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:9px;min-width:0;padding:6px 12px 6px 22px;background:var(--panel);transition:background var(--t)}
+.step:first-child{padding-left:12px}
+.step:not(:last-child)::after{content:"";position:absolute;z-index:1;top:50%;right:-7px;width:13px;height:13px;margin-top:-7px;background:inherit;border-top:1px solid var(--line-strong);border-right:1px solid var(--line-strong);transform:rotate(45deg)}
+.step .n{grid-row:1/3;width:20px;height:20px;display:grid;place-items:center;border-radius:3px;border:1.5px solid var(--ink-faint);font-family:var(--mono);font-size:9.5px;font-weight:600;line-height:1;color:var(--ink-dim);transition:all var(--t)}
+.step .t{font-size:12.5px;font-weight:600;line-height:1.3;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step .s{font-family:var(--mono);font-size:9px;font-weight:500;line-height:1.35;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step .s .dot{display:none}
+.step:not(.st-not_started) .t{color:var(--ink)}
+.step.st-in_progress .n{border-color:var(--good);color:var(--good)}
 .step.st-in_progress .s{color:var(--good)}
-.step.st-in_progress .s .dot{background:var(--good);box-shadow:0 0 0 3px var(--good-glow)}
+.step.st-ready_for_review .n{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.step.st-ready_for_review .s{color:var(--accent)}
+.step.st-completed .n{border-color:var(--good);background:var(--good);color:#fff;font-size:0}
+.step.st-completed .n::before{content:"✓";font-size:11px;font-weight:700}
 .step.st-completed .s{color:var(--good)}
-.step.st-completed .s .dot{background:var(--good)}
+.step.st-blocked .n{border-color:var(--bad);background:var(--bad);color:#fff;font-size:0}
+.step.st-blocked .n::before{content:"!";font-size:11px;font-weight:700}
 .step.st-blocked .s{color:var(--bad)}
-.step.st-blocked .s .dot{background:var(--bad)}
-.step.current{border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
-a.step{transition:border-color var(--t), box-shadow var(--t)}
-a.step:hover{border-color:var(--accent);box-shadow:0 2px 8px var(--accent-glow)}
+.step.current{background:color-mix(in srgb,var(--accent) 7%,var(--panel))}
+.step.current::before{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent)}
+.step.current .t{color:var(--ink)}
+a.step:hover{background:var(--panel-2)}
 a.step:hover .t{color:var(--accent)}
-a.step:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.step.current .t{color:var(--accent)}
-.stepper.compact{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
-.stepper.compact .step{padding:5px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
-.stepper.compact .step .n{display:none}
-.stepper.compact .step .t{margin:0;font-size:12.5px}
-.stepper.compact .step .s{margin:0;font-size:8.5px;letter-spacing:.04em;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stepper.compact .step .s .dot{flex-shrink:0}
+a.step:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .step-empty{grid-column:1/-1;padding:14px;border:1px dashed var(--line-strong);border-radius:var(--radius);color:var(--ink-mute);font-size:12.5px}
 
 /* ----- panels ----- */
@@ -191,27 +189,19 @@ a.step:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .badge.observed::before,.badge.approved::before{background:var(--good)}
 .badge.pending,.badge.hypothesis{color:var(--ink-dim)}
 .badge.pending::before,.badge.hypothesis::before{background:none;box-shadow:inset 0 0 0 1px currentColor}
-.status-pill .dot,.step .s .dot{border-radius:1px}
+.status-pill .dot{border-radius:1px}
 
-/* Stepper: one segmented bar; status shows as a 2px rule on top, the current screen as a rule below. */
-.stepper,.stepper.compact{gap:0;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);overflow:hidden}
-.stepper .step,.stepper .step.current,.stepper a.step:hover{position:relative;border:0;border-left:1px solid var(--line);border-radius:0;background:var(--panel);box-shadow:none}
-.stepper .step:first-child{border-left:0}
-.stepper .step::before,.stepper .step::after{content:"";position:absolute;left:0;right:0;height:2px;background:transparent}
-.stepper .step::before{top:0}
-.stepper .step::after{bottom:0}
-.stepper .step.st-ready_for_review::before{background:var(--accent)}
-.stepper .step.st-in_progress::before,.stepper .step.st-completed::before{background:var(--good)}
-.stepper .step.st-blocked::before{background:var(--bad)}
-.stepper .step.current{background:var(--panel-2)}
-.stepper .step.current::after{background:var(--ink)}
-.stepper .step.current .t{color:var(--ink)}
-.stepper .step .s .dot{box-shadow:none}
-.stepper a.step:hover{background:var(--panel-2)}
-.stepper a.step:hover .t{color:var(--ink)}
 
 /* No active incident (before CAM-01's alert): hide the screen's content, keep its header and stepper. */
 html.no-incident main > :not(.page-head):not(.lede):not(#stepper):not(#no-incident){display:none!important}
 .no-incident-card{margin-top:4px;padding:28px 28px 26px;max-width:560px}
 .no-incident-card .t{font-size:15px;font-weight:600}
 .no-incident-card p{margin:6px 0 16px;color:var(--ink-mute);font-size:13px}
+
+/* ----- "View in Glass box" link (shell.js traceLink / data-trace) ----- */
+.gb-link{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--accent);white-space:nowrap;text-decoration:none;transition:color var(--t)}
+.gb-link svg{flex-shrink:0;opacity:.85}
+.gb-link:hover{color:var(--accent-strong);text-decoration:underline;text-underline-offset:2px}
+.gb-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.gb-slot{display:inline-flex;align-items:center}
+@media print{.gb-link{display:none!important}}

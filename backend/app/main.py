@@ -2,7 +2,9 @@ import csv
 import json
 import math
 import os
+import platform
 import statistics
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,6 +14,7 @@ from fastapi.responses import Response
 
 from app.plan import GENERATOR, build_draft, version_hash
 from app.plume import ppm_per_kg_h
+from app.report import build_report, to_markdown
 from app.state import INCIDENTS
 
 # Docker mounts ./data at /data; locally fall back to the repo's data/ folder.
@@ -56,9 +59,21 @@ def get_incident(incident_id: str):
     stages[1]["status"] = locate_status()
     # A stored estimate is a model output awaiting engineer review; never "completed" on its own.
     stages[2]["status"] = "ready_for_review" if incident.get("quantification") else "not_started"
-    # Draft exists -> in progress; submitted -> awaiting engineer review. Only Approve can go further.
+    # Draft exists -> in progress; submitted -> awaiting engineer review; approved by a named
+    # reviewer -> completed. Approve is blocked after a rejection or change request until resubmitted.
     wo = incident.get("work_order")
-    stages[3]["status"] = ("ready_for_review" if wo["submitted"] else "in_progress") if wo else "not_started"
+    rv = latest_review(wo)
+    approved = bool(rv and rv["decision"] == "approve")
+    if wo:
+        stages[3]["status"] = "completed" if approved else "ready_for_review" if wo["submitted"] else "in_progress"
+        stages[4]["status"] = ("completed" if approved else "ready_for_review" if wo["submitted"]
+                               else "blocked" if wo["reviews"] else "not_started")
+    # Report: a draft report exists once anything has run; completed only when a final (approved)
+    # report with the current content has been exported.
+    if incident.get("quantification") or wo:
+        filed = approved and any(x["status"] == "final" and x["hash"] == make_report(incident)["report_hash"]
+                                 for x in incident.get("report_exports", []))
+        stages[5]["status"] = "completed" if filed else "in_progress"
     return {**incident, "stages": stages}
 
 
@@ -96,6 +111,7 @@ def post_trigger(incident_id: str):
     if not incident["triggered"]:
         incident["triggered"] = True
         incident["triggered_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        audit(incident, "alert_triggered", "Presenter (Trigger event control)", "CAM-01 alert raised; workflow opened")
     return get_incident(incident_id)
 
 
@@ -104,8 +120,8 @@ def post_reset(incident_id: str):
     # Back to normal operations for the next run: drop the alert and everything derived from it.
     incident = incident_or_404(incident_id)
     incident.update(triggered=False, triggered_at=None)
-    incident.pop("quantification", None)
-    incident.pop("work_order", None)
+    for k in ("quantification", "work_order", "audit", "spans", "report_exports"):
+        incident.pop(k, None)
     return get_incident(incident_id)
 
 
@@ -446,7 +462,16 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
         raise HTTPException(status_code=400, detail="Unknown method")
     if method != GAUSSIAN or m["missing"]:
         raise HTTPException(status_code=409, detail={"failure": FAILURE, "missing": m["missing"]})
+    t0, at = time.perf_counter(), now_utc()
     incident["quantification"] = run_gaussian()
+    q = incident["quantification"]
+    add_span(incident, "emission_estimate", at, elapsed_ms(t0), component="Emissions (Atelic backend)",
+             tool="run_gaussian: Gaussian plume inversion", model=None, model_version=q["model_version"],
+             evidence=[{"label": "Sensor and wind traces", "path": "scenario/sensors.csv, scenario/weather.csv", "screen": "quantify.html"},
+                       {"label": "Draft skid geometry", "path": "scenario/geometry.json", "screen": "quantify.html"}],
+             result=f"{q['rate_kg_ch4_h']} kg CH₄/h, P10–P90 {q['interval']['low']}–{q['interval']['high']} "
+                    f"({q['qc']['samples_used']} of {q['qc']['samples_in_window']} samples)")
+    audit(incident, "quantification_run", OPERATOR, f"{q['model_version']}: {q['rate_kg_ch4_h']} kg CH₄/h (model estimated)")
     return {"result": incident["quantification"], "methods": methods(), "release_check": release_check()}
 
 
@@ -460,6 +485,27 @@ OPERATOR = "Operator (not signed in)"
 
 def now_utc():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def audit(incident, event, actor, detail, version=None, hash_=None):
+    # Append-only: entries are never edited or removed (in memory until persistence is added).
+    log = incident.setdefault("audit", [])
+    log.append({"seq": len(log) + 1, "at": now_utc(), "event": event, "actor": actor, "detail": detail,
+                "version": version, "hash": hash_})
+
+
+def latest_review(wo):
+    """The reviewer decision on the latest draft version, or None."""
+    if not wo or not wo["reviews"]:
+        return None
+    rv = wo["reviews"][-1]
+    return rv if rv["version"] == wo["versions"][-1]["version"] else None
+
+
+def check_unlocked(wo):
+    rv = latest_review(wo)
+    if rv and rv["decision"] == "approve":
+        raise HTTPException(status_code=409, detail=f"Approved by {rv['reviewer']}; the draft is locked.")
 
 
 def make_draft(incident):
@@ -504,13 +550,15 @@ def work_order_view(incident):
     view = {"generator": GENERATOR, "can_draft": not missing, "missing": missing, "inputs": draft_inputs(incident),
             "nvidia_inference": status()["nvidia_inference"]}
     if not wo:
-        return {**view, "draft": None, "versions": [], "flags": {}, "submitted": None, "stale": False}
+        return {**view, "draft": None, "versions": [], "flags": {}, "submitted": None, "stale": False,
+                "review": None, "reviews": []}
     latest = wo["versions"][-1]
     stale = latest["draft"]["basis"]["quantification_run_at"] != (q.get("run_at_utc") if q else None)
+    rv = latest_review(wo)
     return {**view, "draft": {**latest["draft"], "fields": latest["fields"], "version": latest["version"],
-                              "hash": latest["hash"], "status": "Draft"},
+                              "hash": latest["hash"], "status": "Approved" if rv and rv["decision"] == "approve" else "Draft"},
             "versions": [{k: v[k] for k in ("version", "hash", "created_at", "author", "changed")} for v in wo["versions"]],
-            "flags": wo["flags"], "submitted": wo["submitted"], "stale": stale}
+            "flags": wo["flags"], "submitted": wo["submitted"], "stale": stale, "review": rv, "reviews": wo["reviews"]}
 
 
 def incident_or_404(incident_id):
@@ -521,11 +569,14 @@ def incident_or_404(incident_id):
 
 
 def add_version(incident, draft, fields, author, changed):
-    wo = incident.setdefault("work_order", {"versions": [], "flags": {}, "submitted": None})
-    wo["versions"].append({"version": len(wo["versions"]) + 1, "draft": draft, "fields": fields, "author": author,
-                           "changed": changed, "created_at": now_utc(), "hash": version_hash(fields, draft["sections"])})
+    wo = incident.setdefault("work_order", {"versions": [], "flags": {}, "submitted": None, "reviews": []})
+    check_unlocked(wo)
+    v = {"version": len(wo["versions"]) + 1, "draft": draft, "fields": fields, "author": author,
+         "changed": changed, "created_at": now_utc(), "hash": version_hash(fields, draft["sections"])}
+    wo["versions"].append(v)
     # A new version replaces what the reviewer would see, so any earlier submission no longer applies.
     wo["submitted"] = None
+    audit(incident, "draft_version", author, f"v{v['version']}: {', '.join(changed)}", v["version"], v["hash"])
 
 
 @app.get("/incidents/{incident_id}/work-order")
@@ -537,9 +588,26 @@ def get_work_order(incident_id: str):
 def post_work_order_draft(incident_id: str):
     incident = incident_or_404(incident_id)
     require_triggered(incident)
+    t0, at = time.perf_counter(), now_utc()
     draft, missing = make_draft(incident)
+    ms = elapsed_ms(t0)
+    tool = f"build_draft: fixed rule template {GENERATOR['version']}"
     if missing:
+        add_span(incident, "work_order", at, ms, tool=tool, model=None, model_version=GENERATOR["version"],
+                 result=f"Not drafted. Missing: {'; '.join(missing)}", status="blocked")
         raise HTTPException(status_code=409, detail={"missing": missing})
+    procs = [e for e in draft["evidence"] if e["kind"] == "procedure"]
+    add_span(incident, "procedure_passages", at, None,
+             tool="parse_doc + asset-id keyword match (no NeMo Retriever, no embeddings)", model=None, model_version=None,
+             evidence=[{"label": g, "path": next(e["uri"].split("#")[0] for e in procs if e["group"] == g), "screen": "plan.html"}
+                       for g in dict.fromkeys(e["group"] for e in procs)],
+             result=f"{len(procs)} passages cited from {len({e['group'] for e in procs})} documents",
+             note="Runs inside the work order draft call; not timed separately.")
+    add_span(incident, "work_order", at, ms, tool=tool, model=None, model_version=GENERATOR["version"],
+             evidence=[{"label": "Source candidates", "path": "skid/candidates.json", "screen": "locate.html"},
+                       {"label": "Emission estimate", "path": "POST /incidents/{id}/quantify", "screen": "quantify.html"},
+                       {"label": "Maintenance history", "path": "maintenance/history.json", "screen": None}],
+             result=f"{sum(len(v) for v in draft['sections'].values())} claims, {len(draft['evidence'])} cited sources")
     fields = draft.pop("fields")
     old = incident.get("work_order")
     add_version(incident, draft, fields, f"{GENERATOR['id']} {GENERATOR['version']}", ["Generated"] if not old else ["Regenerated"])
@@ -574,14 +642,17 @@ def post_work_order_flag(incident_id: str, body: dict = Body(...)):
     wo = incident.get("work_order")
     if not wo:
         raise HTTPException(status_code=409, detail="No draft")
+    check_unlocked(wo)
     cid = body.get("claim_id")
     ids = {c["id"] for cs in wo["versions"][-1]["draft"]["sections"].values() for c in cs}
     if cid not in ids:
         raise HTTPException(status_code=400, detail="Unknown claim")
+    latest = wo["versions"][-1]
     if body.get("flagged", True):
         wo["flags"][cid] = {"note": (body.get("note") or "").strip() or None, "by": OPERATOR, "at": now_utc()}
-    else:
-        wo["flags"].pop(cid, None)
+        audit(incident, "claim_flagged", OPERATOR, f"{cid} flagged as unsupported", latest["version"], latest["hash"])
+    elif wo["flags"].pop(cid, None):
+        audit(incident, "claim_unflagged", OPERATOR, f"{cid} flag cleared", latest["version"], latest["hash"])
     wo["submitted"] = None
     return work_order_view(incident)
 
@@ -597,7 +668,178 @@ def post_work_order_submit(incident_id: str, body: dict = Body(...)):
         raise HTTPException(status_code=409, detail=f"Not the latest draft (now v{latest['version']}). Reload.")
     if not latest["fields"]["priority"]:
         raise HTTPException(status_code=409, detail="Set a priority before submitting")
+    check_unlocked(wo)
+    rv = latest_review(wo)
+    if rv:  # returned by the reviewer: the same text cannot go back unchanged
+        raise HTTPException(status_code=409, detail=f"v{latest['version']} was returned by {rv['reviewer']}; "
+                                                    "edit or regenerate it before resubmitting.")
     # Submission only queues the draft for engineer review. It approves nothing and operates nothing.
     wo["submitted"] = {"version": latest["version"], "hash": latest["hash"], "at": now_utc(), "by": OPERATOR,
                        "open_flags": sorted(wo["flags"])}
+    audit(incident, "submitted_for_review", OPERATOR, f"v{latest['version']} submitted, {len(wo['flags'])} flagged claims",
+          latest["version"], latest["hash"])
     return work_order_view(incident)
+
+
+# ----- Screen 6: Approve -----
+# A named engineer decides on the submitted version. Approval records a decision only; no endpoint
+# here or anywhere else in this backend can operate plant equipment.
+
+DECISIONS = {"approve": "Approved", "request_changes": "Changes requested", "reject": "Rejected"}
+
+
+@app.post("/incidents/{incident_id}/review")
+def post_review(incident_id: str, body: dict = Body(...)):
+    incident = incident_or_404(incident_id)
+    wo = incident.get("work_order")
+    decision = body.get("decision")
+    reviewer = (body.get("reviewer") or "").strip()[:80]
+    reason = (body.get("reason") or "").strip() or None
+    if decision not in DECISIONS:
+        raise HTTPException(status_code=400, detail="Unknown decision")
+    if not reviewer:
+        raise HTTPException(status_code=400, detail="Enter the reviewer's name")
+    if decision != "approve" and not reason:
+        raise HTTPException(status_code=400, detail="A reason is required")
+    rv = latest_review(wo)
+    if rv:  # duplicate click or a second tab
+        raise HTTPException(status_code=409, detail=f"Already decided: {DECISIONS[rv['decision']]} by {rv['reviewer']} at {rv['at']}.")
+    sub = wo and wo["submitted"]
+    if not sub:
+        raise HTTPException(status_code=409, detail="No draft is waiting for review")
+    if body.get("version") != sub["version"] or body.get("hash") != sub["hash"]:
+        raise HTTPException(status_code=409, detail=f"The submitted draft changed (now v{sub['version']}). Reload.")
+    q = incident.get("quantification")
+    if decision == "approve" and wo["versions"][-1]["draft"]["basis"]["quantification_run_at"] != (q.get("run_at_utc") if q else None):
+        raise HTTPException(status_code=409, detail="The emission estimate changed after this draft was made. Request changes instead.")
+    rv = {"decision": decision, "version": sub["version"], "hash": sub["hash"], "reviewer": reviewer, "reason": reason,
+          "at": now_utc(), "open_flags": sub["open_flags"]}
+    wo["reviews"].append(rv)
+    wo["submitted"] = None
+    audit(incident, f"review_{decision}", reviewer, DECISIONS[decision] + (f": {reason}" if reason else ""),
+          sub["version"], sub["hash"])
+    return work_order_view(incident)
+
+
+@app.get("/incidents/{incident_id}/audit")
+def get_audit(incident_id: str):
+    return {"events": incident_or_404(incident_id).get("audit", [])}
+
+
+# ----- Screen 7: Report -----
+# One snapshot (app/report.py) feeds the page and every export, so an export matches the UI.
+
+def make_report(incident):
+    src = {"ogi_meta": read_json("ogi", "source_metadata.json"), "ogi_ann": read_json("ogi", "plume_annotations.json"),
+           "candidates": read_json("skid", "candidates.json"), "site": read_json("scenario", "site.json"),
+           "plume": read_json("carbon_mapper", "verified_plume.json"),
+           "review": latest_review(incident.get("work_order")), "generator": GENERATOR, "status": status()}
+    return build_report(incident, src, now_utc())
+
+
+@app.get("/incidents/{incident_id}/report")
+def get_report(incident_id: str):
+    incident = incident_or_404(incident_id)
+    return {**make_report(incident), "exports": incident.get("report_exports", [])}
+
+
+@app.post("/incidents/{incident_id}/report/export")
+def post_report_export(incident_id: str, body: dict = Body(...)):
+    incident = incident_or_404(incident_id)
+    fmt = body.get("format")
+    if fmt not in ("json", "md", "pdf"):
+        raise HTTPException(status_code=400, detail="Unknown format")
+    report = make_report(incident)
+    # PDF is the browser's print of the same page; the backend only records that it was exported.
+    incident.setdefault("report_exports", []).append({"format": fmt, "hash": report["report_hash"],
+                                                      "status": report["status"], "at": report["generated_at"]})
+    audit(incident, "report_exported", OPERATOR, f"{report['status'].title()} report exported as {fmt.upper()}, hash {report['report_hash']}")
+    name = f"{incident_id}_report_{report['report_hash']}"
+    if fmt == "json":
+        return Response(json.dumps(report, indent=2, ensure_ascii=False), media_type="application/json",
+                        headers={"Content-Disposition": f'attachment; filename="{name}.json"'})
+    if fmt == "md":
+        return Response(to_markdown(report), media_type="text/markdown; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{name}.md"'})
+    return {"recorded": True, "hash": report["report_hash"]}
+
+
+# ----- Screen 8: Glass box -----
+# Spans are recorded only by code that actually ran (quantify, draft). Steps with no agent, model or
+# service behind them are listed with the reason they did not run. Nothing here is decorative.
+
+NO_GUARDRAIL = "Not evaluated: NeMo Guardrails not connected"
+STEPS = [("camera_event", "Camera event received"), ("equipment_mapping", "Equipment mapping queried"),
+         ("graph", "Graph relationships retrieved"), ("procedure_passages", "Procedure passages retrieved"),
+         ("emission_estimate", "Emission estimate calculated"), ("work_order", "Work order drafted"),
+         ("approval", "Human approval required")]
+
+
+def elapsed_ms(t0):
+    return round((time.perf_counter() - t0) * 1000, 1)
+
+
+def execution_location():
+    if status()["dell_edge"] == "running":
+        return "Dell PowerEdge XR7620 (reported by the backend)"
+    return f"Local backend process ({platform.system()}), not the Dell edge server"
+
+
+def add_span(incident, step, started_at, duration_ms, tool, model, model_version, evidence=(), result="",
+             component="Atelic backend", note=None, status="ok"):
+    spans = incident.setdefault("spans", [])
+    spans.append({"id": f"S{len(spans) + 1}", "step": step, "started_at": started_at, "duration_ms": duration_ms,
+                  "component": component, "tool": tool, "model": model, "model_version": model_version,
+                  "provider": "Atelic (local code)", "location": execution_location(), "evidence": list(evidence),
+                  "result": result, "guardrail": NO_GUARDRAIL, "note": note, "status": status})
+
+
+@app.get("/incidents/{incident_id}/agent-runs")
+def get_agent_runs(incident_id: str):
+    incident = incident_or_404(incident_id)
+    spans = incident.get("spans", [])
+    cands = read_json("skid", "candidates.json")
+    ann = read_json("ogi", "plume_annotations.json")
+    not_run = {
+        "camera_event": "No camera event reached the backend in this run. The OGI clip is a replay"
+                        + ("; its plume region was drawn by hand (ogi/plume_annotations.json)." if ann.get("ranges") or ann.get("frames") else "."),
+        "equipment_mapping": "No agent queried the camera-to-equipment mapping. The source candidates "
+                             "come from a manual ranking file (skid/candidates.json).",
+        "graph": "No agent queried the knowledge graph. Neo4j is not connected; the Locate screen reads the site graph from JSON files.",
+        "procedure_passages": "Not run yet. Passages are retrieved when a work order is drafted on Plan.",
+        "emission_estimate": "Not run yet. Starts with Run estimate on Quantify.",
+        "work_order": "Not run yet. Starts with Draft work order on Plan.",
+    }
+    wo = incident.get("work_order")
+    rv = latest_review(wo)
+    human = [e for e in incident.get("audit", []) if e["event"] == "submitted_for_review" or e["event"].startswith("review_")]
+    approval = ("approved" if rv and rv["decision"] == "approve" else "returned" if rv
+                else "waiting" if wo and wo["submitted"] else "not_reached")
+    steps = []
+    for key, label in STEPS:
+        mine = [s for s in spans if s["step"] == key]
+        if key == "camera_event" and incident.get("triggered"):
+            steps.append({"id": key, "label": label, "status": "manual", "spans": [], "at": incident["triggered_at"],
+                          "reason": f"Alert raised at {incident['triggered_at']} by the presenter's Trigger event control on "
+                                    "the Camera screen (POST /trigger). No camera system or vision model sent it."})
+            continue
+        if key == "approval":
+            steps.append({"id": key, "label": label, "status": approval, "spans": [], "human": human,
+                          "reason": {"not_reached": "No draft has been submitted for review yet.",
+                                     "waiting": "Waiting for a named engineer on the Approve screen."}.get(approval),
+                          "guardrail": "Backend rule: a work order is approved only by a named reviewer; no auto-approval."})
+        else:
+            steps.append({"id": key, "label": label, "status": "ran" if mine else "not_run", "spans": mine,
+                          "reason": None if mine else not_run[key]})
+    st = status()
+    return {
+        "steps": steps,
+        "span_count": len(spans),
+        "hardware": {
+            "dell_edge": st["dell_edge"], "location": execution_location(),
+            "nvidia_inference": st["nvidia_inference"],
+            "gpu": None,  # no GPU metrics are collected; never shown as a number
+            "orchestrator": None, "retriever": None, "guardrails": None,
+        },
+        "safety": "No physical control commands are enabled.",
+    }

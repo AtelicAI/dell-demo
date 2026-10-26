@@ -75,7 +75,8 @@
       const a = d.fields.asset;
       const big = a ? esc(d.assessment).replace(esc(a), `<em>${esc(a)}</em>`) : esc(d.assessment);
       $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">${big}</p>
-        <p class="sub">Assembled by <b>${esc(W.generator.id)} ${esc(W.generator.version)}</b> from ${d.evidence.length} sources. No language model was used.</p>`;
+        <p class="sub">Assembled by <b>${esc(W.generator.id)} ${esc(W.generator.version)}</b> from ${d.evidence.length} sources. No language model was used.</p>
+        <div class="gb-row">${window.AtelicShell.traceLink('work_order', 'See how this draft was made')}</div>`;
     } else {
       $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">No response drafted yet</p>
         <p class="sub">${esc(W.generator.note)}${W.nvidia_inference === 'not_connected' ? ' NVIDIA inference not connected in this run.' : ''}</p>
@@ -93,12 +94,13 @@
         <span class="ft">${badge(f.provenance)}${f.screen ? `<span class="go">${SCREEN[f.screen]} →</span>` : ''}</span>
       </${tag}>`;
     }).join('');
-    $('brief-cols').hidden = !d;
+    $('brief-more').hidden = !d;
     if (d) {
       ['observed', 'uncertain'].forEach((s) => {
         const cs = d.sections[s] || [];
         $(`sec-${s}`).innerHTML = cs.map((c) => line(c, null)).join('');
         $(`n-${s}`).textContent = cs.length;
+        $(`sum-${s}`).textContent = cs.length;
       });
     }
   }
@@ -144,9 +146,12 @@
         <div><span>C · Safety considerations</span><span>Permits and gas tests</span></div></div>`;
       return;
     }
-    const f = d.fields, sub = W.submitted;
-    $('stamp').textContent = sub ? 'Submitted for review' : 'Status: Draft';
-    $('stamp').className = `stamp${sub ? ' sub' : ''}`;
+    const f = d.fields, sub = W.submitted, rv = W.review, approved = !!(rv && rv.decision === 'approve');
+    // An approved draft is locked by the backend; a returned one shows the reviewer's reason.
+    document.body.classList.toggle('locked', approved);
+    $('stamp').textContent = approved ? 'Approved' : sub ? 'Submitted for review' : 'Status: Draft';
+    $('stamp').className = `stamp${approved ? ' ok' : sub ? ' sub' : ''}`;
+    $('tools').hidden = approved;
     const latest = W.versions[W.versions.length - 1];
     $('doc-meta').innerHTML = `<span><b>v${d.version}</b></span><span>${esc(d.hash)}</span><span>${esc(latest.author)}</span><span>${hhmmss(latest.created_at)}</span>`;
     $('btn-edit').textContent = editing ? 'Save as new version' : 'Edit fields';
@@ -155,12 +160,13 @@
     $('btn-cancel').hidden = !editing;
     $('btn-regen').hidden = editing;
     body.innerHTML = `
-      ${W.stale ? '<div class="banner">The emission estimate changed after this draft was made.<button class="btn sm" data-regen>Regenerate draft</button></div>' : ''}
+      ${rv && !approved ? `<div class="banner returned"><span><b>${rv.decision === 'reject' ? 'Rejected' : 'Changes requested'}</b> by ${esc(rv.reviewer)}: ${esc(rv.reason)}</span></div>` : ''}
+      ${W.stale && !approved ? '<div class="banner">The emission estimate changed after this draft was made.<button class="btn sm" data-regen>Regenerate draft</button></div>' : ''}
       <div class="doc-msg" id="doc-msg" role="status" aria-live="polite" hidden></div>
       <div class="wo">
         <div class="box"><span class="lbl">Asset</span><div class="val mono">${esc(f.asset || '—')}</div></div>
         ${priorityBox(f.priority)}
-        <div class="box"><span class="lbl">Status</span><div class="val mono">Draft</div></div>
+        <div class="box"><span class="lbl">Status</span><div class="val mono">${esc(d.status)}</div></div>
         ${textBox('problem', 'Problem', f.problem, 2)}
         ${textBox('proposed_inspection', 'Proposed inspection', f.proposed_inspection, 2)}
         ${textBox('required_permits', 'Required permits', f.required_permits, 3)}
@@ -179,7 +185,8 @@
         <summary>Agent trace<span class="meta">No agent run</span></summary>
         <div class="fold-body">No agent or model call was made for this draft. It was assembled by
           <b>${esc(W.generator.id)} ${esc(W.generator.version)}</b> from the cited sources.
-          ${W.nvidia_inference === 'not_connected' ? '<br>NVIDIA inference not connected in this run.' : ''}</div>
+          ${W.nvidia_inference === 'not_connected' ? '<br>NVIDIA inference not connected in this run.' : ''}
+          <br>${window.AtelicShell.traceLink('work_order', 'Open this step in the Glass box')}</div>
       </details>`;
   }
 
@@ -215,21 +222,28 @@
     const d = W && W.draft, btn = $('btn-submit'), body = $('ready-body');
     btn.textContent = 'Submit for engineer review';
     if (!d) { btn.disabled = true; body.innerHTML = '<b>Submit for engineer review</b>Draft a work order first.'; return; }
+    const rv = W.review;
+    if (rv && rv.decision === 'approve') {
+      btn.disabled = true; btn.textContent = 'Approved';
+      body.innerHTML = `<b>Approved by ${esc(rv.reviewer)} at ${hhmmss(rv.at)}</b>v${rv.version} · ${esc(rv.hash)} · The draft is locked. <a href="review.html">Open Approve →</a>`;
+      return;
+    }
     if (W.submitted) {
       const s = W.submitted;
       btn.disabled = true; btn.textContent = 'Submitted';
-      body.innerHTML = `<b>v${s.version} submitted for engineer review</b>${esc(s.hash)} · ${hhmmss(s.at)} · ${s.open_flags.length} flagged claim${s.open_flags.length === 1 ? '' : 's'} · Not approved. The Approve screen is not built yet.`;
+      body.innerHTML = `<b>v${s.version} submitted for engineer review</b>${esc(s.hash)} · ${hhmmss(s.at)} · ${s.open_flags.length} flagged claim${s.open_flags.length === 1 ? '' : 's'} · Not approved yet. <a href="review.html">Open Approve →</a>`;
       return;
     }
     const flags = Object.keys(W.flags).length, p = d.fields.priority;
     const li = (cls, html) => `<li class="${cls}"><span class="ic">${cls === 'ok' ? '✓' : cls === 'info' ? '!' : ''}</span>${html}</li>`;
     body.innerHTML = `<ul class="checks">
       ${li('ok', `Draft <b>v${d.version}</b>`)}
+      ${rv ? li('todo', `Returned by ${esc(rv.reviewer)}: edit or regenerate first`) : ''}
       ${li(p ? 'ok' : 'todo', p ? `Priority <b>${esc(p)}</b>` : 'Set a priority')}
       ${li(flags ? 'info' : 'ok', flags ? `${flags} flagged claim${flags > 1 ? 's' : ''} go${flags > 1 ? '' : 'es'} to the reviewer` : 'No flagged claims')}
       ${editing ? li('todo', 'Save or cancel your edits') : ''}
     </ul>`;
-    btn.disabled = editing || !p;
+    btn.disabled = editing || !p || !!rv;
   }
 
   function renderAll() { lineIx = 0; if (W && W.draft) indexEvidence(W.draft); renderBrief(); renderDoc(); renderEvidence(); renderReady(); }

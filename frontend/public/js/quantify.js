@@ -21,7 +21,7 @@
     { q: 'pressure_bara', name: 'Process pressure', unit: 'bar absolute', color: '--n-station', digits: 3, h: 104 },
   ];
   const AXIS_H = 28;
-  const MONO = 'JetBrains Mono, monospace';
+  const MONO = 'IBM Plex Mono, monospace';
   const METHOD_LABEL = {};
   const hhmm = (t) => (t ? t.slice(11, 16) : '—');
   const hhmmss = (t) => (t ? t.slice(11, 19) : '—');
@@ -218,7 +218,7 @@
       series: [{
         type: 'scatter', symbolSize: 6, itemStyle: { color: vio, opacity: .75 },
         data: smp.map((s) => (s.used ? s.rate_kg_ch4_h : null)),
-        markArea: { silent: true, itemStyle: { color: 'rgba(124,58,237,.10)' }, data: [[{ yAxis: r.interval.low }, { yAxis: r.interval.high }]] },
+        markArea: { silent: true, itemStyle: { color: 'rgba(46,99,153,.08)' }, data: [[{ yAxis: r.interval.low }, { yAxis: r.interval.high }]] },
         markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: vio, width: 1.5, type: 'solid' }, data: [{ yAxis: r.rate_kg_ch4_h }] },
       }],
     });

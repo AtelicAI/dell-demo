@@ -6,11 +6,11 @@
 <title>Methane observations — Atelic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=2">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=6">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="css/shell.css?v=32">
-<script src="js/shell.js?v=32" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=40">
+<script src="js/shell.js?v=34" defer></script>
 <script src="vendor/leaflet/leaflet.js" defer></script>
 <script src="js/overview.js?v=21" defer></script>
 <style>
@@ -22,7 +22,8 @@
 
   /* ----- satellite map (Leaflet) ----- */
   .map-panel{overflow:hidden;display:flex;flex-direction:column}
-  .map-wrap{position:relative;flex:1;min-height:0;background:var(--panel-3)}
+  /* isolation keeps Leaflet's pane z-indexes (400-1000) inside the map, below the top bar's popovers and dialogs */
+  .map-wrap{position:relative;flex:1;min-height:0;background:var(--panel-3);isolation:isolate}
   .map-wrap .leaflet-container{position:absolute;inset:0;background:var(--panel-3);font-family:var(--sans)}
   /* Muted basemap so the plume reads first (as on the Carbon Mapper portal). */
   .map-wrap .basemap{filter:grayscale(.85) brightness(1.08) contrast(.92)}

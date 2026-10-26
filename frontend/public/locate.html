@@ -6,13 +6,13 @@
 <title>Locate source — Atelic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=2">
-<link rel="stylesheet" href="css/shell.css?v=32">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/shell.css?v=40">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=32" defer></script>
+<script src="js/shell.js?v=34" defer></script>
 <script src="js/plumeheat.js?v=1" defer></script>
-<script src="js/locate.js?v=32" defer></script>
+<script src="js/locate.js?v=34" defer></script>
 <style>
   [hidden]{display:none!important}
 
@@ -91,7 +91,7 @@
   .tabs{display:flex;gap:2px}
   .tab{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:4px;border:1px solid transparent;background:none;cursor:pointer;color:var(--ink-mute)}
   .tab:hover{color:var(--ink)}
-  .tab[aria-selected=true]{color:var(--accent);background:var(--accent-glow);border-color:rgba(2,132,199,.3)}
+  .tab[aria-selected=true]{color:var(--accent);background:var(--accent-glow);border-color:var(--line-strong)}
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .view{flex:1;min-height:0;display:flex;flex-direction:column}
   .view-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-bottom:1px solid var(--line)}
@@ -111,7 +111,7 @@
   .legend span{display:flex;align-items:center;gap:5px}
   .legend i{width:14px;height:0;border-top:1.5px solid var(--ink-mute)}
   .legend i.mon{border-top:1.5px dashed var(--pink)}
-  .legend i.obs{border-top:1.5px dotted var(--good)}
+  .legend i.obs{border-top:1.5px dotted var(--ink-dim)}
   .legend i.sw{width:9px;height:9px;border:1.5px solid;border-radius:50%;background:currentColor}
   .legend i.cand{width:9px;height:9px;border-radius:50%;border:1.5px dashed var(--warn)}
   .edge-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 14px;border-top:1px solid var(--line);background:var(--panel-2);font-size:11.5px;color:var(--ink-mute);min-height:34px}
@@ -120,15 +120,15 @@
   /* layout SVG */
   .lk{stroke:var(--ink-mute);stroke-width:1.6;fill:none}
   .lk.mon{stroke:var(--pink);stroke-width:1.1;stroke-dasharray:4 3}
-  .lk.obs{stroke:var(--good);stroke-width:1.1;stroke-dasharray:1.5 3;opacity:.7}
+  .lk.obs{stroke:var(--ink-dim);stroke-width:1.1;stroke-dasharray:1.5 3;opacity:.7}
   .lk.hl{stroke:var(--accent);stroke-width:2.4;opacity:1}
   .nd{cursor:pointer}
   .nd .sh{fill:var(--panel);stroke:var(--ink-mute);stroke-width:1.4}
-  .nd.t-Vessel .sh{fill:rgba(124,58,237,.10);stroke:var(--n-station)}
-  .nd.t-Valve .sh{fill:rgba(37,99,235,.12);stroke:var(--n-equip)}
-  .nd.t-Vent .sh{fill:rgba(2,132,199,.12);stroke:var(--n-well)}
-  .nd.t-Sensor .sh{fill:rgba(219,39,119,.10);stroke:var(--n-tag)}
-  .nd.t-Camera .sh{fill:rgba(5,150,105,.10);stroke:var(--n-wt)}
+  .nd.t-Vessel .sh{fill:rgba(17,24,39,.05);stroke:var(--n-station)}
+  .nd.t-Valve .sh{fill:rgba(17,24,39,.05);stroke:var(--n-equip)}
+  .nd.t-Vent .sh{fill:rgba(17,24,39,.05);stroke:var(--n-well)}
+  .nd.t-Sensor .sh{fill:rgba(17,24,39,.05);stroke:var(--n-tag)}
+  .nd.t-Camera .sh{fill:rgba(17,24,39,.05);stroke:var(--n-wt)}
   .nd .tx{font-family:var(--mono);font-size:10.5px;font-weight:600;fill:var(--ink)}
   .nd .sub{font-family:var(--sans);font-size:9.5px;fill:var(--ink-dim)}
   .nd .cring{fill:none;stroke:var(--warn);stroke-width:1.4;stroke-dasharray:3 3}
@@ -141,7 +141,7 @@
   .nd:hover .sh{stroke-width:2.2}
 
   /* ----- candidates pane: verdict card, scoreboard, grouped evidence ----- */
-  .assess{padding:11px 16px 10px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(217,119,6,.06),transparent 80%)}
+  .assess{padding:11px 16px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
   .assess .v-k{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
   .assess .v-row{display:flex;align-items:center;gap:12px;margin-top:2px}
   .assess .v-id{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--ink)}
@@ -156,7 +156,7 @@
   .cands .lbl{display:block;padding:0 6px 3px}
   .cand{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:4px 8px;border:1px solid transparent;border-radius:4px;background:none;cursor:pointer;text-align:left;transition:background var(--t),border-color var(--t)}
   .cand:hover{background:var(--panel-2)}
-  .cand.sel{border-color:var(--accent);background:rgba(2,132,199,.06)}
+  .cand.sel{border-color:var(--accent);background:var(--accent-glow)}
   .cand:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .cand .rk{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-mute);background:var(--panel-3);border:1px solid var(--line-strong)}
   .cand.sel .rk{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -166,8 +166,8 @@
   .cand .ev{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
   .meter{display:flex;gap:2px}
   .meter i{width:9px;height:6px;border-radius:2px}
-  .meter i.f{background:var(--good)}
-  .meter i.a{background:var(--bad);opacity:.8}
+  .meter i.f{background:var(--ink-mute)}
+  .meter i.a{background:none;box-shadow:inset 0 0 0 1px var(--ink-dim)}
   .cand .ct{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);white-space:nowrap}
   .dtabs{display:flex;gap:2px;margin:8px 12px 0;padding:3px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line)}
   .dtabs .tab{flex:1;font-size:11px;padding:4px 6px;border-radius:4px;border:1px solid transparent;white-space:nowrap}
@@ -178,7 +178,7 @@
   .detail li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--ink);line-height:1.45}
   .detail li:last-child{border-bottom:0}
   .detail li .mk{flex-shrink:0;width:14px;text-align:center;font-family:var(--mono);font-weight:700}
-  .detail li .mk.for{color:var(--good)}.detail li .mk.against{color:var(--bad)}.detail li .mk.miss{color:var(--ink-dim)}
+  .detail li .mk.for{color:var(--ink)}.detail li .mk.against{color:var(--ink-dim)}.detail li .mk.miss{color:var(--ink-dim)}
   .detail li .tx{flex:1;min-width:0}
   .detail li .src{display:block;margin-top:1px}
   .detail .empty{font-size:12px;color:var(--ink-dim);padding:4px 0}
@@ -187,8 +187,8 @@
   .eg h4{display:flex;align-items:center;gap:6px;margin:0 0 2px}
   .eg h4 .mk{font-size:11px}
   .eg h4 .n{margin-left:auto;font-weight:600;color:var(--ink-dim)}
-  .eg.for{border-color:var(--good)}.eg.for h4 .mk{color:var(--good)}
-  .eg.against{border-color:var(--bad)}.eg.against h4 .mk{color:var(--bad)}
+  .eg.for{border-color:var(--ink-mute)}.eg.for h4 .mk{color:var(--ink)}
+  .eg.against{border-color:var(--ink-faint)}.eg.against h4 .mk{color:var(--ink-dim)}
   .eg.miss{border-color:var(--ink-faint);border-left-style:dashed}
   .eg li{padding:4px 0;border-bottom:1px dashed var(--line)}
   .detail h4.oth{margin-top:12px}
@@ -295,6 +295,7 @@
       <div class="panel-head">
         <h2>Source assessment</h2>
         <span class="badges" id="cand-badge"></span>
+        <span class="gb-slot" data-trace="equipment_mapping"></span>
       </div>
       <div id="assess" class="assess"><div class="note">Loading…</div></div>
       <div class="cands" id="cands"></div>
