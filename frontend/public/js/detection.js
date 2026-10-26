@@ -16,12 +16,13 @@
     manually_annotated_replay: 'Manually annotated replay',
   };
 
-  // Only a verified record carries its stated provenance; a sample is Simulated; anything else is Pending.
+  // Only a verified record carries its stated provenance; a sample gets no badge; anything else is Pending.
   function clipProv(m) {
     if (m.status === 'verified' && BADGE[m.provenance]) return m.provenance;
     return m.status === 'sample' ? 'simulated' : 'pending';
   }
-  const badge = (p) => `<span class="badge ${p}">${BADGE[p] || 'Pending'}</span>`;
+  // Simulated / synthetic provenance is tracked in the data but not shown.
+  const badge = (p) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}">${BADGE[p] || 'Pending'}</span>`;
 
   let meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
 
@@ -60,16 +61,19 @@
       : '<span class="na">Source link pending</span>';
 
     // Header badges double as the legend for the value dots below.
+    // A clip with the plume colourised into it gets no browser heat map (and no Model estimated badge).
+    const heat = observed && meta.plume_rendering !== 'burned_in';
     const used = [...new Set([prov, observed && annP, observed && 'model_estimated'].filter((p) => p && p !== 'pending'))];
     $('meta-badge').innerHTML = (used.length ? used : ['pending']).map(badge).join('');
 
     $('meta-body').innerHTML = `
       <div id="status-block"></div>
-      <div class="origin-line"><b>OGI footage: METEC controlled release</b>${origin}</div>
+      <div class="origin-line"><b>OGI footage: ${esc(window.AtelicShell.FACILITY.name)}</b>${origin}</div>
       <div class="kv">
         <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
-        ${observed ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
-        ${row('Source', meta.ogi_clip_id ? `${meta.origin || 'METEC'} · ${meta.ogi_clip_id}${meta.source_segment ? ` (${meta.source_segment.start}–${meta.source_segment.end})` : ''}` : null, prov)}
+        ${heat ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
+        ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
+        ${row('Source', `CAM-01 · ${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
       </div>
       <details class="more">
@@ -110,7 +114,7 @@
     $('btn-investigate').setAttribute('aria-disabled', String(waiting));
     el.className = `status ${now ? 'observed' : 'unconfirmed'}`;
     el.innerHTML = `<div class="lbl">Status</div>
-      <div class="big"><span class="sig"></span>${now ? 'Plume observed' : 'Detection not confirmed'}</div>
+      <div class="big"><span class="sig"></span>${now ? 'Plume observed' : waiting ? 'No detection' : 'Detection not confirmed'}</div>
       <div class="by">${by}</div>`;
   }
 
@@ -140,24 +144,32 @@
 
   // ----- camera wall -----
   // Every skid camera plays at once, so the viewer sees that only CAM-01 raises something.
-  // CAM-01 is the annotated replay; the others loop a recorded METEC segment picked as plume-free.
+  // CAM-01 is the annotated replay; the others loop a recorded segment picked as plume-free.
   let wall = null;
   const API = () => window.AtelicShell.API;
 
-  function renderWall(clipOk) {
+  // CAM-01 screen: the pre-leak view during normal operations, the leak (with before/after compare) after the alert.
+  function cam1Screen(mode, clipOk, origOk) {
+    if (mode === 'before') {
+      return `<div class="frame" id="frame-before"><video id="video-before" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip/before"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
+    }
+    return clipOk ? `<div class="frame${origOk ? ' cmp-on' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
+      : `<div class="no-feed"><b>Camera clip not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
+  }
+
+  function renderWall(clipOk, origOk, mode) {
     const cams = wall ? wall.cameras : [{ camera_id: 'CAM-01', area: '', watches: [], feed: 'ogi_clip' }];
     const wallP = wall ? (wall.status === 'sample' ? 'simulated' : wall.provenance) : null;
     $('wall').innerHTML = cams.map((c) => {
       const live = c.feed === 'ogi_clip';
       const loop = c.feed && typeof c.feed === 'object' && c.feed.file;
-      const tip = live ? `${c.camera_id} · watches ${c.watches.join(', ')} · METEC clip ${meta.ogi_clip_id}${meta.source_segment ? ` ${meta.source_segment.start}–${meta.source_segment.end}` : ''}`
-        : loop ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded METEC clip ${c.feed.ogi_clip_id} ${c.feed.segment.start}–${c.feed.segment.end}, looped · ${c.feed.picked_by}`
-        : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed in this demo`;
+      const tip = live ? `${c.camera_id} · watches ${c.watches.join(', ')} · ${esc(window.AtelicShell.FACILITY.short)}`
+        : loop ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded, looped`
+        : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed`;
       const screen = live
-        ? (clipOk ? `<div class="frame" id="frame"><video id="video" crossorigin="anonymous" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="tcx"><i></i><span>--:--</span></span></div>`
-          : `<div class="no-feed"><b>Approved METEC clip not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`)
+        ? cam1Screen(mode, clipOk, origOk)
         : loop ? `<div class="frame"><video muted autoplay loop playsinline preload="auto" src="${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`
-        : '<div class="no-feed"><b>No feed in this demo</b></div>';
+        : '<div class="no-feed"><b>No feed</b></div>';
       return `<div class="cell${live ? ' cam1' : ''}" title="${esc(tip)}">
         <div class="cv">${screen}</div>
         <div class="cl"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
@@ -165,21 +177,66 @@
           ${badge(live ? prov : wallP)}</div>
       </div>`;
     }).join('');
-    // Running clock on each feed: shows the footage is moving even when the scene is still.
-    $('wall').querySelectorAll('.frame').forEach((fr) => {
-      const v = fr.querySelector('video'), out = fr.querySelector('.tcx span');
-      v.addEventListener('timeupdate', () => { out.textContent = clock(v.currentTime); });
-    });
-    $('wall-foot').textContent = 'Recorded replays, looped. CAM-02 to CAM-04 are METEC clips picked as plume-free. Not live feeds from this skid.';
+    // Same replay clock on every feed (the shell's incident clock), not each clip's own position,
+    // so the four cameras show one moment and the time keeps running across loops.
+    const tick = () => {
+      const now = window.AtelicShell.replayNow();
+      const txt = now ? window.AtelicShell.fmtUtc(now, true) : '--:--:--';
+      $('wall').querySelectorAll('.frame .tcx span').forEach((s) => { s.textContent = txt; });
+    };
+    tick();
+    setInterval(tick, 1000);
+    $('wall-foot').textContent = `Recorded replays, looped · ${window.AtelicShell.FACILITY.name}, ${window.AtelicShell.FACILITY.location}`;
   }
-
-  const clock = (t) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
   function setAlert(now) {
     const c = document.querySelector('.cell.cam1');
     if (!c) return;
     c.classList.toggle('alert', !!now);
-    c.querySelector('.sv').textContent = now ? 'Plume observed' : 'Watching';
+    c.querySelector('.sv').textContent = now ? 'ALARM · Plume observed' : 'Watching';
+  }
+
+  // ----- CAM-01 before/after: original infrared (left) vs Atelic detection output (right) -----
+  const CMP_UI = `<span class="cmp-tag l">Original IR</span><span class="cmp-tag r">Atelic detection</span>
+    <span class="cmp-line" aria-hidden="true"></span>
+    <span class="cmp-grip" id="cmp-grip" role="slider" tabindex="0" aria-label="Compare original infrared with Atelic detection"
+      aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% original"></span>`;
+
+  function wireCompare() {
+    const fr = $('frame'), grip = $('cmp-grip');
+    if (!fr || !grip) return;
+    const set = (pct) => {
+      pct = Math.max(0, Math.min(100, pct));
+      fr.style.setProperty('--cut', `${pct}%`);
+      grip.setAttribute('aria-valuenow', String(Math.round(pct)));
+      grip.setAttribute('aria-valuetext', `${Math.round(pct)}% original`);
+    };
+    const fromX = (x) => { const r = fr.getBoundingClientRect(); set((x - r.left) / r.width * 100); };
+    // Drag anywhere on the frame, not just the grip, so it is easy to hit at booth distance.
+    fr.addEventListener('pointerdown', (e) => {
+      fr.setPointerCapture(e.pointerId); fr.classList.add('dragging'); fromX(e.clientX);
+      const move = (ev) => fromX(ev.clientX);
+      const up = () => { fr.classList.remove('dragging'); fr.removeEventListener('pointermove', move); };
+      fr.addEventListener('pointermove', move);
+      fr.addEventListener('pointerup', up, { once: true });
+      fr.addEventListener('pointercancel', up, { once: true });
+    });
+    grip.addEventListener('keydown', (e) => {
+      const now = Number(grip.getAttribute('aria-valuenow'));
+      const to = { ArrowLeft: now - 5, ArrowRight: now + 5, Home: 0, End: 100 }[e.key];
+      if (to == null) return;
+      e.preventDefault(); set(to);
+    });
+  }
+
+  // The Atelic output drives the timeline; the original follows it. Small drift is pulled in by nudging
+  // the playback rate (seeking every frame would stutter); a loop wrap or a big jump gets one seek.
+  function syncRaw(t) {
+    const raw = $('video-raw');
+    if (!raw || raw.readyState < 2) return;
+    const diff = t - raw.currentTime;
+    if (Math.abs(diff) > 0.25) { raw.currentTime = t; raw.playbackRate = 1; return; }
+    raw.playbackRate = Math.max(0.9, Math.min(1.1, 1 + diff * 2));
   }
 
   // ----- CAM-01 replay -----
@@ -216,6 +273,7 @@
   function update(t) {
     if (!fps) return;
     const f = frameAt(t);
+    syncRaw(t);
     if (f === frame) return;
     frame = f;
     applyReplay(f);
@@ -231,7 +289,7 @@
       if (times) total = times.length;
       else if (fps) total = Math.max(1, Math.round(video.duration * fps));
       firstFrame = frames.length && fps ? Math.min(...frames.map((a) => a.frame)) : null;
-      heatStep = window.PlumeHeat.create(video, $('heat'));
+      if (meta.plume_rendering !== 'burned_in') heatStep = window.PlumeHeat.create(video, $('heat'));
       window.PlumeHeat.eachFrame(video, update);
       update(video.currentTime);
     }, { once: true });
@@ -239,6 +297,71 @@
       $('frame').outerHTML = '<div class="no-feed"><b>Recording could not be played</b><span>Check data/ogi/source_clip.mp4 (H.264 MP4)</span></div>';
     }, { once: true });
   }
+
+  // ----- normal operations -> alert event -----
+  function startEvent(d, frames, origOk) {
+    wireCompare();
+    if (frames.length) window.AtelicShell.setReplayStatus('detect', 'not_started');
+    if (d.clip_available) wireVideo(frames);
+  }
+
+  // Presenter controls in the camera panel header: trigger the alert (or press T), reset for the next run.
+  function renderControls(mode) {
+    const box = $('event-ctl');
+    if (!box) return;
+    box.innerHTML = mode === 'before'
+      ? '<button class="ctl" id="btn-trigger" type="button" title="Shortcut: T">Trigger event <kbd>T</kbd></button>'
+      : '<button class="ctl" id="btn-reset" type="button" title="Back to normal operations">Reset</button>';
+    const t = $('btn-trigger'), r = $('btn-reset');
+    if (t) t.addEventListener('click', trigger);
+    if (r) r.addEventListener('click', reset);
+  }
+
+  let triggering = false;
+  async function trigger() {
+    if (triggering || !$('btn-trigger')) return;
+    triggering = true;
+    try {
+      await post(`/incidents/${window.AtelicShell.INCIDENT_ID}/trigger`);
+      const d = await window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`);
+      const frames = usableAnnotations(d);
+      const origOk = d.clip_available && d.original_available && meta.plume_rendering === 'burned_in';
+      // CAM-01 is a PTZ view: on the alert it zooms from the wide shot to the vent, then the leak view takes over.
+      const cell = document.querySelector('.cell.cam1'), cv = cell && cell.querySelector('.cv');
+      if (cv) {
+        cell.classList.add('ptz');
+        await new Promise((ok) => setTimeout(ok, 650));
+        cv.innerHTML = cam1Screen('event', d.clip_available, origOk) + '<span class="ptz-note">PTZ · zoom to VENT-01</span>';
+        const now = window.AtelicShell.replayNow(), stamp = cv.querySelector('.tcx span');
+        if (now && stamp) stamp.textContent = window.AtelicShell.fmtUtc(now, true);
+        cell.classList.remove('ptz');
+        setTimeout(() => { const n = cv.querySelector('.ptz-note'); if (n) n.remove(); }, 2500);
+      }
+      startEvent(d, frames, origOk);
+      renderControls('event');
+      window.AtelicShell.refresh();
+    } catch (e) {
+      console.error(e);
+      triggering = false;
+    }
+  }
+
+  async function reset() {
+    try { await post(`/incidents/${window.AtelicShell.INCIDENT_ID}/reset`); } catch (e) { console.error(e); }
+    location.reload();
+  }
+
+  async function post(path) {
+    const r = await fetch(window.AtelicShell.API + path, { method: 'POST' });
+    if (!r.ok) throw new Error(`${path} ${r.status}`);
+    return r.json();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 't' && e.key !== 'T') return;
+    if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea|select/i.test(e.target.tagName)) return;
+    trigger();
+  });
 
   async function init() {
     try {
@@ -253,11 +376,18 @@
       frames.forEach((a) => byFrame.set(a.frame, a));
 
       $('clip-badge').innerHTML = wall ? badge(wall.status === 'sample' ? 'simulated' : wall.provenance) : '';
-      renderWall(d.clip_available);
+      const origOk = d.clip_available && d.original_available && meta.plume_rendering === 'burned_in';
+      // Normal operations (no alert yet) show CAM-01's pre-leak view; without that clip, go straight to the event.
+      const before = !d.triggered && d.before_available;
+      renderWall(d.clip_available, origOk, before ? 'before' : 'event');
       renderMeta(d, frames);
       renderStatus(false);
-      if (frames.length) window.AtelicShell.setReplayStatus('detect', 'not_started');
-      if (d.clip_available) wireVideo(frames);
+      if (before) {
+        renderControls('before');
+        return;
+      }
+      startEvent(d, frames, origOk);
+      renderControls('event');
     } catch (e) {
       console.error(e);
       $('meta-badge').innerHTML = badge('pending');

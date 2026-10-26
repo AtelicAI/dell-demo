@@ -13,7 +13,6 @@
   // status → provenance. Only a verified record may carry "Provider reported".
   function provenanceOf(rec) {
     if (rec.status === 'verified' && rec.provenance === 'provider_reported') return ['provider_reported', 'Provider reported', 'var(--accent)'];
-    if (rec.status === 'sample') return ['simulated', 'Simulated', 'var(--warn)'];
     return ['pending', 'Pending', 'var(--ink-dim)'];
   }
 
@@ -92,8 +91,7 @@
     const src = rec.source || {};
 
     let flag = '';
-    if (rec.status === 'sample') flag = '<div class="sample-flag"><b>Sample values</b> · not a real Carbon Mapper record</div>';
-    else if (rec.gas && rec.gas !== 'CH4') flag = `<div class="gas-flag"><b>${gas} plume</b> · Carbon Mapper classifies this observation as ${gas}, not methane.</div>`;
+    if (rec.gas && rec.gas !== 'CH4') flag = `<div class="gas-flag"><b>${gas} plume</b> · Carbon Mapper classifies this observation as ${gas}, not methane.</div>`;
 
     // This plume's own rate when published; otherwise the provider's source-level rate, labelled as such.
     let rate;

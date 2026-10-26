@@ -1,6 +1,4 @@
-# MP-VENT-01: Vent assembly leak inspection (illustrative)
-
-> Illustrative procedure for a representative skid. Not an approved site operating instruction.
+# MP-VENT-01: Vent assembly leak inspection
 
 ## Scope
 Inspection of VENT-01 (vertical release assembly) and the P-102 vent header after a suspected methane release.

@@ -4,6 +4,8 @@
 (function () {
   const API = `${location.protocol}//${location.hostname}:8000`;
   const INCIDENT_ID = 'INC-001';
+  // Fictional facility the local investigation is set at (no real operator or site).
+  const FACILITY = { name: 'Al Nakheel Gas Gathering Station', short: 'Al Nakheel GGS', location: 'Bahrain' };
 
   const STAGE_LABELS = {
     detect: 'Detect', locate: 'Locate', quantify: 'Quantify',
@@ -162,7 +164,33 @@
       s.dell_edge === 'running' ? 'ok' : 'off');
     pill($('pill-nvidia'), `NVIDIA inference · ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}`,
       s.nvidia_inference === 'not_connected' ? 'off' : 'ok');
-    pill($('pill-replay'), `Replay · ${s.replay_time_utc || '—'}`, 'off');
+    replayStart = s.replay_start_utc ? Date.parse(s.replay_start_utc) : null;
+    tickReplay();
+  }
+
+  // One replay clock for the whole app: incident start + real time elapsed since the first page of this
+  // browser session, so it keeps running across clip loops and page changes.
+  let replayStart = null, replayTimer = null;
+  function replayT0() {
+    try {
+      const v = Number(sessionStorage.getItem('atelic.replayT0'));
+      if (v) return v;
+      sessionStorage.setItem('atelic.replayT0', String(Date.now()));
+    } catch (e) { /* storage blocked: clock restarts per page */ }
+    return T0;
+  }
+  const T0 = Date.now();
+  function replayNow() {
+    return replayStart == null ? null : new Date(replayStart + (Date.now() - replayT0()));
+  }
+  const fmtUtc = (d, withDate) => `${withDate ? `${d.toISOString().slice(0, 10)} ` : ''}${d.toISOString().slice(11, 19)} UTC`;
+  function tickReplay() {
+    const now = replayNow(), el = $('pill-replay');
+    if (el) {
+      pill(el, `Replay · ${now ? fmtUtc(now) : '—'}`, now ? 'ok' : 'off');
+      if (now) el.title = `Replay clock: ${fmtUtc(now, true)}`;
+    }
+    if (now && !replayTimer) replayTimer = setInterval(tickReplay, 1000);
   }
 
   // Replay-time overrides: a screen can show a stage as it was at the current replay moment
@@ -177,6 +205,7 @@
 
   function renderIncident(inc) {
     lastIncident = inc;
+    renderNoIncident(inc);
     const strip = $('incident-strip');
     if (strip) {
       // Same words as the PRD strip, laid out as parts. Status colour follows the backend wording.
@@ -237,12 +266,32 @@
     }
   }
 
+  // Before CAM-01's alert there is no incident to work on: Locate, Quantify and Plan show an empty state
+  // in place of their content (Camera handles its own normal-operations view).
+  function renderNoIncident(inc) {
+    const stage = document.body.dataset.stage;
+    // Boolean: classList.toggle(name, undefined) would flip the class on pages without a stage (Overview).
+    const off = Boolean(inc.triggered === false && stage && stage !== 'detect');
+    document.documentElement.classList.toggle('no-incident', off);
+    let card = $('no-incident');
+    if (!off) { if (card) card.remove(); return; }
+    if (card) return;
+    card = document.createElement('section');
+    card.id = 'no-incident';
+    card.className = 'panel no-incident-card';
+    card.innerHTML = `<div class="t">No active incident</div>
+      <p>All cameras at ${FACILITY.name} are watching. This screen opens when a camera raises an alert.</p>
+      <a class="btn" href="detection.html">Go to cameras →</a>`;
+    const after = $('stepper') || document.querySelector('main .lede');
+    if (after) after.after(card); else document.querySelector('main').prepend(card);
+  }
+
   // Re-read stage status after a page action changes backend state (e.g. an estimate ran).
   async function refresh() {
     try { renderIncident(await get(`/incidents/${INCIDENT_ID}`)); } catch (e) { console.error(e); }
   }
 
-  window.AtelicShell = { API, INCIDENT_ID, get, setReplayStatus, refresh };
+  window.AtelicShell = { API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

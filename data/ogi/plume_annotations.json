@@ -1,38 +1,22 @@
 {
-  "_comment": "Plume region for the leak window, drawn on the cropped MOV_2566 clip from the operator-given times (leak 03:20-08:00 of the original). One region applies to every frame in each range (start_frame..end_frame, inclusive). Coordinates are normalized 0..1 of the video frame. Per-frame entries go in \"frames\": {\"frame\": 0, \"mask_polygon_normalized\": [[x,y],...], \"bbox_normalized\": [x, y, w, h], \"origin_normalized\": [x, y], \"confidence\": null}. Leave confidence null unless a detector supplied it. No region from 00:38.85 to 00:39.10 of the clip: gas not visible there (operator review).",
+  "_comment": "Plume region for the 5 s enhanced-visibility MOV_2566 clip. The colourised plume is visible in every frame (0-74), so one range covers the whole clip; the box is the union of the colourised pixels across all frames, origin at the stack top. One region applies to every frame in each range (start_frame..end_frame, inclusive). Coordinates are normalized 0..1 of the video frame (640x480). Per-frame entries go in \"frames\". Leave confidence null unless a detector supplied it.",
   "ogi_clip_id": "MOV_2566",
   "provenance": "manual_annotation",
   "annotator": "Claude (draft)",
   "ranges": [
     {
-      "start_frame": 150,
-      "end_frame": 580,
-      "source_time": "03:20-03:48.92",
+      "start_frame": 0,
+      "end_frame": 74,
+      "source_time": null,
       "bbox_normalized": [
-        0.34,
-        0.08,
-        0.24,
-        0.46
+        0.519,
+        0.004,
+        0.475,
+        0.65
       ],
       "origin_normalized": [
         0.53,
-        0.5
-      ],
-      "confidence": null
-    },
-    {
-      "start_frame": 584,
-      "end_frame": 4323,
-      "source_time": "03:49.10-08:00",
-      "bbox_normalized": [
-        0.34,
-        0.08,
-        0.24,
-        0.46
-      ],
-      "origin_normalized": [
-        0.53,
-        0.5
+        0.563
       ],
       "confidence": null
     }

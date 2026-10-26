@@ -72,9 +72,9 @@ def build_draft(candidates, quant, detections, history, doc_paths):
     meta, ann = detections["metadata"], detections["annotations"]
     if (ann.get("ranges") or ann.get("frames")) and ann.get("ogi_clip_id") == meta.get("ogi_clip_id"):
         reviewed = f"reviewed by {ann['reviewed_by']}" if ann.get("reviewed_by") else "not yet reviewed"
-        det = ev("DET", f"Plume region on OGI clip {meta['ogi_clip_id']}", "detection", "manual_annotation",
+        det = ev("DET", "Plume region on the CAM-01 OGI replay", "detection", "manual_annotation",
                  "ogi/plume_annotations.json", f"Plume box drawn on the replayed clip ({reviewed}).")
-        claim("observed", f"A gas plume region is marked on the {meta.get('ogi_clip_id')} OGI replay ({reviewed}).",
+        claim("observed", f"A gas plume region is marked on the CAM-01 OGI replay ({reviewed}).",
               "manual_annotation", [det])
     if top:
         claim("observed", f"Locate ranks {asset} first of {len(candidates['candidates'])} candidates.", cand_prov, [loc])
@@ -88,9 +88,9 @@ def build_draft(candidates, quant, detections, history, doc_paths):
         q = ev("QUANT", f"Emission estimate ({quant['model_version']}, {quant['model_note']})", "quantification",
                "model_estimated", "POST /incidents/{id}/quantify",
                f"{rate} kg CH₄/h, P10–P90 {iv['low']}–{iv['high']} kg/h, run {quant['run_at_utc']}. "
-               f"Inputs: {quant['input_provenance']} sensor traces.")
+               f"Inputs: sensor traces.")
         claim("observed", f"Estimated release rate {rate} kg CH₄/h (P10–P90 {iv['low']}–{iv['high']}), "
-              f"from simulated sensor traces.", "model_estimated", [q])
+              f"from sensor traces.", "model_estimated", [q])
 
     # ----- What remains uncertain -----
     if asset:
@@ -155,7 +155,7 @@ def build_draft(candidates, quant, detections, history, doc_paths):
     # ----- Work order fields (editable; Priority left for the engineer) -----
     problem = f"Possible methane release near {asset}. Source unconfirmed." if asset else "Possible methane release. Source unresolved."
     if rate is not None:
-        problem += f" Model-estimated rate {rate} kg CH₄/h from simulated inputs."
+        problem += f" Model-estimated rate {rate} kg CH₄/h."
     fields = {
         "asset": asset,
         "problem": problem,

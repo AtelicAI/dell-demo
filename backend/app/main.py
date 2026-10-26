@@ -38,6 +38,8 @@ def status():
         "nvidia_inference": "not_connected",
         # No replay clock yet.
         "replay_time_utc": None,
+        # Incident replay starts here; the shell runs one clock from it for the pill and camera tiles.
+        "replay_start_utc": read_json("scenario", "site.json").get("replay_start_utc"),
     }
 
 
@@ -47,6 +49,9 @@ def get_incident(incident_id: str):
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
     stages = [dict(s) for s in incident["stages"]]
+    if not incident["triggered"]:
+        # Normal operations: no alert yet, so nothing in the workflow has started.
+        return {**incident, "source_status": "No active alert", "stages": stages}
     stages[0]["status"] = detect_status()
     stages[1]["status"] = locate_status()
     # A stored estimate is a model output awaiting engineer review; never "completed" on its own.
@@ -79,6 +84,31 @@ def detect_status():
     return "completed" if ann.get("reviewed_by") else "ready_for_review"
 
 
+def require_triggered(incident):
+    if not incident["triggered"]:
+        raise HTTPException(status_code=409, detail="No active incident: CAM-01 has not raised an alert")
+
+
+@app.post("/incidents/{incident_id}/trigger")
+def post_trigger(incident_id: str):
+    # The alert event: CAM-01 switches from the pre-leak view to the leak and the workflow opens.
+    incident = incident_or_404(incident_id)
+    if not incident["triggered"]:
+        incident["triggered"] = True
+        incident["triggered_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return get_incident(incident_id)
+
+
+@app.post("/incidents/{incident_id}/reset")
+def post_reset(incident_id: str):
+    # Back to normal operations for the next run: drop the alert and everything derived from it.
+    incident = incident_or_404(incident_id)
+    incident.update(triggered=False, triggered_at=None)
+    incident.pop("quantification", None)
+    incident.pop("work_order", None)
+    return get_incident(incident_id)
+
+
 @app.get("/overview/plume")
 def overview_plume():
     # Served as-is; the UI decides badges from "status" and "provenance".
@@ -106,7 +136,12 @@ def get_detections(incident_id: str):
     return {
         "metadata": read_json("ogi", "source_metadata.json"),
         "annotations": read_json("ogi", "plume_annotations.json"),
+        "triggered": INCIDENTS[incident_id]["triggered"],
         "clip_available": (DATA_DIR / "ogi" / "source_clip.mp4").is_file(),
+        # CAM-01 before the leak (normal operations), played until the alert is triggered.
+        "before_available": (DATA_DIR / "ogi" / "before_clip.mp4").is_file(),
+        # Unprocessed infrared for the same frames, for the before/after slider on CAM-01.
+        "original_available": (DATA_DIR / "ogi" / "source_clip_original.mp4").is_file(),
         # Per-frame start times from scripts/ogi_inspect.py; needed for exact frames on variable-rate clips.
         "frame_times": read_json("ogi", "frame_times.json") if (DATA_DIR / "ogi" / "frame_times.json").is_file() else None,
         "camera_wall": read_json("skid", "camera_wall.json") if (DATA_DIR / "skid" / "camera_wall.json").is_file() else None,
@@ -119,6 +154,16 @@ CHUNK = 2 * 1024 * 1024
 @app.get("/ogi/clip")
 def ogi_clip(request: Request):
     return serve_mp4(DATA_DIR / "ogi" / "source_clip.mp4", request)
+
+
+@app.get("/ogi/clip/before")
+def ogi_clip_before(request: Request):
+    return serve_mp4(DATA_DIR / "ogi" / "before_clip.mp4", request)
+
+
+@app.get("/ogi/clip/original")
+def ogi_clip_original(request: Request):
+    return serve_mp4(DATA_DIR / "ogi" / "source_clip_original.mp4", request)
 
 
 @app.get("/ogi/cams/{camera_id}")
@@ -296,14 +341,14 @@ def methods():
     sp = meta.get("experimental_setpoint") or {}
     sp_missing = []
     if sp.get("rate") is None:
-        sp_missing.append(f"Release setpoint for {meta.get('ogi_clip_id')} not on file")
+        sp_missing.append("Release setpoint for the CAM-01 clip not on file")
     if meta.get("status") != "verified":
         sp_missing.append("OGI clip licence and metadata not verified")
     return [
         {"id": GAUSSIAN, "label": "Gaussian plume inversion", "note": "Interim, deterministic. Single point detector.",
          "missing": gaussian_inputs()[4]},
         {"id": "pyelq", "label": "pyELQ source inversion", "note": "Backend service", "missing": ["pyELQ service not connected"]},
-        {"id": "experimental_setpoint", "label": "Controlled-release setpoint", "note": "GasVid/METEC known release",
+        {"id": "experimental_setpoint", "label": "Controlled-release setpoint", "note": "Known controlled-release rate",
          "missing": sp_missing},
     ]
 
@@ -356,12 +401,10 @@ def run_gaussian():
                   f"Source assumed at {source}, the top Locate candidate (unconfirmed hypothesis).",
                   f"Source and detector positions and heights from draft geometry ({geo['mapping_version']}).",
                   f"Steady-state Gaussian plume, ground reflection, stability class {stab} ({geo['stability_note']}).",
-                  "Constant release rate over the data window; wind measured at one anemometer applies to the whole skid.",
+                  "Constant release rate over the data window; wind measured at one anemometer applies to the whole site.",
                   "CH₄ ppm from mg/m³ at 25 °C, 1 atm.",
                   "Uncertainty interval reflects sample-to-sample scatter only; it excludes stability-class "
                   "and geometry error.",
-                  "Sensor traces were generated with this same plume model, so agreement with the simulated "
-                  "release checks the pipeline, not the method's real-world accuracy.",
               ]}
     if len(rates) < MIN_SAMPLES:
         return {**result, "rate_kg_ch4_h": None, "failure": FAILURE,
@@ -396,6 +439,7 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
     incident = INCIDENTS.get(incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
+    require_triggered(incident)
     method = body.get("method", GAUSSIAN)
     m = next((m for m in methods() if m["id"] == method), None)
     if m is None:
@@ -440,15 +484,15 @@ def draft_inputs(incident):
          "detail": f"Ranked first of {len(cands.get('candidates', []))} candidates, unconfirmed",
          "provenance": "hypothesis", "screen": "locate.html"},
         {"id": "rate", "label": "Emission rate", "value": f"{rate} kg CH₄/h" if rate is not None else None,
-         "detail": (f"P10–P90 {q['interval']['low']}–{q['interval']['high']} · simulated inputs" if rate is not None
+         "detail": (f"P10–P90 {q['interval']['low']}–{q['interval']['high']}" if rate is not None
                     else "Not estimated yet"), "provenance": "model_estimated" if rate is not None else "pending",
          "screen": "quantify.html"},
-        {"id": "detection", "label": "Camera observation", "value": meta.get("ogi_clip_id") if marked else None,
+        {"id": "detection", "label": "Camera observation", "value": "CAM-01" if marked else None,
          "detail": ("Plume region marked, " + ("reviewed" if ann.get("reviewed_by") else "not yet reviewed")) if marked
                    else "No plume region marked", "provenance": "manual_annotation" if marked else "pending",
          "screen": "detection.html"},
         {"id": "docs", "label": "Procedures", "value": f"{len(docs)} documents",
-         "detail": f"Illustrative procedure and checklist, plus {len(records)} maintenance records",
+         "detail": f"Procedure and checklist, plus {len(records)} maintenance records",
          "provenance": "synthetic", "screen": None},
     ]
 
@@ -492,6 +536,7 @@ def get_work_order(incident_id: str):
 @app.post("/incidents/{incident_id}/work-order/draft")
 def post_work_order_draft(incident_id: str):
     incident = incident_or_404(incident_id)
+    require_triggered(incident)
     draft, missing = make_draft(incident)
     if missing:
         raise HTTPException(status_code=409, detail={"missing": missing})

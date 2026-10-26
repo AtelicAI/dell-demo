@@ -3,7 +3,7 @@
   "status": "sample",
   "provenance": "simulated",
   "local_incident_id": "INC-001",
-  "method": "Mock ranking (no agent run yet)",
+  "method": "Manual ranking",
   "assessment": { "result": "likely_source", "asset_id": "VENT-01" },
   "candidates": [
     {

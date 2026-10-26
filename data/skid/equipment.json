@@ -6,7 +6,7 @@
   "provenance": "synthetic",
 
   "areas": [
-    { "asset_id": "SKID-A", "display_name": "Representative gas-handling skid", "asset_type": "EquipmentArea" }
+    { "asset_id": "SKID-A", "display_name": "Gas-handling unit", "asset_type": "EquipmentArea" }
   ],
 
   "equipment": [

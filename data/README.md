@@ -7,7 +7,8 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 | `carbon_mapper/verified_plume.json`, `plume.png` | 1 Overview | provider_reported | fetched (plume `tan20260923t085028c30s4001-A`, a **CO₂** plume; licence pending) | Run `python3 scripts/fetch_carbon_mapper.py [plume_id [source_name]]` (needs Pillow) |
 | `ogi/source_metadata.json` | 2 Detect | experimental_setpoint | **pending licence** (clip MOV_2566 set; file facts from `scripts/ogi_inspect.py`) | Set `status: verified` once the licence is confirmed |
 | `ogi/plume_annotations.json` | 2 Detect | manual_annotation | **placeholder** | Hand-drawn or real model output on the clip |
-| `ogi/source_clip.mp4` | 2 Detect | — | local only (gitignored) | GasVid MOV_2566 converted to H.264: `avconvert -s MOV_2566.mp4 -p PresetHighestQuality -o data/ogi/source_clip.mp4` |
+| `ogi/source_clip.mp4` | 2 Detect | — | local only (gitignored) | `gasvid-visibility-clean.mp4`: 5 s enhanced-visibility MOV_2566, plume colourised in the video (`plume_rendering: burned_in`, no browser heat map). Crop the title bar: `ffmpeg -i gasvid-visibility-clean.mp4 -vf crop=640:480:0:32 -c:v libx264 -crf 16 -pix_fmt yuv420p -r 15 -an data/ogi/source_clip.mp4`, then run `scripts/ogi_inspect.py` |
+| `ogi/source_clip_raw.mp4` | — | — | local only (gitignored), unused | Previous raw cut, to switch back: `avconvert -s MOV_2566.mp4 -p PresetHighestQuality -o data/ogi/source_clip.mp4 --start 190 --duration 290`, then restore the old plume region and drop `plume_rendering` |
 | `ogi/frame_times.json` | 2 Detect | — | generated | Run `python3 scripts/ogi_inspect.py` after changing the clip |
 | `skid/equipment.json` | 3 Locate | synthetic | draft | Team-reviewed asset list |
 | `skid/layout.json` | 3 Locate | synthetic | draft | Team-reviewed 2D layout |

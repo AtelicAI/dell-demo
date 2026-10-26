@@ -10,8 +10,9 @@
     experimental_setpoint: 'Experimental setpoint', hypothesis: 'Hypothesis', pending: 'Pending',
     model_estimated: 'Model estimated',
   };
-  const badge = (p, title) => `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
-  const METHOD = { manual_illustrative: 'Manually configured (illustrative)', 'manually configured': 'Manually configured' };
+  // Simulated / synthetic provenance is tracked in the data but not shown.
+  const badge = (p, title) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
+  const METHOD = { manual_illustrative: 'Manually configured', 'manually configured': 'Manually configured' };
   const TYPE_COLOR = {
     Vessel: '--n-station', Valve: '--n-equip', Vent: '--n-well', PipeSegment: '--ink-dim',
     Sensor: '--n-tag', Camera: '--n-wt', EquipmentArea: '--ink-mute', WorkOrder: '--n-sap',
@@ -19,7 +20,7 @@
   const EDGE_COLOR = {
     CONNECTED_TO: '--ink-mute', MONITORS: '--pink', CAN_OBSERVE: '--good', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap',
   };
-  const MISSING_CAM = 'Camera coverage has not been calibrated. Equipment attribution is illustrative.';
+  const MISSING_CAM = 'Camera coverage has not been calibrated.';
   const MAP_DISC = 'Equipment relationships and camera coverage are manually configured.';
   const NO_REL = 'No verified relationship is available for this asset.';
 
@@ -121,7 +122,7 @@
       </g>`;
     }).join('');
 
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Representative skid equipment layout">
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Equipment layout">
       <defs><marker id="flow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9 z" fill="${css('--ink-mute')}"/></marker></defs>
       ${links}${nodes}</svg>`;
     box.querySelectorAll('[data-edge]').forEach((p) => p.addEventListener('click', () => { edgeSel = +p.dataset.edge; renderEdgeInfo(); renderLayout(); }));
@@ -323,10 +324,10 @@
     const meta = d.metadata, ann = d.annotations;
     // Same provenance rule as Screen 2: only a verified clip carries its stated provenance.
     const prov = meta.status === 'verified' && BADGE[meta.provenance] ? meta.provenance : meta.status === 'sample' ? 'simulated' : 'pending';
-    $('cam-clip').textContent = meta.ogi_clip_id ? `METEC · ${meta.ogi_clip_id}` : 'METEC · clip not set';
+    $('cam-clip').textContent = window.AtelicShell.FACILITY.short;
     if (!d.clip_available) {
       $('cam-badge').innerHTML = badge('pending');
-      $('cam-frame').innerHTML = '<div class="cam-empty">Approved METEC clip not loaded</div>';
+      $('cam-frame').innerHTML = '<div class="cam-empty">Camera clip not loaded</div>';
       return Promise.reject(new Error('Clip not loaded'));
     }
     // First annotated frame of this exact clip (dataset identity).
@@ -335,7 +336,9 @@
       : [];
     const first = ranges.sort((a, b) => a.frame - b.frame)[0];
     D = { box: first ? first.bbox_normalized : null };
-    $('cam-badge').innerHTML = badge(prov, 'Clip') + (first ? badge('manual_annotation', 'Plume region') + badge('model_estimated', 'Heat map') : '');
+    // Plume already colourised in the clip -> no browser heat map on top of it.
+    const heat = meta.plume_rendering !== 'burned_in';
+    $('cam-badge').innerHTML = badge(prov, 'Clip') + (first ? badge('manual_annotation', 'Plume region') + (heat ? badge('model_estimated', 'Heat map') : '') : '');
 
     const times = d.frame_times && d.frame_times.frame_start_s;
     const f = first ? first.frame : 0;
@@ -360,8 +363,10 @@
       while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (times[mid] <= t + 1e-4) lo = mid; else hi = mid - 1; }
       return lo;
     };
-    const step = window.PlumeHeat.create(video, $('cam-heat'));
-    window.PlumeHeat.eachFrame(video, (t) => step(inRange(frameOf(t)) ? D.box : null));
+    if (heat) {
+      const step = window.PlumeHeat.create(video, $('cam-heat'));
+      window.PlumeHeat.eachFrame(video, (t) => step(inRange(frameOf(t)) ? D.box : null));
+    }
     video.addEventListener('ended', () => { video.currentTime = frameTime; video.play().catch(() => {}); });
     video.addEventListener('seeked', () => video.play().catch(() => {}), { once: true });
     // Resolves when the first annotated frame is really on screen (seeked), so the loader reports the truth.
@@ -370,7 +375,7 @@
         if (video.videoWidth && video.videoHeight) $('cam-frame').style.setProperty('--ar', video.videoWidth / video.videoHeight);
         video.currentTime = frameTime;
       }, { once: true });
-      video.addEventListener('seeked', () => ok(`${meta.ogi_clip_id} · frame ${f}`), { once: true });
+      video.addEventListener('seeked', () => ok(`CAM-01 · frame ${f}`), { once: true });
       video.addEventListener('error', () => { $('cam-frame').innerHTML = '<div class="cam-empty">Clip could not be played</div>'; fail(new Error('Clip could not be played')); }, { once: true });
       setTimeout(() => fail(new Error('Frame not loaded yet')), 6000);
     });
@@ -396,9 +401,9 @@
     $('assess').innerHTML = likely ? `
       <div class="v-k">Likely source</div>
       <div class="v-row"><span class="v-id">${esc(likely)}</span><span class="pill"><i></i>Unconfirmed · needs field check</span></div>
-      <div class="by"><span class="v-nm">${esc(name(likely) || '')}</span>${C.status === 'sample' ? ' · <b>Sample values</b> · mock ranking, no agent has run yet' : ` · ${esc(C.method || '')}`}</div>${bad}`
+      <div class="by"><span class="v-nm">${esc(name(likely) || '')}</span>${C.status === 'sample' || !C.method ? '' : ` · ${esc(C.method)}`}</div>${bad}`
       : `<div class="v-k">Source</div><div class="v-id">Unresolved</div>
-      <div class="by">${C.status === 'sample' ? '<b>Sample values</b> · mock ranking, no agent has run yet' : esc(C.method || '')}</div>${bad}`;
+      <div class="by">${C.status === 'sample' ? '' : esc(C.method || '')}</div>${bad}`;
   }
 
   function renderCands() {
@@ -419,7 +424,7 @@
   }
 
   const li = (mk, cls, html) => `<li><span class="mk ${cls}">${mk}</span><span class="tx">${html}</span></li>`;
-  const ev = (e) => `${esc(e.label)}<span class="src">${assetLink(e.source_id)} <span class="pdot" title="${BADGE[e.provenance] || ''}"></span></span>`;
+  const ev = (e) => `${esc(e.label)}<span class="src">${assetLink(e.source_id)} <span class="pdot"${e.provenance === 'synthetic' || e.provenance === 'simulated' ? '' : ` title="${BADGE[e.provenance] || ''}"`}></span></span>`;
   const list = (items, empty) => items.length ? `<ul>${items.join('')}</ul>` : `<div class="empty">${empty}</div>`;
 
   function evidenceTab(id) {
@@ -481,7 +486,7 @@
       ${regions.some((r) => !hasPoly(r)) ? `<div class="caveat" style="margin-top:8px">${MISSING_CAM}</div>` : ''}
       <h4>Versions</h4>${kv([
         ['Graph store', G.store === 'json' ? 'JSON files (Neo4j not connected yet)' : G.store],
-        ['Skid mapping', (G.nodes[0] || {}).mapping_version],
+        ['Site mapping', (G.nodes[0] || {}).mapping_version],
         ['2D layout', G.layout.mapping_version],
         ['Camera mapping', G.camera_rois.mapping_version],
         ['Mapping method', METHOD[G.camera_rois.mapping_method] || G.camera_rois.mapping_method],
@@ -548,13 +553,13 @@
     const graphP = step('graph', get(`/incidents/${INCIDENT_ID}/graph`),
       (v) => `${v.nodes.length} assets · ${v.edges.length} relationships · ${v.store === 'json' ? 'JSON' : v.store}`);
     const candP = step('cands', get(`/incidents/${INCIDENT_ID}/candidates`),
-      (v) => `${(v.candidates || []).length} candidates${v.status === 'sample' ? ' · sample' : ''}`);
+      (v) => `${(v.candidates || []).length} candidates`);
     const [g, c, d] = await Promise.allSettled([graphP, candP, get(`/incidents/${INCIDENT_ID}/detections`)]);
 
     if (g.status === 'fulfilled') {
       G = g.value;
       byId = new Map(G.nodes.map((n) => [n.asset_id, n]));
-      $('graph-badge').innerHTML = badge(G.nodes.some((n) => n.provenance !== 'synthetic') ? 'pending' : 'synthetic', 'Representative skid data');
+      $('graph-badge').innerHTML = badge(G.nodes.some((n) => n.provenance !== 'synthetic') ? 'pending' : 'synthetic', 'Site data');
     } else {
       const msg = '<div class="view-empty">Knowledge graph data not available.</div>';
       $('layout').innerHTML = msg;

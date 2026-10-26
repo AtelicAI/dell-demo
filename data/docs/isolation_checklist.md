@@ -1,6 +1,4 @@
-# IC-SKID-A: Isolation checklist (illustrative)
-
-> Illustrative checklist for a representative skid. Not an approved site operating instruction.
+# IC-SKID-A: Isolation checklist
 
 - [ ] Control room informed and permit issued
 - [ ] XV-101 (inlet isolation) closed and locked

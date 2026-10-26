@@ -7,11 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/shell.css?v=30">
+<link rel="stylesheet" href="css/theme.css?v=2">
+<link rel="stylesheet" href="css/shell.css?v=32">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=29" defer></script>
-<script src="js/quantify.js?v=13" defer></script>
+<script src="js/shell.js?v=32" defer></script>
+<script src="js/quantify.js?v=14" defer></script>
 <style>
   [hidden]{display:none!important}
 
@@ -30,7 +30,7 @@
   .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
   .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
   .note{font-size:12.5px;color:var(--ink-mute);line-height:1.55}
-  .caveat{margin:0;padding:7px 12px;border-radius:8px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.45;background:var(--panel)}
+  .caveat{margin:0;padding:7px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.45;background:var(--panel)}
 
   /* ----- result card: a calc sheet ----- */
   .hero{background:
@@ -51,7 +51,7 @@
   .g-axis{position:absolute;left:0;right:0;top:46px;height:1px;background:var(--ink-faint)}
   .g-tick{position:absolute;top:46px;width:1px;height:6px;background:var(--ink-faint)}
   .g-tick span{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9.5px;color:var(--ink-dim)}
-  .band{position:absolute;top:8px;height:30px;border-radius:6px;background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.35);transform-origin:left;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+  .band{position:absolute;top:8px;height:30px;border-radius:4px;background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.35);transform-origin:left;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
   .band.pre{transform:scaleX(0)}
   .g-dot{position:absolute;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:var(--violet);opacity:.55}
   .med{position:absolute;top:2px;height:42px;width:2px;margin-left:-1px;background:var(--violet);border-radius:1px}
@@ -120,7 +120,7 @@
   .side .sec:last-child{border-bottom:0}
   .side .lbl{display:block}
   .side .sec{padding:12px 16px;border-bottom:1px solid var(--line)}
-  .meth{display:grid;grid-template-columns:16px 1fr;gap:1px 9px;padding:7px 10px;margin-top:6px;border:1px solid var(--line-strong);border-radius:9px;cursor:pointer;transition:border-color var(--t),background var(--t)}
+  .meth{display:grid;grid-template-columns:16px 1fr;gap:1px 9px;padding:7px 10px;margin-top:6px;border:1px solid var(--line-strong);border-radius:4px;cursor:pointer;transition:border-color var(--t),background var(--t)}
   .meth:hover{border-color:var(--accent)}
   .meth.sel{border-color:var(--accent);background:var(--accent-glow)}
   .meth.off{cursor:not-allowed;background:var(--panel-2);border-style:dashed}
@@ -139,7 +139,7 @@
   .inputs .id{font-family:var(--mono);font-weight:600;color:var(--ink);font-size:11.5px}
   .inputs .t{min-width:0;color:var(--ink-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* ----- next step bar ----- */
-  .next{position:sticky;bottom:14px;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 14px 12px 20px;border-radius:12px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 14px 34px -16px rgba(15,23,42,.35);animation-delay:180ms}
+  .next{position:sticky;bottom:14px;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 14px 12px 20px;border-radius:4px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 14px 34px -16px rgba(15,23,42,.35);animation-delay:180ms}
   .next .txt{flex:1;min-width:0}
   .next .txt b{display:block;font-size:13.5px;font-weight:600}
   .next .txt span{font-size:12px;color:var(--ink-mute)}
@@ -180,7 +180,6 @@
             <span class="meta" id="series-meta">—</span>
           </div>
           <div class="traces-sub">
-            <p class="caveat" id="series-caveat" hidden>These sensor traces are simulated for the representative scenario, not recorded with GasVid.</p>
             <div class="t-legend" id="t-legend" hidden>
               <span><i class="lw"></i>Data window</span>
               <span><i class="lu"></i>Used sample</span>

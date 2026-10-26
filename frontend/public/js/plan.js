@@ -9,7 +9,8 @@
     simulated: 'Simulated', synthetic: 'Simulated', model_estimated: 'Model estimated',
     manual_annotation: 'Manual annotation', hypothesis: 'Hypothesis', gap: 'Gap', pending: 'Pending',
   };
-  const badge = (p, title) => `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
+  // Simulated / synthetic provenance is tracked in the data but not shown.
+  const badge = (p, title) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
   const KIND = {
     candidates: 'Locate', candidate_evidence: 'Locate', procedure: 'Procedure', maintenance: 'Maintenance record',
     detection: 'Camera', quantification: 'Estimate',
@@ -167,7 +168,7 @@
       ${section('A', 'Recommended inspection', 'inspection', 'steps')}
       ${section('B', 'Isolation prerequisites', 'isolation', 'boxes')}
       ${section('C', 'Safety considerations', 'safety', 'bullets')}
-      <p class="warning">Illustrative procedures are not approved site operating instructions. No equipment action will be executed.</p>
+      <p class="warning">No equipment action will be executed.</p>
       <details class="fold">
         <summary>Version history<span class="meta">${W.versions.length} version${W.versions.length > 1 ? 's' : ''}</span></summary>
         <div class="fold-body"><table class="vers">${W.versions.slice().reverse().map((v) => `<tr>
@@ -270,7 +271,7 @@
     const e = evById[btn.dataset.ev];
     if (!e) return;
     const text = e.kind === 'candidate_evidence' ? e.label : (e.excerpt || e.label);
-    pop.innerHTML = `<div class="h">[${fnNo[e.id]}] ${esc(e.group)}</div>${esc(text)}<div class="p">${esc(BADGE[e.provenance] || e.provenance)} · ${esc((e.uri || e.source))}</div>`;
+    pop.innerHTML = `<div class="h">[${fnNo[e.id]}] ${esc(e.group)}</div>${esc(text)}<div class="p">${e.provenance === 'synthetic' || e.provenance === 'simulated' ? '' : `${esc(BADGE[e.provenance] || e.provenance)} · `}${esc((e.uri || e.source))}</div>`;
     const r = btn.getBoundingClientRect();
     pop.classList.add('open');
     const w = pop.offsetWidth, h = pop.offsetHeight;

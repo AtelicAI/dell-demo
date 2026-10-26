@@ -1,14 +1,14 @@
 {
-  "_comment": "Clip chosen: GasVid MOV_2566 (via Lang-Gas), converted mp4v -> H.264 with avconvert, then cropped to 03:10-08:00 of the original (source_segment). Licence still unconfirmed, so status stays pending. resolution/frame_rate/duration_s/frame_count are written by scripts/ogi_inspect.py. Fill from the approved METEC/GasVid clip after inspecting the file (ffprobe). Clip goes in data/ogi/source_clip.mp4 (not committed). detection_mode is one of: external_detector_alert, local_model_inference, recorded_model_output, manually_annotated_replay. frame_rate is a number (fps); resolution like \"640x480\".",
+  "_comment": "Clip: 5 s enhanced-visibility rendering of GasVid MOV_2566 (gasvid-visibility-clean.mp4, supplied by the Atelic team): 2x upscaled, plume colourised in the video itself; the supplied file's 32 px title bar is cropped off (ffmpeg crop=640:480:0:32, libx264 crf 16). Which 5 s of the original it covers is not recorded, so source_segment is null. The raw cut (03:10-08:00, 4324 frames) is kept locally as data/ogi/source_clip_raw.mp4. plume_rendering 'burned_in' turns off the browser heat map, which would otherwise paint over the colourised plume. Licence still unconfirmed, so status stays pending. resolution/frame_rate/duration_s/frame_count are written by scripts/ogi_inspect.py. Clip goes in data/ogi/source_clip.mp4 (not committed). detection_mode is one of: external_detector_alert, local_model_inference, recorded_model_output, manually_annotated_replay.",
   "status": "pending",
   "ogi_clip_id": "MOV_2566",
   "origin": "METEC",
   "source_url": "https://drive.google.com/drive/folders/1JKEMtCGPSq2IqGk4uXZP9A6gr8fyJsGC",
   "recording_date": null,
   "camera_type": null,
-  "resolution": "320x240",
-  "frame_rate": 14.907,
-  "duration_s": 290.057,
+  "resolution": "640x480",
+  "frame_rate": 15.0,
+  "duration_s": 5.0,
   "license_status": "pending",
   "provenance": "experimental_setpoint",
   "experimental_setpoint": {
@@ -18,10 +18,8 @@
   },
   "detection_mode": "manually_annotated_replay",
   "model_version": null,
-  "variable_frame_rate": true,
-  "frame_count": 4324,
-  "source_segment": {
-    "start": "03:10",
-    "end": "08:00"
-  }
+  "variable_frame_rate": false,
+  "frame_count": 75,
+  "source_segment": null,
+  "plume_rendering": "burned_in"
 }

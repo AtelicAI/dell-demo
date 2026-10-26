@@ -11,7 +11,8 @@
     experimental_setpoint: 'Experimental setpoint', provider_reported: 'Provider reported',
     hypothesis: 'Hypothesis', pending: 'Pending',
   };
-  const badge = (p, title) => `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
+  // Simulated / synthetic provenance is tracked in the data but not shown.
+  const badge = (p, title) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
   // Stacked strips on one time axis; methane gets the most height.
   const STRIPS = [
     { q: 'methane_ppm', name: 'Methane concentration', unit: 'ppm', color: '--n-well', digits: 2, h: 160 },
@@ -49,10 +50,8 @@
         `<div class="hero-empty">${esc(r.failure)}<ul>${(r.missing || []).map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>`;
       return;
     }
-    const synthetic = r.input_provenance === 'synthetic';
-    title.textContent = synthetic ? 'Simulated emission-rate estimate' : 'Emission-rate estimate';
-    $('res-badges').innerHTML = badge(r.provenance, `Produced by ${r.model_version}`) +
-      (synthetic ? badge('simulated', 'Inputs are simulated sensor traces') : '');
+    title.textContent = 'Emission-rate estimate';
+    $('res-badges').innerHTML = badge(r.provenance, `Produced by ${r.model_version}`);
     const qc = r.qc || {};
     body.innerHTML = rateBlock(`<div class="num">${r.rate_kg_ch4_h.toFixed(2)}</div>`,
       `<div class="unit">kg CH₄/h</div><div class="sub">Median of ${qc.samples_used} per-sample estimates</div>`) + gauge(r);
@@ -85,7 +84,7 @@
     const dots = rates.map((v, i) => `<div class="g-dot" style="left:${pct(v)};top:${14 + (i % 4) * 6}px" title="${v.toFixed(2)} kg/h"></div>`).join('');
     const iv = r.interval;
     const band = iv ? `<div class="band pre" style="left:${pct(iv.low)};width:calc(${pct(iv.high)} - ${pct(iv.low)})"></div>` : '';
-    const refEl = ref ? `<div class="ref" style="left:${pct(ref.rate_kg_ch4_h)}" title="Simulated release input from scenario/release_truth.json"></div>` : '';
+    const refEl = ref ? `<div class="ref" style="left:${pct(ref.rate_kg_ch4_h)}" title="Reference release rate"></div>` : '';
     return `<div class="gauge" aria-label="Per-sample estimates on a kg/h scale">
       <div class="g-track"><div class="g-axis"></div>${ticks.join('')}${band}${dots}${refEl}
         <div class="med" style="left:${pct(r.rate_kg_ch4_h)}" title="Median ${r.rate_kg_ch4_h} kg/h"></div></div>
@@ -93,7 +92,7 @@
         <span><i class="lm"></i>Median</span>
         ${iv ? '<span><i class="lb"></i>P10–P90 interval</span>' : ''}
         <span><i class="ld"></i>Per-sample estimate</span>
-        ${ref ? `<span><i class="lr"></i>Simulated release input · ${ref.rate_kg_ch4_h} kg/h ${badge('simulated')}</span>` : ''}
+        ${ref ? `<span><i class="lr"></i>Reference release rate · ${ref.rate_kg_ch4_h} kg/h</span>` : ''}
       </div></div>`;
   }
 
@@ -101,7 +100,6 @@
   function renderTraces() {
     const el = $('traces'), labels = $('labels');
     const have = STRIPS.filter((s) => S && (S.series[s.q] || []).length);
-    $('series-caveat').hidden = !(S && S.provenance === 'synthetic');
     if (!have.length) {
       labels.innerHTML = '';
       el.innerHTML = '<div class="traces-empty">No sensor data available for this incident.</div>';

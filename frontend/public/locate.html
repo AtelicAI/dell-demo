@@ -7,12 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/shell.css?v=30">
+<link rel="stylesheet" href="css/theme.css?v=2">
+<link rel="stylesheet" href="css/shell.css?v=32">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=29" defer></script>
+<script src="js/shell.js?v=32" defer></script>
 <script src="js/plumeheat.js?v=1" defer></script>
-<script src="js/locate.js?v=26" defer></script>
+<script src="js/locate.js?v=32" defer></script>
 <style>
   [hidden]{display:none!important}
 
@@ -47,7 +47,7 @@
   .scroll{flex:1;min-height:0;overflow-y:auto}
   .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
   .note{font-size:12px;color:var(--ink-mute);line-height:1.5}
-  .caveat{margin:0;padding:8px 12px;border-radius:8px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.5}
+  .caveat{margin:0;padding:8px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.5}
   .id{font-family:var(--mono);font-weight:600;color:var(--ink);white-space:nowrap}
   .panel-head h2{white-space:nowrap}
   .linkish{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);background:none;border:0;padding:0;cursor:pointer}
@@ -57,7 +57,7 @@
   /* ----- camera strip (top of the investigation panel): looping replay with heat map + what CAM-01 can see ----- */
   .cam-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
   .cam-stage{width:150px;height:100px;container-type:size;display:grid;place-items:center}
-  .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw,100cqh * var(--ar));background:#000;border-radius:6px;overflow:hidden;
+  .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw,100cqh * var(--ar));background:#000;border-radius:4px;overflow:hidden;
     box-shadow:0 0 0 1px var(--line-strong),0 6px 16px rgba(15,23,42,.16)}
   .cam-frame video{position:absolute;inset:0;width:100%;height:100%;display:block}
   .cam-frame canvas.heat{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;filter:blur(2px)}
@@ -73,7 +73,7 @@
   .cam-meta .badges{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
   .vis-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .vchips{display:flex;flex-wrap:wrap;gap:4px}
-  .vchip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color var(--t),background var(--t)}
+  .vchip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:3px;border:1px solid var(--line-strong);background:var(--panel);font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color var(--t),background var(--t)}
   .vchip:hover{border-color:var(--accent)}
   .vchip.sel{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
   .vchip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -83,13 +83,13 @@
   .vis-sel:empty{display:none}
   .vis-sel .t{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .vis-sel b{font-family:var(--mono);color:var(--ink)}
-  .vis-sel .roi-tag{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;border:1px dashed var(--ink-faint);border-radius:999px}
+  .vis-sel .roi-tag{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;border:1px dashed var(--ink-faint);border-radius:3px}
   .vis-sel .roi-tag.on{color:var(--accent);border:1px solid var(--accent)}
   .cam-note{font-size:11px;color:var(--ink-mute);line-height:1.35;padding-left:8px;border-left:2px solid var(--warn)}
 
   /* ----- investigation pane ----- */
   .tabs{display:flex;gap:2px}
-  .tab{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:7px;border:1px solid transparent;background:none;cursor:pointer;color:var(--ink-mute)}
+  .tab{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:4px;border:1px solid transparent;background:none;cursor:pointer;color:var(--ink-mute)}
   .tab:hover{color:var(--ink)}
   .tab[aria-selected=true]{color:var(--accent);background:var(--accent-glow);border-color:rgba(2,132,199,.3)}
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -99,7 +99,7 @@
   .view-head h3{margin:0;font-size:12.5px;font-weight:600}
   .view-head .note{font-size:11.5px}
   .tools{display:flex;gap:4px;flex-wrap:wrap}
-  .tg{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-mute);cursor:pointer;white-space:nowrap}
+  .tg{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:3px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-mute);cursor:pointer;white-space:nowrap}
   .tg:hover{border-color:var(--accent)}
   .tg[aria-pressed=true]{color:var(--ink);border-color:var(--accent);background:var(--accent-glow)}
   .tg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -146,7 +146,7 @@
   .assess .v-row{display:flex;align-items:center;gap:12px;margin-top:2px}
   .assess .v-id{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--ink)}
   .assess .v-nm{font-size:12px;color:var(--ink-mute)}
-    .assess .pill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;background:var(--warn-glow);border:1px solid rgba(217,119,6,.35);color:var(--warn);font-size:11.5px;font-weight:600}
+    .assess .pill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:3px;background:var(--warn-glow);border:1px solid rgba(217,119,6,.35);color:var(--warn);font-size:11.5px;font-weight:600}
   .assess .pill i{width:6px;height:6px;border-radius:50%;background:var(--warn)}
   .assess .by{margin-top:3px;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .assess .by b{color:var(--warn);font-weight:600}
@@ -154,7 +154,7 @@
   .assess.unresolved .v-id{color:var(--ink-mute)}
   .cands{padding:7px 10px 7px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
   .cands .lbl{display:block;padding:0 6px 3px}
-  .cand{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:4px 8px;border:1px solid transparent;border-radius:9px;background:none;cursor:pointer;text-align:left;transition:background var(--t),border-color var(--t)}
+  .cand{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:4px 8px;border:1px solid transparent;border-radius:4px;background:none;cursor:pointer;text-align:left;transition:background var(--t),border-color var(--t)}
   .cand:hover{background:var(--panel-2)}
   .cand.sel{border-color:var(--accent);background:rgba(2,132,199,.06)}
   .cand:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -169,8 +169,8 @@
   .meter i.f{background:var(--good)}
   .meter i.a{background:var(--bad);opacity:.8}
   .cand .ct{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);white-space:nowrap}
-  .dtabs{display:flex;gap:2px;margin:8px 12px 0;padding:3px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line)}
-  .dtabs .tab{flex:1;font-size:11px;padding:4px 6px;border-radius:7px;border:1px solid transparent;white-space:nowrap}
+  .dtabs{display:flex;gap:2px;margin:8px 12px 0;padding:3px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line)}
+  .dtabs .tab{flex:1;font-size:11px;padding:4px 6px;border-radius:4px;border:1px solid transparent;white-space:nowrap}
   .dtabs .tab[aria-selected=true]{background:var(--panel);border-color:var(--line-strong);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.06)}
   .detail{padding:2px 16px 10px}
   .detail h4{margin:10px 0 3px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
@@ -193,11 +193,11 @@
   .eg li{padding:4px 0;border-bottom:1px dashed var(--line)}
   .detail h4.oth{margin-top:12px}
   .chips{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
-  .chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--line-strong);border-radius:999px;font-size:11.5px;color:var(--ink-mute);background:var(--panel)}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--line-strong);border-radius:3px;font-size:11.5px;color:var(--ink-mute);background:var(--panel)}
   .kv{display:grid;grid-template-columns:auto 1fr;font-size:12px}
   .kv .k{padding:4px 12px 4px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px dashed var(--line)}
   .kv .v{padding:4px 0;font-family:var(--mono);font-size:11.5px;color:var(--ink);border-bottom:1px dashed var(--line);text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
-  .pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--warn)}
+  .pdot{width:6px;height:6px;border-radius:1px;flex-shrink:0;background:var(--ink-dim)}
   .cand-actions{padding:6px 14px 8px;border-top:1px solid var(--line)}
   .cand-actions .note{margin-bottom:5px;font-size:10.5px;line-height:1.35;color:var(--ink-dim)}
   .cand-actions .btn{width:100%;justify-content:center;padding:8px 16px}
@@ -224,7 +224,7 @@
       <div class="ld-card">
         <span class="lbl">Preparing source investigation</span>
         <ul>
-          <li data-k="graph"><span class="st"></span><span>Skid knowledge graph</span><span class="rs">Loading…</span></li>
+          <li data-k="graph"><span class="st"></span><span>Site knowledge graph</span><span class="rs">Loading…</span></li>
           <li data-k="cands"><span class="st"></span><span>Source candidates</span><span class="rs">Loading…</span></li>
           <li data-k="cam"><span class="st"></span><span>Camera frame</span><span class="rs">Loading…</span></li>
         </ul>
@@ -306,7 +306,7 @@
       </div>
       <div class="scroll"><div class="detail" id="detail" role="tabpanel"></div></div>
       <div class="cand-actions">
-        <div class="note">Camera-to-equipment mapping is manually configured for this representative skid.</div>
+        <div class="note">Camera-to-equipment mapping is manually configured for this site.</div>
         <a class="btn primary" id="btn-quantify" href="quantify.html">Review emissions estimate →</a>
       </div>
     </section>
