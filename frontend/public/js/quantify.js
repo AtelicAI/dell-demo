@@ -6,13 +6,8 @@
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const { API, INCIDENT_ID, get } = window.AtelicShell;
 
-  const BADGE = {
-    simulated: 'Simulated', synthetic: 'Simulated', model_estimated: 'Model estimated',
-    experimental_setpoint: 'Experimental setpoint', provider_reported: 'Provider reported',
-    hypothesis: 'Hypothesis', pending: 'Pending',
-  };
   // Simulated / synthetic provenance is tracked in the data but not shown.
-  const badge = (p, title) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
+  const { badge } = window.AtelicShell;
   // Stacked strips on one time axis; methane gets the most height.
   const STRIPS = [
     { q: 'methane_ppm', name: 'Methane concentration', unit: 'ppm', color: '--n-well', digits: 2, h: 160 },

@@ -5,12 +5,8 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const { API, INCIDENT_ID, get } = window.AtelicShell;
 
-  const BADGE = {
-    simulated: 'Simulated', synthetic: 'Simulated', model_estimated: 'Model estimated',
-    manual_annotation: 'Manual annotation', hypothesis: 'Hypothesis', gap: 'Gap', pending: 'Pending',
-  };
   // Simulated / synthetic provenance is tracked in the data but not shown.
-  const badge = (p, title) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
+  const { BADGE, badge } = window.AtelicShell;
   const KIND = {
     candidates: 'Locate', candidate_evidence: 'Locate', procedure: 'Procedure', maintenance: 'Maintenance record',
     detection: 'Camera', quantification: 'Estimate',
@@ -299,22 +295,8 @@
   document.addEventListener('focusout', (e) => { if (e.target.matches('.fn')) hidePop(); });
   addEventListener('scroll', hidePop, { passive: true });
 
-  // ----- modal (flag, regenerate, submit) -----
-  let onOk = null;
-  function openModal(title, html, okLabel, fn) {
-    $('modal-title').textContent = title;
-    $('modal-body').innerHTML = html;
-    $('modal-ok').textContent = okLabel;
-    onOk = fn;
-    $('modal').classList.add('open');
-    ($('modal-body').querySelector('textarea') || $('modal-ok')).focus();
-  }
-  const closeModal = () => { $('modal').classList.remove('open'); onOk = null; };
-  $('modal-cancel').addEventListener('click', closeModal);
-  $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('modal').classList.contains('open')) closeModal(); });
-  // closeModal only hides the dialog, so a callback can still read its fields.
-  $('modal-ok').addEventListener('click', async () => { const fn = onOk; closeModal(); if (fn) await fn(); });
+  // ----- confirmation dialog (shell component) -----
+  const openModal = (title, html, okLabel, onOk) => window.AtelicShell.modal({ title, html, okLabel, onOk });
 
   const regenerate = () => openModal('Regenerate the draft?',
     '<p>A new version is built from the current evidence. Field edits and flags on the current version are replaced.</p>',

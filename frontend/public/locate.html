@@ -8,13 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=40">
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=34" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=41">
+<script src="js/shell.js?v=36" defer></script>
 <script src="js/plumeheat.js?v=1" defer></script>
-<script src="js/locate.js?v=34" defer></script>
+<script src="js/locate.js?v=36" defer></script>
 <style>
-  [hidden]{display:none!important}
 
   /* PRD Screen 3: investigation (camera strip + plant view) | ranked candidates */
   .loc-grid{position:relative;display:grid;grid-template-columns:minmax(0,60fr) minmax(0,40fr);gap:14px;min-height:0}
@@ -40,19 +38,17 @@
   .loc-grid.ready > .panel{animation:rise var(--t-slow) both}
   .loc-grid.ready > .panel:nth-child(3){animation-delay:60ms}
   .loc-grid.ready > .panel:nth-child(4){animation-delay:120ms}
-  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
   @media (prefers-reduced-motion:reduce){.loc-grid.ready > .panel{animation:none}.st{animation-duration:2s}}
   .loc-grid > .panel{min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+  .kg-link{font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+  .kg-link:hover{text-decoration:underline}
+  .kg-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
   .scroll{flex:1;min-height:0;overflow-y:auto}
-  .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
   .note{font-size:12px;color:var(--ink-mute);line-height:1.5}
   .caveat{margin:0;padding:8px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.5}
   .id{font-family:var(--mono);font-weight:600;color:var(--ink);white-space:nowrap}
   .panel-head h2{white-space:nowrap}
-  .linkish{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);background:none;border:0;padding:0;cursor:pointer}
-  .linkish:hover{text-decoration:underline}
-  .linkish:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 
   /* ----- camera strip (top of the investigation panel): looping replay with heat map + what CAM-01 can see ----- */
   .cam-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
@@ -88,31 +84,19 @@
   .cam-note{font-size:11px;color:var(--ink-mute);line-height:1.35;padding-left:8px;border-left:2px solid var(--warn)}
 
   /* ----- investigation pane ----- */
-  .tabs{display:flex;gap:2px}
   .tab{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:4px;border:1px solid transparent;background:none;cursor:pointer;color:var(--ink-mute)}
   .tab:hover{color:var(--ink)}
   .tab[aria-selected=true]{color:var(--accent);background:var(--accent-glow);border-color:var(--line-strong)}
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .view{flex:1;min-height:0;display:flex;flex-direction:column}
-  .view-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-bottom:1px solid var(--line)}
-  .view-head > div:first-child{flex:1;min-width:0}
-  .view-head h3{margin:0;font-size:12.5px;font-weight:600}
-  .view-head .note{font-size:11.5px}
-  .tools{display:flex;gap:4px;flex-wrap:wrap}
-  .tg{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:3px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-mute);cursor:pointer;white-space:nowrap}
-  .tg:hover{border-color:var(--accent)}
-  .tg[aria-pressed=true]{color:var(--ink);border-color:var(--accent);background:var(--accent-glow)}
-  .tg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .canvas{flex:1;min-height:0;position:relative}
   #layout svg{position:absolute;inset:0;width:100%;height:100%}
-  #graph{position:absolute;inset:0}
   .view-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px;font-size:13px;color:var(--ink-mute)}
   .legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
   .legend span{display:flex;align-items:center;gap:5px}
   .legend i{width:14px;height:0;border-top:1.5px solid var(--ink-mute)}
   .legend i.mon{border-top:1.5px dashed var(--pink)}
   .legend i.obs{border-top:1.5px dotted var(--ink-dim)}
-  .legend i.sw{width:9px;height:9px;border:1.5px solid;border-radius:50%;background:currentColor}
   .legend i.cand{width:9px;height:9px;border-radius:50%;border:1.5px dashed var(--warn)}
   .edge-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 14px;border-top:1px solid var(--line);background:var(--panel-2);font-size:11.5px;color:var(--ink-mute);min-height:34px}
   .edge-info b{font-family:var(--mono);font-size:11px;color:var(--ink)}
@@ -181,7 +165,6 @@
   .detail li .mk.for{color:var(--ink)}.detail li .mk.against{color:var(--ink-dim)}.detail li .mk.miss{color:var(--ink-dim)}
   .detail li .tx{flex:1;min-width:0}
   .detail li .src{display:block;margin-top:1px}
-  .detail .empty{font-size:12px;color:var(--ink-dim);padding:4px 0}
   .detail .why{margin:10px 0 2px;font-size:12px;line-height:1.5;color:var(--ink-mute)}
   .eg{margin-top:10px;border-left:2px solid var(--line-strong);padding-left:10px}
   .eg h4{display:flex;align-items:center;gap:6px;margin:0 0 2px}
@@ -230,14 +213,12 @@
         </ul>
       </div>
     </div>
-    <!-- 1: camera strip + equipment layout / knowledge graph (selection persists across tabs) -->
+    <!-- 1: camera strip + equipment layout (the full knowledge graph has its own page: graph.html) -->
     <section class="panel" aria-label="Equipment investigation">
       <div class="panel-head">
-        <div class="tabs" role="tablist" aria-label="Investigation view">
-          <button class="tab" role="tab" id="tab-layout" aria-controls="view-layout" aria-selected="true">Equipment layout</button>
-          <button class="tab" role="tab" id="tab-graph" aria-controls="view-graph" aria-selected="false" tabindex="-1">Knowledge graph</button>
-        </div>
+        <h2>Equipment layout</h2>
         <span class="badges" id="graph-badge"></span>
+        <a class="kg-link" id="kg-link" href="graph.html?from=locate" title="See all relationships of the selected asset">Open in knowledge graph →</a>
       </div>
 
       <div class="cam-strip" aria-label="Camera view">
@@ -249,41 +230,13 @@
         </div>
       </div>
 
-      <div class="view" id="view-layout" role="tabpanel" aria-labelledby="tab-layout">
+      <div class="view" id="view-layout">
         <div class="canvas" id="layout"><div class="view-empty">Loading layout…</div></div>
         <div class="legend">
           <span><i></i>Piping (gas flow →)</span>
           <span><i class="mon"></i>Monitors</span>
           <span><i class="obs"></i>Camera can observe</span>
           <span><i class="cand"></i>Source candidate</span>
-        </div>
-      </div>
-
-      <div class="view" id="view-graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
-        <div class="view-head">
-          <div>
-            <h3 title="Select an asset to inspect its connections, sensors, camera coverage and supporting records.">How the equipment is connected</h3>
-          </div>
-          <div class="tools" role="group" aria-label="Expand graph">
-            <button class="tg" data-x="up" aria-pressed="false">Expand upstream</button>
-            <button class="tg" data-x="down" aria-pressed="false">Expand downstream</button>
-            <button class="tg" data-x="sensors" aria-pressed="false">Show linked sensors</button>
-          </div>
-        </div>
-        <div class="canvas"><div id="graph"></div></div>
-        <div class="legend">
-          <span><i class="sw" style="border-color:var(--n-station);color:var(--n-station)"></i>Vessel</span>
-          <span><i class="sw" style="border-color:var(--n-equip);color:var(--n-equip)"></i>Valve</span>
-          <span><i class="sw" style="border-color:var(--ink-dim);color:var(--ink-dim)"></i>Pipe</span>
-          <span><i class="sw" style="border-color:var(--n-well);color:var(--n-well)"></i>Vent</span>
-          <span><i class="sw" style="border-color:var(--n-tag);color:var(--n-tag)"></i>Sensor</span>
-          <span><i class="sw" style="border-color:var(--n-wt);color:var(--n-wt)"></i>Camera</span>
-          <span><i class="sw" style="border-color:var(--n-sap);color:var(--n-sap)"></i>Work order</span>
-          <span><i class="sw" style="border-color:var(--warn);border-style:dashed;background:none"></i>Source candidate</span>
-          <span><i></i>Flows to</span>
-          <span><i class="mon"></i>Monitors</span>
-          <span><i class="obs"></i>Can observe</span>
-          <span><i style="border-color:var(--n-sap)"></i>Work order</span>
         </div>
       </div>
 

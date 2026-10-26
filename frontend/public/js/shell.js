@@ -1,4 +1,5 @@
-// Shared shell: left rail, top bar status pills, incident strip, 6-stage stepper.
+// Shared shell: left rail, top bar status pills, incident strip, 6-stage stepper, plus the shared
+// components every screen uses: provenance badge, confirmation dialog, back bar.
 // Everything is rendered from backend state; nothing is hard-coded.
 // A page opts in with <body data-page="overview"> and empty #rail / #topbar / #incident-strip / #stepper.
 (function () {
@@ -47,7 +48,8 @@
   const ICONS = {
     overview: '<path d="M3 3h10v10H3z"/><path d="M5 6h6M5 9h4"/>',
     detection: '<rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h2m2 0h2M5 10h4"/>',
-    locate: '<circle cx="3" cy="8" r="1.8"/><circle cx="13" cy="3" r="1.8"/><circle cx="13" cy="13" r="1.8"/><circle cx="8" cy="8" r="1.8"/><path d="M4.5 7l2 .5M10.5 4.5 9 7M10.5 11.5 9 9"/>',
+    locate: '<circle cx="8" cy="8" r="4.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>',
+    graph: '<circle cx="3" cy="8" r="1.8"/><circle cx="13" cy="3" r="1.8"/><circle cx="13" cy="13" r="1.8"/><circle cx="8" cy="8" r="1.8"/><path d="M4.5 7l2 .5M10.5 4.5 9 7M10.5 11.5 9 9"/>',
     quantify: '<path d="M3 14V7M7 14V3M11 14v-5M15 14v2" stroke-linecap="round"/>',
     plan: '<path d="M3 4h10v8H3z"/><path d="M5 7h6"/>',
     review: '<path d="M3 8l3 3 7-7"/>',
@@ -65,6 +67,8 @@
     { page: 'plan', label: 'Plan', href: 'plan.html' },
     { page: 'review', label: 'Approve', href: 'review.html' },
     { page: 'report', label: 'Report', href: 'report.html' },
+    { sec: 'Plant' },
+    { page: 'graph', label: 'Knowledge graph', href: 'graph.html' },
     { sec: 'Observability' },
     { page: 'activity', label: 'Glass box', href: 'activity.html' },
   ];
@@ -264,6 +268,80 @@
     (root || document).querySelectorAll('[data-trace]').forEach((el) => { el.innerHTML = traceLink(el.dataset.trace, el.dataset.traceText); });
   }
 
+  // Provenance badge (truth rule). Simulated / synthetic provenance stays in the data but is not shown;
+  // an unknown value shows Pending, never a guessed label.
+  const BADGE = {
+    observed: 'Observed', provider_reported: 'Provider reported', experimental_setpoint: 'Experimental setpoint',
+    model_estimated: 'Model estimated', simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
+    hypothesis: 'Hypothesis', approved: 'Approved', pending: 'Pending', gap: 'Gap',
+    human_decision: 'Human decision', system: 'System status',
+  };
+  const escAttr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function badge(p, title) {
+    if (p === 'simulated' || p === 'synthetic') return '';
+    return `<span class="badge ${escAttr(p)}"${title ? ` title="${escAttr(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
+  }
+
+  // Confirmation dialog, built on first use. OK runs onOk after the dialog hides (its fields can still
+  // be read), or follows okHref. With requireText, OK waits until the textarea in the body has text.
+  let modalOk = null, modalReturn = null;
+  function modalEl() {
+    let m = $('modal');
+    if (m) return m;
+    m = document.createElement('div');
+    m.className = 'modal-backdrop';
+    m.id = 'modal';
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.setAttribute('aria-labelledby', 'modal-title');
+    m.innerHTML = '<div class="modal"><h3 id="modal-title"></h3><div id="modal-body"></div><div class="actions"></div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', async (e) => {
+      if (e.target === m || e.target.closest('[data-modal-cancel]')) { closeModal(); return; }
+      if (e.target.closest('button[data-modal-ok]')) { const fn = modalOk; closeModal(); if (fn) await fn(); }
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open')) closeModal(); });
+    return m;
+  }
+  function modal({ title, html = '', okLabel = 'OK', okClass = '', okHref, cancelLabel = 'Cancel', requireText, onOk }) {
+    const m = modalEl();
+    modalReturn = document.activeElement;
+    modalOk = onOk || null;
+    $('modal-title').textContent = title;
+    $('modal-body').innerHTML = html;
+    m.querySelector('.actions').innerHTML = `<button type="button" class="btn" data-modal-cancel>${cancelLabel}</button>${okHref
+      ? `<a class="btn primary ${okClass}" data-modal-ok href="${escAttr(okHref)}">${okLabel}</a>`
+      : `<button type="button" class="btn primary ${okClass}" data-modal-ok>${okLabel}</button>`}`;
+    const ok = m.querySelector('[data-modal-ok]'), ta = $('modal-body').querySelector('textarea');
+    if (requireText && ta) {
+      ok.disabled = true;
+      ta.addEventListener('input', () => { ok.disabled = !ta.value.trim(); });
+    }
+    m.classList.add('open');
+    (ta || ok).focus();
+  }
+  function closeModal() {
+    const m = $('modal');
+    if (!m) return;
+    m.classList.remove('open');
+    modalOk = null;
+    if (modalReturn && modalReturn.isConnected) modalReturn.focus();
+    modalReturn = null;
+  }
+
+  // Back bar: a page opened with ?from=<page> (e.g. from a "View in Glass box" link) links back to it.
+  function cameFrom() {
+    const from = new URLSearchParams(location.search).get('from');
+    const n = NAV.find((x) => x.page === from && x.href);
+    return n ? { page: n.page, label: n.label, href: n.href } : null;
+  }
+  function backBar(detail) {
+    const el = $('back-bar'), back = cameFrom();
+    if (!el || !back) return;
+    el.hidden = false;
+    el.innerHTML = `<span>Opened from ${back.label}${detail || ''}</span><a href="${back.href}">← Back to ${back.label}</a>`;
+  }
+
   async function init() {
     renderRail(document.body.dataset.page);
     fillTraceSlots();
@@ -303,7 +381,10 @@
     try { renderIncident(await get(`/incidents/${INCIDENT_ID}`)); } catch (e) { console.error(e); }
   }
 
-  window.AtelicShell = { API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink };
+  window.AtelicShell = {
+    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink,
+    BADGE, badge, modal, closeModal, cameFrom, backBar,
+  };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

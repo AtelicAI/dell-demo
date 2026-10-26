@@ -8,15 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=40">
-<script src="js/shell.js?v=34" defer></script>
-<script src="js/review.js?v=4" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=41">
+<script src="js/shell.js?v=36" defer></script>
+<script src="js/review.js?v=5" defer></script>
 <style>
-  [hidden]{display:none!important}
-  .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
-  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
   @keyframes ink{from{opacity:0;transform:scale(1.2)}}
-  .rise{animation:rise var(--t-slow) both}
   @media (prefers-reduced-motion:reduce){.rise,.sig.just .seal{animation:none!important}}
 
   /* PRD Screen 6, decision first: a brief of what is being approved, the points that need the
@@ -108,7 +104,7 @@
   .ask .sm b{color:var(--warn);font-weight:600}
   .field label{display:block;margin-bottom:5px;font-size:12px;font-weight:500;color:var(--ink-mute)}
   .field input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:4px;background:var(--panel);color:var(--ink)}
-  .field input:focus,.modal textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
   .field .hint{font-size:11px;color:var(--ink-dim);margin-top:4px}
   .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .acts .btn{justify-content:center;padding:10px}
@@ -136,13 +132,6 @@
   .hist li{padding:5px 0;border-top:1px dashed var(--line);color:var(--ink-mute)}
   .hist li b{color:var(--ink);font-weight:600}
 
-  .modal label{display:block;margin:0 0 6px;font-size:12px;color:var(--ink-mute)}
-  .modal textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line-strong);border-radius:4px;margin-bottom:16px;resize:vertical}
-  .modal .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0 0 16px;font-size:12.5px}
-  .modal .kv span:nth-child(odd){color:var(--ink-mute)}
-  .modal .kv span:nth-child(even){font-family:var(--mono);font-size:12px}
-  .modal .btn.go{background:var(--good);border-color:var(--good)}
-  .modal .btn.no{background:var(--bad);border-color:var(--bad);color:#fff}
 
   @media (max-width:1240px){.r-grid{grid-template-columns:minmax(0,1fr) 300px}.tiles{grid-template-columns:1fr 1fr}.tile:nth-child(3){border-left:0}.tile:nth-child(-n+2){border-bottom:1px solid var(--line)}}
   @media (max-width:980px){.r-grid{grid-template-columns:1fr}.rail-d{position:static}.fields{grid-template-columns:1fr}}
@@ -198,16 +187,6 @@
   </div>
 </main>
 
-<div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="modal">
-    <h3 id="modal-title"></h3>
-    <div id="modal-body"></div>
-    <div class="actions">
-      <button class="btn" id="modal-cancel">Cancel</button>
-      <button class="btn primary" id="modal-ok"></button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>

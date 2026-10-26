@@ -5,13 +5,9 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const { API, INCIDENT_ID, get } = window.AtelicShell;
 
-  const BADGE = {
-    observed: 'Observed', provider_reported: 'Provider reported', experimental_setpoint: 'Experimental setpoint',
-    model_estimated: 'Model estimated', simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
-    hypothesis: 'Hypothesis', approved: 'Approved', human_decision: 'Human decision', system: 'System status', gap: 'Gap',
-  };
   // Simulated / synthetic provenance is tracked in the data (and the JSON export) but not shown.
-  const badge = (p) => (!p || p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}">${BADGE[p] || esc(p)}</span>`);
+  // Report rows without a provenance get no badge.
+  const badge = (p) => (p ? window.AtelicShell.badge(p) : '');
   const KIND = {
     candidates: 'Locate', candidate_evidence: 'Locate', procedure: 'Procedure', maintenance: 'Maintenance record',
     detection: 'Camera annotation', quantification: 'Estimate', video: 'OGI clip', scenario: 'Scenario', sensor: 'Sensor traces',

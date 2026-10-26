@@ -201,25 +201,8 @@
     }
   }
 
-  // ----- confirmation dialog -----
-  let onOk = null;
-  function openModal(title, html, okLabel, okClass, fn) {
-    $('modal-title').textContent = title;
-    $('modal-body').innerHTML = html;
-    $('modal-ok').textContent = okLabel;
-    $('modal-ok').className = `btn primary ${okClass}`;
-    onOk = fn;
-    $('modal').classList.add('open');
-    const ta = $('modal-body').querySelector('textarea');
-    $('modal-ok').disabled = !!ta;
-    if (ta) ta.addEventListener('input', () => ($('modal-ok').disabled = !ta.value.trim()));
-    (ta || $('modal-ok')).focus();
-  }
-  const closeModal = () => { $('modal').classList.remove('open'); onOk = null; };
-  $('modal-cancel').addEventListener('click', closeModal);
-  $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('modal').classList.contains('open')) closeModal(); });
-  $('modal-ok').addEventListener('click', async () => { const fn = onOk; closeModal(); if (fn) await fn(); });
+  // ----- confirmation dialog (shell component); a reason is required when the body asks for one -----
+  const openModal = (title, html, okLabel, okClass, onOk) => window.AtelicShell.modal({ title, html, okLabel, okClass, onOk, requireText: true });
 
   document.addEventListener('input', (e) => { if (e.target.id === 'rv-name') syncButtons(); });
   document.addEventListener('click', (e) => {

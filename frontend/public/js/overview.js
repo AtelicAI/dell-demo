@@ -185,14 +185,13 @@
     new ResizeObserver(() => map.invalidateSize()).observe($('map'));
   }
 
+  // "Explore on-site investigation": the local incident is a separate example, so say so before leaving.
   function wireModal() {
-    const modal = $('modal');
-    const open = () => { modal.classList.add('open'); $('modal-continue').focus(); };
-    const close = () => { modal.classList.remove('open'); $('btn-explore').focus(); };
-    $('btn-explore').addEventListener('click', open);
-    $('modal-cancel').addEventListener('click', close);
-    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) close(); });
+    $('btn-explore').addEventListener('click', () => window.AtelicShell.modal({
+      title: 'Separate local example',
+      html: `<p>This local investigation follows a camera alert at ${window.AtelicShell.FACILITY.name}, ${window.AtelicShell.FACILITY.location}. It is not the satellite-observed facility.</p>`,
+      cancelLabel: 'Stay on overview', okLabel: 'Continue to camera observation', okHref: 'detection.html',
+    }));
   }
 
   async function init() {

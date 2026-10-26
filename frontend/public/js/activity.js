@@ -19,14 +19,13 @@
 
   // Where each step's result is shown in the app (for "Shown on …" links and the back link).
   const SCREEN = {
-    camera_event: ['detection.html', 'Camera'], equipment_mapping: ['locate.html', 'Locate'], graph: ['locate.html', 'Locate'],
+    camera_event: ['detection.html', 'Camera'], equipment_mapping: ['locate.html', 'Locate'], graph: ['graph.html', 'Knowledge graph'],
     procedure_passages: ['plan.html', 'Plan'], emission_estimate: ['quantify.html', 'Quantify'], work_order: ['plan.html', 'Plan'],
     approval: ['review.html', 'Approve'],
   };
-  const PAGE = { detection: 'Camera', locate: 'Locate', quantify: 'Quantify', plan: 'Plan', review: 'Approve', report: 'Report' };
   // ?step=<id>&from=<page>: opened from a "View in Glass box" link on another screen.
   const params = new URLSearchParams(location.search);
-  const focusStep = params.get('step'), fromPage = params.get('from');
+  const focusStep = params.get('step');
 
   let A = null, filter = 'all', open = new Set(), timer = null, active = null;
 
@@ -153,10 +152,10 @@
     if (last) open.add(last.id);
     active = s.id;
     render();
-    const back = fromPage && PAGE[fromPage];
+    const back = window.AtelicShell.cameFrom();
     $('focus-bar').hidden = false;
-    $('focus-bar').innerHTML = `<span>Step behind this result: <b>${esc(s.label)}</b>${back ? ` · opened from ${back}` : ''}</span>
-      ${back ? `<a href="${fromPage}.html">← Back to ${back}</a>` : ''}
+    $('focus-bar').innerHTML = `<span>Step behind this result: <b>${esc(s.label)}</b>${back ? ` · opened from ${back.label}` : ''}</span>
+      ${back ? `<a href="${back.href}">← Back to ${back.label}</a>` : ''}
       <button type="button" id="focus-clear">Show all steps</button>`;
     const el = $(`st-${s.id}`);
     requestAnimationFrame(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));

@@ -1,32 +1,22 @@
 // Screen 3 — Locate / Source investigation. Reads GET /incidents/:id/graph, /candidates, /detections.
-// One shared selection (asset_id) drives the camera ROI, the 2D layout, the graph and the candidate panel.
+// One shared selection (asset_id) drives the camera ROI, the 2D layout and the candidate panel.
+// The full knowledge graph is its own page (graph.html); the link there carries the selected asset.
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-  const BADGE = {
-    simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
-    experimental_setpoint: 'Experimental setpoint', hypothesis: 'Hypothesis', pending: 'Pending',
-    model_estimated: 'Model estimated',
-  };
+  const { BADGE, badge } = window.AtelicShell;
+  // Provenances a verified camera clip may carry (same rule as Screen 2).
+  const CLIP_PROV = new Set(['experimental_setpoint', 'manual_annotation', 'model_estimated', 'simulated', 'synthetic', 'hypothesis', 'pending']);
   // Simulated / synthetic provenance is tracked in the data but not shown.
-  const badge = (p, title) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}"${title ? ` title="${esc(title)}"` : ''}>${BADGE[p] || 'Pending'}</span>`;
   const METHOD = { manual_illustrative: 'Manually configured', 'manually configured': 'Manually configured' };
-  const TYPE_COLOR = {
-    Vessel: '--n-station', Valve: '--n-equip', Vent: '--n-well', PipeSegment: '--ink-dim',
-    Sensor: '--n-tag', Camera: '--n-wt', EquipmentArea: '--ink-mute', WorkOrder: '--n-sap',
-  };
-  const EDGE_COLOR = {
-    CONNECTED_TO: '--ink-mute', MONITORS: '--ink-mute', CAN_OBSERVE: '--ink-dim', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap',
-  };
   const MISSING_CAM = 'Camera coverage has not been calibrated.';
   const MAP_DISC = 'Equipment relationships and camera coverage are manually configured.';
   const NO_REL = 'No verified relationship is available for this asset.';
 
   let G = null, C = null, D = null, byId = new Map(), rank = new Map();
-  let selected = null, edgeSel = null, dtab = 'evidence', chart = null;
-  const expand = { up: false, down: false, sensors: false };
+  let selected = null, edgeSel = null, dtab = 'evidence';
 
   // ----- graph helpers -----
   const edgesOf = (id) => G.edges.filter((e) => e.from === id || e.to === id);
@@ -35,39 +25,13 @@
   const name = (id) => (byId.get(id) || {}).display_name || '';
   const assetLink = (id) => `<button class="linkish" data-sel="${esc(id)}">${esc(id)}</button>`;
 
-  function walk(id, dir) {
-    // Transitive CONNECTED_TO in one flow direction.
-    const out = new Set(), stack = [id];
-    while (stack.length) {
-      const cur = stack.pop();
-      G.edges.forEach((e) => {
-        if (e.type !== 'CONNECTED_TO') return;
-        const next = dir === 'up' ? (e.to === cur && e.from) : (e.from === cur && e.to);
-        if (next && !out.has(next)) { out.add(next); stack.push(next); }
-      });
-    }
-    return out;
-  }
-
-  const showEdge = (e) => e.type !== 'CONTAINS' || e.from === selected;
-
-  function graphSet() {
-    const s = new Set([selected]);
-    // The area node links to every asset; only show those links when the area itself is selected.
-    edgesOf(selected).filter(showEdge).forEach((e) => { s.add(e.from); s.add(e.to); });
-    if (expand.up) walk(selected, 'up').forEach((x) => s.add(x));
-    if (expand.down) walk(selected, 'down').forEach((x) => s.add(x));
-    if (expand.sensors) G.edges.forEach((e) => { if (e.type === 'MONITORS' && s.has(e.to)) s.add(e.from); });
-    return s;
-  }
-
   // ----- selection -----
   function select(id) {
     if (!id || !byId.has(id)) return;
     selected = id;
     edgeSel = null;
+    $('kg-link').href = `graph.html?${new URLSearchParams({ asset: id, from: 'locate' })}`;
     renderLayout();
-    renderGraph();
     renderCands();
     renderDetail();
     renderCam();
@@ -131,160 +95,6 @@
     }));
   }
 
-  // ----- knowledge graph (ECharts, fixed reading layout) -----
-  // Not a force layout: gas flows left → right through the selected asset, sensors sit above what
-  // they monitor, work orders below their asset, the camera along the bottom.
-  const EQUIP = new Set(['Vessel', 'Valve', 'PipeSegment', 'Vent']);
-  const EDGE_WORDS = { CONNECTED_TO: 'flows to', MONITORS: 'monitors', CAN_OBSERVE: 'can observe', HAS_WORK_ORDER: 'work order', CONTAINS: 'contains' };
-  const typeOf = (id) => (byId.get(id) || {}).asset_type;
-
-  function placeGraph(vis) {
-    const at = new Map();
-    const eq = [...vis].filter((id) => EQUIP.has(typeOf(id)));
-    const pipes = G.edges.filter((e) => e.type === 'CONNECTED_TO' && vis.has(e.from) && vis.has(e.to));
-    // Columns by flow distance from an anchor; each unconnected group gets its own band below.
-    const col = new Map();
-    const touch = (id) => edgesOf(selected).some((e) => e.from === id || e.to === id);
-    const order = [EQUIP.has(typeOf(selected)) ? selected : eq.find(touch), ...eq].filter(Boolean);
-    let band = 0;
-    const bandOf = new Map();
-    order.forEach((start) => {
-      if (col.has(start)) return;
-      col.set(start, 0); bandOf.set(start, band);
-      const q = [start];
-      while (q.length) {
-        const cur = q.shift();
-        pipes.forEach((e) => {
-          const [nb, d] = e.from === cur ? [e.to, 1] : e.to === cur ? [e.from, -1] : [];
-          if (nb && !col.has(nb)) { col.set(nb, col.get(cur) + d); bandOf.set(nb, band); q.push(nb); }
-        });
-      }
-      band++;
-    });
-    // Stack nodes that share a column and band, centred on the band line.
-    const groups = new Map();
-    eq.forEach((id) => { const k = `${bandOf.get(id)}|${col.get(id)}`; groups.set(k, [...(groups.get(k) || []), id]); });
-    let y0 = 0;
-    for (let b = 0; b < band; b++) {
-      const keys = [...groups.keys()].filter((k) => +k.split('|')[0] === b);
-      const tall = Math.max(1, ...keys.map((k) => groups.get(k).length));
-      keys.forEach((k) => groups.get(k).forEach((id, i) => at.set(id, [col.get(id), y0 + (i - (groups.get(k).length - 1) / 2) * 1.1])));
-      y0 += tall * 1.1 + 1.6;
-    }
-    const xs = [...at.values()].map((p) => p[0]), ys = [...at.values()].map((p) => p[1]);
-    const top = ys.length ? Math.min(...ys) : 0, bottom = ys.length ? Math.max(...ys) : 0;
-    const cx = xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : 0;
-    if (!at.size && vis.has(selected)) at.set(selected, [0, 0]);
-
-    // Satellites: sensors above, work orders below, camera at the bottom, area on top.
-    const used = new Set([...at.values()].map((p) => p.join()));
-    const free = (x, y, dy) => { while (used.has(`${x},${y}`)) x += 0.55; used.add(`${x},${y}`); return [x, y]; };
-    [...vis].filter((id) => !at.has(id)).forEach((id) => {
-      const t = typeOf(id), e = G.edges.find((x) => (x.from === id && at.has(x.to)) || (x.to === id && at.has(x.from)));
-      const host = e ? at.get(e.from === id ? e.to : e.from) : [cx, bottom];
-      if (t === 'Sensor') at.set(id, free(host[0], Math.min(host[1], top) - 1.4));
-      else if (t === 'WorkOrder') at.set(id, free(host[0], Math.max(host[1], bottom) + 1.7));
-      else if (t === 'Camera') at.set(id, free(cx, bottom + 2.1));
-      else if (t === 'EquipmentArea') at.set(id, free(cx, top - 2.1));
-      else at.set(id, free(host[0] + 0.5, host[1] + 1.1));
-    });
-    return at;
-  }
-
-  function renderGraph() {
-    if (!G || $('view-graph').hidden || !window.echarts) return;
-    const el = $('graph');
-    if (!selected) { el.innerHTML = '<div class="view-empty">Select an asset to see its connections.</div>'; return; }
-    if (!chart) {
-      el.innerHTML = '';
-      chart = echarts.init(el, null, { renderer: 'canvas' });
-      chart.on('click', (p) => {
-        if (p.dataType === 'node' && !p.data._ghost) select(p.data.id);
-        if (p.dataType === 'edge') { edgeSel = p.data._i; renderEdgeInfo(); renderGraph(); }
-      });
-    }
-    const vis = graphSet(), at = placeGraph(vis);
-    // Positions in real pixels. ECharts would otherwise stretch x and y separately to fit the box,
-    // which squashes the circles; the two invisible corner nodes below pin its fit to scale 1.
-    const BW = el.clientWidth, BH = el.clientHeight, PX = 56, PT = 44, PB = 42;
-    const xs = [...at.values()].map((p) => p[0]), ys = [...at.values()].map((p) => p[1]);
-    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-    const kx = x1 > x0 ? Math.min(170, (BW - 2 * PX) / (x1 - x0)) : 0;
-    const ky = y1 > y0 ? Math.min(62, (BH - PT - PB) / (y1 - y0)) : 0;
-    const px = (p) => [BW / 2 + (p[0] - (x0 + x1) / 2) * kx, PT + (BH - PT - PB) / 2 + (p[1] - (y0 + y1) / 2) * ky];
-    // Narrow columns drop the name line (it stays in the tooltip).
-    const W = x1 > x0 ? kx - 12 : 132;
-    const wide = W >= 96;
-    const mono = 'IBM Plex Mono, monospace';
-    const data = [...vis].map((id) => {
-      const n = byId.get(id), isSel = id === selected, r = rank.get(id), c = css(TYPE_COLOR[n.asset_type] || '--ink-dim');
-      const small = n.asset_type === 'WorkOrder' || n.asset_type === 'Sensor' || n.asset_type === 'Camera';
-      const nm = n.asset_type === 'WorkOrder' ? `${n.work_type} · ${n.date}` : n.display_name;
-      const fit = (s, w) => (s.length * 6 > w ? `${s.slice(0, Math.max(4, Math.floor(w / 6) - 1))}…` : s);
-      return {
-        id, name: id, x: px(at.get(id))[0], y: px(at.get(id))[1],
-        // Circles coloured by type (kg-demo look); candidates get a dashed amber ring, selection a cyan ring.
-        symbol: 'circle', symbolSize: isSel ? 34 : small ? 18 : 26,
-        itemStyle: {
-          color: c,
-          borderColor: isSel ? css('--accent') : r ? css('--warn') : '#fff',
-          borderWidth: isSel ? 4 : r ? 2.5 : 2,
-          borderType: r && !isSel ? 'dashed' : 'solid',
-          shadowBlur: isSel ? 16 : 0, shadowColor: css('--accent-glow'),
-        },
-        label: {
-          // Sensors sit above their asset, so their label goes on top to stay clear of the link.
-          show: true, position: n.asset_type === 'Sensor' ? 'top' : 'bottom', distance: 5, align: 'center',
-          backgroundColor: css('--panel'), padding: [1, 3], borderRadius: 3,
-          formatter: `{id|${id}}${r && wide ? ` {rk|#${r}}` : ''}${wide ? `\n{nm|${fit(nm, W - 14)}}` : ''}`,
-          rich: {
-            id: { fontFamily: mono, fontSize: 11, fontWeight: 700, color: isSel ? css('--accent') : css('--ink') },
-            rk: { fontFamily: mono, fontSize: 9.5, fontWeight: 700, color: css('--warn') },
-            nm: { fontSize: 9.5, color: css('--ink-mute'), padding: [1, 0, 0, 0] },
-          },
-        },
-      };
-    });
-    const links = G.edges.map((e, i) => ({ e, i })).filter(({ e }) => showEdge(e) && vis.has(e.from) && vis.has(e.to)).map(({ e, i }) => ({
-      source: e.from, target: e.to, _i: i, _t: e.type,
-      // Words only on horizontal flow links with room; short vertical links rely on line style + legend.
-      label: { show: wide && e.type === 'CONNECTED_TO' },
-      lineStyle: {
-        color: i === edgeSel ? css('--accent') : css(EDGE_COLOR[e.type]), width: i === edgeSel ? 2.6 : e.type === 'CONNECTED_TO' ? 1.8 : 1.2,
-        type: e.type === 'MONITORS' ? 'dashed' : e.type === 'CAN_OBSERVE' ? 'dotted' : 'solid', curveness: 0,
-      },
-    }));
-    chart.setOption({
-      animationDurationUpdate: 450,
-      tooltip: {
-        backgroundColor: 'rgba(255,255,255,.98)', borderColor: css('--line-strong'),
-        textStyle: { color: css('--ink'), fontFamily: mono, fontSize: 11.5 },
-        extraCssText: 'box-shadow:0 10px 24px rgba(15,23,42,.1);border-radius:6px;padding:7px 10px;max-width:280px;white-space:normal;',
-        formatter: (p) => {
-          if (p.dataType === 'node' && p.data._ghost) return '';
-          if (p.dataType === 'node') { const n = byId.get(p.data.id); return `<b>${esc(n.asset_id)}</b> · ${esc(n.asset_type)}<br>${esc(n.display_name)}`; }
-          if (p.dataType === 'edge') { const e = G.edges[p.data._i]; return `<b>${e.type}</b><br>${esc(e.from)} → ${esc(e.to)}<br>Click for source`; }
-          return '';
-        },
-      },
-      series: [{
-        // nodeScaleRatio 0: node size ignores the fit/zoom scale, so circles stay round.
-        type: 'graph', layout: 'none', roam: true, nodeScaleRatio: 0,
-        // Node centres are fitted to this box, so pad by half a card to keep cards fully visible.
-        left: 0, right: 0, top: 0, bottom: 0,
-        data: [...data, ...[[0, 0], [BW, BH]].map(([x, y], i) => ({ id: `_ghost${i}`, name: '', x, y, _ghost: true, symbolSize: 0, label: { show: false }, tooltip: { show: false } }))],
-        links,
-        edgeSymbol: ['none', 'arrow'], edgeSymbolSize: 8,
-        edgeLabel: {
-          show: true, formatter: (p) => EDGE_WORDS[p.data._t] || p.data._t,
-          fontFamily: mono, fontSize: 9.5, color: css('--ink-mute'),
-          backgroundColor: css('--panel'), padding: [1, 4], borderRadius: 3,
-        },
-        emphasis: { focus: 'adjacency', lineStyle: { width: 2.4 } },
-      }],
-    }, true);
-  }
-
   function renderEdgeInfo() {
     const box = $('edge-info');
     const e = edgeSel != null && G ? G.edges[edgeSel] : null;
@@ -323,7 +133,7 @@
   function initCam(d) {
     const meta = d.metadata, ann = d.annotations;
     // Same provenance rule as Screen 2: only a verified clip carries its stated provenance.
-    const prov = meta.status === 'verified' && BADGE[meta.provenance] ? meta.provenance : meta.status === 'sample' ? 'simulated' : 'pending';
+    const prov = meta.status === 'verified' && CLIP_PROV.has(meta.provenance) ? meta.provenance : meta.status === 'sample' ? 'simulated' : 'pending';
     $('cam-clip').textContent = window.AtelicShell.FACILITY.short;
     if (!d.clip_available) {
       $('cam-badge').innerHTML = badge('pending');
@@ -521,30 +331,11 @@
     });
   }
 
-  function showView(tab) {
-    const graph = tab.id === 'tab-graph';
-    $('tab-layout').setAttribute('aria-selected', !graph);
-    $('tab-graph').setAttribute('aria-selected', graph);
-    $('tab-layout').tabIndex = graph ? -1 : 0;
-    $('tab-graph').tabIndex = graph ? 0 : -1;
-    $('view-layout').hidden = graph;
-    $('view-graph').hidden = !graph;
-    if (graph) { renderGraph(); if (chart) chart.resize(); } else renderLayout();
-  }
-
   function wire() {
-    ['tab-layout', 'tab-graph'].forEach((id) => $(id).addEventListener('click', () => showView($(id))));
-    tabKeys(document.querySelector('.panel-head .tabs'), showView);
     const dt = (t) => { dtab = t.dataset.t; renderDetail(); };
     document.querySelectorAll('.dtabs .tab').forEach((t) => t.addEventListener('click', () => dt(t)));
     tabKeys(document.querySelector('.dtabs'), dt);
-    document.querySelectorAll('.tools .tg').forEach((b) => b.addEventListener('click', () => {
-      expand[b.dataset.x] = !expand[b.dataset.x];
-      b.setAttribute('aria-pressed', expand[b.dataset.x]);
-      renderGraph();
-    }));
     new ResizeObserver(() => renderLayout()).observe($('layout'));
-    new ResizeObserver(() => chart && chart.resize()).observe($('graph'));
   }
 
   async function init() {
@@ -563,7 +354,6 @@
     } else {
       const msg = '<div class="view-empty">Knowledge graph data not available.</div>';
       $('layout').innerHTML = msg;
-      $('graph').innerHTML = msg;
       $('vis-list').innerHTML = `<div class="note">${NO_REL}</div>`;
       $('graph-badge').innerHTML = badge('pending');
     }
@@ -596,7 +386,6 @@
       $('loc-grid').classList.add('ready');
       $('loader').classList.add('done');
       renderLayout();
-      if (chart) chart.resize();
     }, 450);
   }
 

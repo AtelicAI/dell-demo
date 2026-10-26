@@ -8,12 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=40">
+<link rel="stylesheet" href="css/shell.css?v=41">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=34" defer></script>
-<script src="js/quantify.js?v=16" defer></script>
+<script src="js/shell.js?v=36" defer></script>
+<script src="js/quantify.js?v=17" defer></script>
 <style>
-  [hidden]{display:none!important}
 
   /* PRD Screen 4 (scrolling page): result card + sensor charts on the left, method/inputs/QC on the right
      (stretched to the same height), assumptions full width below */
@@ -25,10 +24,8 @@
   .q-layout .panel{overflow:hidden;animation:rise var(--t-slow) both}
   .side{animation-delay:60ms}
   .traces{animation-delay:100ms}
-  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
   @media (prefers-reduced-motion:reduce){.q-layout .panel{animation:none}.band{transition:none}}
   .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
-  .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
   .note{font-size:12.5px;color:var(--ink-mute);line-height:1.55}
   .caveat{margin:0;padding:7px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.45;background:var(--panel)}
 

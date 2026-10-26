@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Knowledge graph — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=6">
+<link rel="stylesheet" href="css/shell.css?v=41">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
+<script src="js/shell.js?v=36" defer></script>
+<script src="js/graph.js?v=5" defer></script>
+<style>
+  main.fit .lede{margin-bottom:12px}
+
+  /* Site knowledge graph (hero) | selected asset */
+  .kg-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;min-height:0}
+  .kg-grid > .panel{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .panel-head .badges{margin-left:auto;display:flex;gap:5px}
+  .note{font-size:12px;color:var(--ink-mute);line-height:1.5}
+
+
+  .kg-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-bottom:1px solid var(--line)}
+  .kg-tools .rels{display:flex;flex-wrap:wrap;gap:4px}
+  .tg{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:3px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink-dim);cursor:pointer;white-space:nowrap}
+  .tg:hover{border-color:var(--accent)}
+  .tg[aria-pressed=true]{color:var(--ink);border-color:var(--accent);background:var(--accent-glow)}
+  .tg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tg .n{color:var(--ink-dim);font-weight:500}
+  .kg-tools select{margin-left:auto;max-width:200px;font-family:var(--mono);font-size:11.5px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:3px;background:var(--panel);color:var(--ink)}
+  .kg-tools select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  .canvas{flex:1;min-height:0;position:relative}
+  #kg{position:absolute;inset:0}
+  .view-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px;font-size:13px;color:var(--ink-mute)}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:14px;height:0;border-top:1.5px solid var(--ink-mute)}
+  .legend i.mon{border-top-style:dashed}
+  .legend i.obs{border-top:1.5px dotted var(--ink-dim)}
+  .legend i.sw{width:9px;height:9px;border:1.5px solid;border-radius:50%;background:currentColor}
+  .edge-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 14px;border-top:1px solid var(--line);background:var(--panel-2);font-size:11.5px;color:var(--ink-mute);min-height:34px}
+  .edge-info b{font-family:var(--mono);font-size:11px;color:var(--ink)}
+
+  /* asset panel */
+  .asset-head{padding:12px 16px 10px;border-bottom:1px solid var(--line)}
+  .asset-head .a-id{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--ink);line-height:1.2}
+  .asset-head .a-nm{font-size:12.5px;color:var(--ink-mute);margin-top:2px}
+  .asset-head .a-ty{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
+  .asset-head .a-ty i{width:8px;height:8px;border-radius:50%}
+  .scroll{flex:1;min-height:0;overflow-y:auto}
+  .detail{padding:2px 16px 12px}
+  .detail h4{display:flex;align-items:center;gap:6px;margin:12px 0 3px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .detail h4 .n{margin-left:auto;font-weight:500}
+  .detail ul{margin:0;padding:0;list-style:none}
+  .detail li{padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--ink);line-height:1.45}
+  .detail li:last-child{border-bottom:0}
+  .detail li .src{display:block;margin-top:1px;font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .detail li .dir{display:inline-block;min-width:78px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim)}
+  .kv{display:grid;grid-template-columns:auto 1fr;font-size:12px}
+  .kv .k{padding:4px 12px 4px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px dashed var(--line)}
+  .kv .v{padding:4px 0;font-family:var(--mono);font-size:11.5px;color:var(--ink);border-bottom:1px dashed var(--line);text-align:right;min-width:0;overflow-wrap:anywhere}
+  .store{padding:8px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-dim);line-height:1.45}
+
+  @media (max-width:1100px){.kg-grid{grid-template-columns:1fr}main.fit{height:auto}.canvas{height:480px;flex:none}}
+</style>
+</head>
+<body data-page="graph">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide fit">
+  <div class="page-head">
+    <h1>Plant knowledge graph</h1>
+  </div>
+  <p class="lede">How the site's equipment, sensors, camera and records connect. Select an asset to see its relationships.</p>
+  <div class="back-bar" id="back-bar" hidden></div>
+
+  <div class="kg-grid fill">
+    <section class="panel" aria-label="Site knowledge graph">
+      <div class="panel-head">
+        <h2>Al Nakheel · gas-handling unit</h2>
+        <span class="badges" id="kg-badge"></span>
+      </div>
+      <div class="kg-tools">
+        <span class="lbl">Show</span>
+        <div class="rels" id="rels" role="group" aria-label="Relationship types"></div>
+        <select id="pick" aria-label="Find asset"></select>
+      </div>
+      <div class="canvas"><div id="kg"><div class="view-empty">Loading knowledge graph…</div></div></div>
+      <div class="legend">
+        <span><i class="sw" style="border-color:var(--n-station);color:var(--n-station)"></i>Vessel</span>
+        <span><i class="sw" style="border-color:var(--n-equip);color:var(--n-equip)"></i>Valve</span>
+        <span><i class="sw" style="border-color:var(--ink-dim);color:var(--ink-dim)"></i>Pipe</span>
+        <span><i class="sw" style="border-color:var(--n-well);color:var(--n-well)"></i>Vent</span>
+        <span><i class="sw" style="border-color:var(--n-tag);color:var(--n-tag)"></i>Sensor</span>
+        <span><i class="sw" style="border-color:var(--n-wt);color:var(--n-wt)"></i>Camera</span>
+        <span><i class="sw" style="border-color:var(--n-sap);color:var(--n-sap)"></i>Work order</span>
+        <span><i class="sw" style="border-color:var(--ink-mute);color:var(--ink-mute)"></i>Area</span>
+        <span><i></i>Flows to</span>
+        <span><i class="mon"></i>Monitors</span>
+        <span><i class="obs"></i>Can observe</span>
+      </div>
+      <div class="edge-info" id="edge-info"><span class="note">Click a connection to see where it comes from.</span></div>
+    </section>
+
+    <section class="panel" aria-label="Selected asset">
+      <div class="asset-head" id="asset-head"><div class="note">Select an asset in the graph.</div></div>
+      <div class="scroll"><div class="detail" id="detail"></div></div>
+      <div class="store" id="store"></div>
+    </section>
+  </div>
+</main>
+
+</body>
+</html>

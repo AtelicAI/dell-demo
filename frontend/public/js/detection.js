@@ -5,10 +5,9 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  const BADGE = {
-    experimental_setpoint: 'Experimental setpoint', manual_annotation: 'Manual annotation',
-    model_estimated: 'Model estimated', provider_reported: 'Provider reported', simulated: 'Simulated',
-  };
+  const { badge } = window.AtelicShell;
+  // Provenances a verified clip or annotation may carry (anything else shows Pending).
+  const CLIP_PROV = new Set(['experimental_setpoint', 'manual_annotation', 'model_estimated', 'provider_reported', 'simulated']);
   const MODES = {
     external_detector_alert: 'External detector alert',
     local_model_inference: 'Local model inference',
@@ -18,11 +17,10 @@
 
   // Only a verified record carries its stated provenance; a sample gets no badge; anything else is Pending.
   function clipProv(m) {
-    if (m.status === 'verified' && BADGE[m.provenance]) return m.provenance;
+    if (m.status === 'verified' && CLIP_PROV.has(m.provenance)) return m.provenance;
     return m.status === 'sample' ? 'simulated' : 'pending';
   }
   // Simulated / synthetic provenance is tracked in the data but not shown.
-  const badge = (p) => p === 'simulated' || p === 'synthetic' ? '' : `<span class="badge ${p}">${BADGE[p] || 'Pending'}</span>`;
 
   let meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
 
@@ -369,7 +367,7 @@
       const d = await window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`);
       meta = d.metadata; ann = d.annotations; wall = d.camera_wall;
       prov = clipProv(meta);
-      annP = ann.status === 'sample' ? 'simulated' : (BADGE[ann.provenance] ? ann.provenance : 'pending');
+      annP = ann.status === 'sample' ? 'simulated' : (CLIP_PROV.has(ann.provenance) ? ann.provenance : 'pending');
       fps = typeof meta.frame_rate === 'number' && meta.frame_rate > 0 ? meta.frame_rate : null;
       times = d.frame_times && d.frame_times.frame_start_s && d.frame_times.frame_start_s.length ? d.frame_times.frame_start_s : null;
       if (times && !fps) fps = times.length / d.frame_times.end_s;
