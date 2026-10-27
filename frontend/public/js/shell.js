@@ -1,10 +1,19 @@
 // Shared shell: left rail, top bar status pills, incident strip, 6-stage stepper, plus the shared
-// components every screen uses: provenance badge, confirmation dialog, back bar.
+// components every screen uses: provenance badge, confirmation dialog, back bar, dropdown.
 // Everything is rendered from backend state; nothing is hard-coded.
 // A page opts in with <body data-page="overview"> and empty #rail / #topbar / #incident-strip / #stepper.
 (function () {
   const API = `${location.protocol}//${location.hostname}:8000`;
-  const INCIDENT_ID = 'INC-001';
+  // Live incident this browser is working on: ?inc= (remembered for the next pages), else the last one picked.
+  const INCIDENT_ID = (() => {
+    const q = new URLSearchParams(location.search).get('inc'), ok = (v) => /^INC-\d{3}$/.test(v || '');
+    try {
+      if (ok(q)) { localStorage.setItem('atelic.incident', q); return q; }
+      const v = localStorage.getItem('atelic.incident');
+      return ok(v) ? v : 'INC-001';
+    } catch (e) { return ok(q) ? q : 'INC-001'; }
+  })();
+  let liveIncidents = null;
   // Fictional facility the local investigation is set at (no real operator or site).
   const FACILITY = { name: 'Al Nakheel Gas Gathering Station', short: 'Al Nakheel GGS', location: 'Bahrain' };
 
@@ -47,6 +56,7 @@
 
   const ICONS = {
     overview: '<path d="M3 3h10v10H3z"/><path d="M5 6h6M5 9h4"/>',
+    incidents: '<path d="M2.5 3.5h11M2.5 8h11M2.5 12.5h11"/><circle cx="2.5" cy="3.5" r=".6"/>',
     detection: '<rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h2m2 0h2M5 10h4"/>',
     locate: '<circle cx="8" cy="8" r="4.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>',
     graph: '<circle cx="3" cy="8" r="1.8"/><circle cx="13" cy="3" r="1.8"/><circle cx="13" cy="13" r="1.8"/><circle cx="8" cy="8" r="1.8"/><path d="M4.5 7l2 .5M10.5 4.5 9 7M10.5 11.5 9 9"/>',
@@ -59,6 +69,7 @@
   // href: null = screen not built yet (shown disabled).
   const NAV = [
     { page: 'overview', label: 'Overview', href: 'index.html' },
+    { page: 'incidents', label: 'Incidents', href: 'incidents.html' },
     { sec: 'Investigation' },
     { page: 'detection', label: 'Camera', href: 'detection.html' },
     { page: 'locate', label: 'Locate', href: 'locate.html' },
@@ -119,19 +130,140 @@
     const el = $('topbar');
     if (!el) return;
     el.innerHTML = `
-      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span></div>
+      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span><span class="sep">|</span><span class="inc-sw" id="inc-sw" title="Current incident"><b>${INCIDENT_ID}</b></span></div>
       <div class="right-controls">
         <button type="button" id="pill-dell" class="status-pill" data-partner="dell" title="About the Dell edge server" aria-expanded="false"><span class="dot"></span>Dell Edge · …</button>
         <button type="button" id="pill-nvidia" class="status-pill" data-partner="nvidia" title="About the NVIDIA AI stack" aria-expanded="false"><span class="dot"></span>NVIDIA inference · …</button>
         <span id="pill-replay" class="status-pill" title="Replay clock (UTC)"><span class="dot"></span>Replay · …</span>
+        <button type="button" id="nt-btn" class="nt-btn" aria-label="Notifications" title="Notifications" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg><span class="nt-n" hidden></span></button>
       </div>
-      <div class="hw-pop" id="hw-pop" role="dialog" hidden></div>`;
+      <div class="hw-pop" id="hw-pop" role="dialog" hidden></div>
+      <div class="nt-pop" id="nt-pop" role="dialog" aria-label="Notifications" hidden></div>`;
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-partner]');
-      if (b) togglePartner(b);
+      if (b) { closeNotes(); togglePartner(b); }
+      if (e.target.closest('#nt-btn')) { closePartner(); toggleNotes(); }
+      if (e.target.closest('[data-nt-all]')) { markSeen(noteEvents.map(noteKey)); renderNotes(); }
+      const it = e.target.closest('[data-nt-key]');
+      if (it) markSeen([it.dataset.ntKey]);
     });
-    document.addEventListener('click', (e) => { if (!e.target.closest('[data-partner], #hw-pop')) closePartner(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePartner(); });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-partner], #hw-pop')) closePartner();
+      if (!e.target.closest('#nt-btn, #nt-pop')) closeNotes();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closePartner(); closeNotes(); } });
+  }
+
+  // Notifications: human hand-offs read from the audit log (nothing invented). Each one points at the
+  // screen where someone acts next. Read state is per browser; opening that screen counts as read.
+  const NOTE = {
+    alert_triggered: { page: 'detection', kind: 'bad', title: (e) => e.detail.split(';')[0] },
+    submitted_for_review: { page: 'review', kind: 'warn', title: (e) => `Work order v${e.version} waiting for approval` },
+    review_request_changes: { page: 'plan', kind: 'warn', title: (e) => `Changes requested on v${e.version}` },
+    review_reject: { page: 'plan', kind: 'bad', title: (e) => `Work order v${e.version} rejected` },
+    review_approve: { page: 'report', kind: 'good', title: (e) => `Work order v${e.version} approved` },
+  };
+  const SEVERITY = { good: 1, warn: 2, bad: 3 };
+  const noteKey = (e) => `${e.incident_id}:${e.seq}@${e.at}`;
+  // Notifications link to the incident they belong to.
+  const noteHref = (e) => `${navOf(NOTE[e.event].page).href}?inc=${encodeURIComponent(e.incident_id)}`;
+  let noteEvents = [], noteKnown = null, notePoll = null;
+  function readSeen() {
+    try { return new Set(JSON.parse(localStorage.getItem('atelic.notesSeen') || '[]')); } catch (e) { return new Set(); }
+  }
+  function markSeen(keys) {
+    const seen = readSeen();
+    keys.forEach((k) => seen.add(k));
+    // Keep only keys still in the log (a reset starts a new log).
+    const live = new Set(noteEvents.map(noteKey));
+    try { localStorage.setItem('atelic.notesSeen', JSON.stringify([...seen].filter((k) => live.has(k)))); } catch (e) { /* storage blocked */ }
+  }
+  function ago(at) {
+    const s = (Date.now() - Date.parse(at)) / 1000;
+    return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : `${at.slice(11, 16)} UTC`;
+  }
+  const navOf = (page) => NAV.find((n) => n.page === page) || {};
+
+  async function loadNotes() {
+    let events;
+    try { events = (await get('/audit')).events; } catch (e) { return; }
+    noteEvents = events.filter((e) => NOTE[e.event]);
+    const here = document.body.dataset.page;
+    if (noteKnown === null) {
+      // First load on this page: no toasts; what targets this screen is being looked at now.
+      markSeen(noteEvents.filter((e) => NOTE[e.event].page === here && e.incident_id === INCIDENT_ID).map(noteKey));
+    } else {
+      const fresh = noteEvents.filter((e) => !noteKnown.has(noteKey(e)));
+      fresh.forEach(toast);
+      // Already on the screen it points at (e.g. the alert you just raised): pop it up, but no unread dot.
+      markSeen(fresh.filter((e) => NOTE[e.event].page === here && e.incident_id === INCIDENT_ID).map(noteKey));
+    }
+    noteKnown = new Set(noteEvents.map(noteKey));
+    renderNotes();
+    if (!notePoll) notePoll = setInterval(() => { if (!document.hidden) loadNotes(); }, 8000);
+  }
+
+  function renderNotes() {
+    const seen = readSeen();
+    const unread = noteEvents.filter((e) => !seen.has(noteKey(e)));
+    const worst = (list) => list.reduce((k, e) => (SEVERITY[NOTE[e.event].kind] > SEVERITY[k] ? NOTE[e.event].kind : k), 'good');
+    const btn = $('nt-btn');
+    if (btn) {
+      const n = btn.querySelector('.nt-n');
+      n.hidden = !unread.length;
+      n.textContent = unread.length;
+      n.className = `nt-n ${worst(unread)}`;
+      btn.setAttribute('aria-label', `Notifications${unread.length ? `, ${unread.length} unread` : ''}`);
+    }
+    // Rail: a coloured dot on each screen with unread items for it.
+    document.querySelectorAll('#rail .nv a').forEach((a) => {
+      a.classList.remove('note-good', 'note-warn', 'note-bad');
+      const page = (NAV.find((n) => n.href && a.getAttribute('href') === n.href) || {}).page;
+      // The rail shows the current incident's screens, so only its items get a dot.
+      const mine = unread.filter((e) => NOTE[e.event].page === page && e.incident_id === INCIDENT_ID);
+      if (mine.length) a.classList.add(`note-${worst(mine)}`);
+    });
+    const pop = $('nt-pop');
+    if (!pop) return;
+    pop.innerHTML = `<div class="nt-hd"><b>Notifications</b>${unread.length ? '<button type="button" class="linkish" data-nt-all>Mark all read</button>' : ''}</div>${noteEvents.length
+      ? `<div class="nt-list">${noteEvents.slice().reverse().map((e) => {
+        const n = NOTE[e.event], nav = navOf(n.page);
+        return `<a class="nt-it ${n.kind}${seen.has(noteKey(e)) ? '' : ' new'}" href="${noteHref(e)}" data-nt-key="${escAttr(noteKey(e))}">
+          <span class="nt-d"></span><span><b>${escAttr(n.title(e))}</b><span class="nt-x">${escAttr(e.detail)}</span>
+          <small>${escAttr(e.incident_id)} · ${escAttr(e.actor)} · ${ago(e.at)} · ${nav.label}</small></span></a>`;
+      }).join('')}</div>`
+      : '<p class="nt-empty">Nothing yet. Camera alerts, submissions for approval and reviewer decisions show here.</p>'}`;
+  }
+  function toggleNotes() {
+    const pop = $('nt-pop');
+    if (!pop.hidden) { closeNotes(); return; }
+    renderNotes();
+    pop.hidden = false;
+    $('nt-btn').setAttribute('aria-expanded', 'true');
+  }
+  function closeNotes() {
+    const pop = $('nt-pop');
+    if (!pop || pop.hidden) return;
+    pop.hidden = true;
+    $('nt-btn').setAttribute('aria-expanded', 'false');
+  }
+  // A new item arriving while a page is open pops up for a few seconds.
+  function toast(e) {
+    let box = $('nt-toasts');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'nt-toasts';
+      box.setAttribute('aria-live', 'polite');
+      document.body.appendChild(box);
+    }
+    const n = NOTE[e.event], nav = navOf(n.page), t = document.createElement('div');
+    t.className = `nt-toast ${n.kind}`;
+    t.innerHTML = `<span class="nt-d"></span><div><b>${escAttr(n.title(e))}</b><span class="nt-x">${escAttr(e.incident_id)} · ${escAttr(e.actor)}</span>
+      <a href="${noteHref(e)}" data-nt-key="${escAttr(noteKey(e))}">Open ${nav.label} →</a></div><button type="button" aria-label="Dismiss">×</button>`;
+    t.querySelector('a').addEventListener('click', () => markSeen([noteKey(e)]));
+    t.querySelector('button').addEventListener('click', () => t.remove());
+    box.appendChild(t);
+    setTimeout(() => t.remove(), 9000);
   }
 
   let lastStatus = null;
@@ -243,6 +375,24 @@
     }
   }
 
+  // Live incidents (GET /incidents) feed the incident switcher in the top bar.
+  async function loadLive() {
+    try { liveIncidents = (await get('/incidents')).live; } catch (e) { return; }
+    mountSwitcher();
+  }
+  function mountSwitcher() {
+    const host = $('inc-sw');
+    if (!host || !liveIncidents || liveIncidents.length < 2 || host.classList.contains('dd')) return;
+    dropdown(host, {
+      label: 'Switch incident', value: INCIDENT_ID,
+      options: liveIncidents.map((l) => ({
+        value: l.incident_id, label: l.incident_id, color: l.triggered ? '--warn' : '--ink-faint',
+        sub: `${l.camera_id} · ${l.triggered ? (l.asset_id ? `near ${l.asset_id}` : 'alert open') : 'no alert'}`,
+      })),
+      onChange: (v) => { location.href = `${location.pathname}?inc=${encodeURIComponent(v)}`; },
+    });
+  }
+
   function renderUnreachable() {
     pill($('pill-dell'), 'Dell Edge · Backend unreachable', 'err');
     pill($('pill-nvidia'), 'NVIDIA inference · Unknown', 'off');
@@ -342,21 +492,98 @@
     el.innerHTML = `<span>Opened from ${back.label}${detail || ''}</span><a href="${back.href}">← Back to ${back.label}</a>`;
   }
 
+  // Dropdown in the app style, in place of a native <select>. host = an empty element.
+  // options: [{ value, label, sub, group, color }] (sorted by group; color = a CSS token for a dot).
+  // search = placeholder for a filter box. onChange(value) on a pick; returns { set(value) }.
+  const CHEVRON = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5 8 3.5"/></svg>';
+  function dropdown(host, { label, options, value, onChange, search }) {
+    host.classList.add('dd');
+    host.innerHTML = `<button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="${escAttr(label)}"><span class="dd-v"></span>${CHEVRON}</button>
+      <div class="dd-pop" hidden>${search ? `<input class="dd-q" type="text" autocomplete="off" placeholder="${escAttr(search)}" aria-label="${escAttr(search)}">` : ''}
+      <div class="dd-list" role="listbox" tabindex="-1" aria-label="${escAttr(label)}"></div></div>`;
+    const btn = host.querySelector('.dd-btn'), pop = host.querySelector('.dd-pop'), list = host.querySelector('.dd-list'), q = host.querySelector('.dd-q');
+    let cur = value, vis = [], active = -1;
+    const dot = (o) => (o.color ? `<i style="background:var(${o.color})"></i>` : '');
+    const body = (o) => `${dot(o)}<b>${escAttr(o.label)}</b>${o.sub ? `<span>${escAttr(o.sub)}</span>` : ''}`;
+    const show = () => { host.querySelector('.dd-v').innerHTML = body(options.find((o) => o.value === cur) || options[0]); };
+    function draw() {
+      const f = q ? q.value.trim().toLowerCase() : '';
+      vis = options.filter((o) => !f || `${o.label} ${o.sub || ''} ${o.group || ''}`.toLowerCase().includes(f));
+      let g = null;
+      list.innerHTML = vis.map((o, i) => {
+        const head = o.group && o.group !== g ? `<div class="dd-g">${escAttr(o.group)}</div>` : '';
+        g = o.group;
+        return `${head}<div class="dd-o${i === active ? ' on' : ''}" role="option" data-i="${i}" aria-selected="${o.value === cur}">${body(o)}</div>`;
+      }).join('') || '<div class="dd-none">No match</div>';
+      const a = list.querySelector('.dd-o.on');
+      if (a) a.scrollIntoView({ block: 'nearest' });
+    }
+    function open() {
+      if (q) q.value = '';
+      vis = options;
+      active = Math.max(0, options.findIndex((o) => o.value === cur));
+      pop.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      draw();
+      (q || list).focus();
+    }
+    function close(refocus) {
+      if (pop.hidden) return;
+      pop.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      if (refocus) btn.focus();
+    }
+    function pick(o) {
+      close(true);
+      if (!o || o.value === cur) return;
+      cur = o.value;
+      show();
+      onChange(cur);
+    }
+    btn.addEventListener('click', () => (pop.hidden ? open() : close()));
+    list.addEventListener('click', (e) => { const o = e.target.closest('.dd-o'); if (o) pick(vis[o.dataset.i]); });
+    list.addEventListener('mousemove', (e) => {
+      const o = e.target.closest('.dd-o');
+      if (o && Number(o.dataset.i) !== active) { active = Number(o.dataset.i); list.querySelectorAll('.dd-o').forEach((x) => x.classList.toggle('on', x === o)); }
+    });
+    if (q) q.addEventListener('input', () => { active = 0; draw(); });
+    host.addEventListener('keydown', (e) => {
+      if (pop.hidden) {
+        if (['ArrowDown', 'ArrowUp'].includes(e.key)) { e.preventDefault(); open(); }
+        return;
+      }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = Math.min(vis.length - 1, Math.max(0, active + (e.key === 'ArrowDown' ? 1 : -1)));
+        draw();
+      } else if (e.key === 'Enter') { e.preventDefault(); pick(vis[active]); }
+      else if (e.key === 'Tab') close();
+    });
+    document.addEventListener('click', (e) => { if (!host.contains(e.target)) close(); });
+    show();
+    return { set(v) { cur = v; show(); } };
+  }
+
   async function init() {
     renderRail(document.body.dataset.page);
     fillTraceSlots();
+    // Static labels that name the incident (<span data-inc>) show the current one.
+    document.querySelectorAll('[data-inc]').forEach((el) => { el.textContent = INCIDENT_ID; });
     renderTopbar();
     try {
       const [status, incident] = await Promise.all([get('/status'), get(`/incidents/${INCIDENT_ID}`)]);
       renderStatus(status);
       renderIncident(incident);
+      loadLive();
+      loadNotes();
     } catch (e) {
       console.error(e);
       renderUnreachable();
     }
   }
 
-  // Before CAM-01's alert there is no incident to work on: Locate, Quantify and Plan show an empty state
+  // Before the camera's alert there is no incident to work on: Locate, Quantify and Plan show an empty state
   // in place of their content (Camera handles its own normal-operations view).
   function renderNoIncident(inc) {
     const stage = document.body.dataset.stage;
@@ -379,11 +606,13 @@
   // Re-read stage status after a page action changes backend state (e.g. an estimate ran).
   async function refresh() {
     try { renderIncident(await get(`/incidents/${INCIDENT_ID}`)); } catch (e) { console.error(e); }
+    loadNotes();
+    loadLive();
   }
 
   window.AtelicShell = {
     API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink,
-    BADGE, badge, modal, closeModal, cameFrom, backBar,
+    BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.

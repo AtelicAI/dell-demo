@@ -32,6 +32,7 @@ def row(label, value, prov, cites=(), note=None):
 def build_report(incident, src, now):
     """src: the data files and live status the report reads (see main.make_report)."""
     meta, ann, cands, site, plume = src["ogi_meta"], src["ogi_ann"], src["candidates"], src["site"], src["plume"]
+    files, cam = src["files"], incident["camera_id"]
     q, wo, audit = incident.get("quantification"), incident.get("work_order"), incident.get("audit", [])
     latest = wo["versions"][-1] if wo else None
     rv = src["review"]
@@ -53,19 +54,19 @@ def build_report(incident, src, now):
             "quantification": "quantify.html", "procedure": None, "maintenance": "locate.html"}.get(e["kind"]))
     marked = bool(ann.get("ranges") or ann.get("frames")) and ann.get("ogi_clip_id") == meta.get("ogi_clip_id")
     E_META = ev("OGI-META", f"OGI clip metadata {meta.get('ogi_clip_id')}", "video", meta.get("provenance"),
-                "ogi/source_metadata.json", "detection.html")
+                files["ogi_meta"], "detection.html")
     E_DET = ev("DET", f"Plume region on OGI clip {meta.get('ogi_clip_id')}", "detection", "manual_annotation",
-               "ogi/plume_annotations.json", "detection.html") if marked else None
+               files["ogi_ann"], "detection.html") if marked else None
     E_LOC = ev("LOC", f"Locate candidate ranking ({cands.get('method', 'unknown method')})", "candidates", cand_prov,
-               "skid/candidates.json", "locate.html")
+               files["candidates"], "locate.html")
     E_SITE = ev("SITE", "Site definition", "scenario", site.get("provenance", "synthetic"),
                 "scenario/site.json", None)
     if q:
         E_Q = ev("QUANT", f"Emission estimate ({q['model_version']})", "quantification", "model_estimated",
                  "POST /incidents/{id}/quantify", "quantify.html")
         E_SENS = ev("SENS", f"Sensor traces {q['detector_id']} + {q['wind_sensor_id']}", "sensor", "synthetic",
-                    "scenario/sensors.csv, scenario/weather.csv", "quantify.html")
-        E_GEOM = ev("GEOM", "Draft skid geometry", "scenario", "synthetic", "scenario/geometry.json", "quantify.html")
+                    f"{files['sensors']}, {files['weather']}", "quantify.html")
+        E_GEOM = ev("GEOM", "Draft skid geometry", "scenario", "synthetic", files["geometry"], "quantify.html")
     E_PLUME = ev("SAT", f"Carbon Mapper observation {plume.get('satellite_observation_id')}", "satellite",
                  plume.get("provenance") if plume.get("status") == "verified" else "gap",
                  "carbon_mapper/verified_plume.json", "index.html")
@@ -97,7 +98,8 @@ def build_report(incident, src, now):
         row("Recording", f"{incident['camera_id']} infrared" + (f" · {facility}" if facility else ""), meta.get("provenance"),
             [E_META], f"Licence {meta.get('license_status', 'unknown')}"),
         row("Segment", f"{seg.get('start')}–{seg.get('end')} of the original, {meta.get('frame_count')} frames"
-            if seg else Gap(f"{meta.get('frame_count')} frames; which part of the original recording it covers is not recorded."),
+            if seg else Gap(f"{meta.get('frame_count')} frames; which part of the original recording it covers is not recorded.")
+            if meta.get("frame_count") else Gap(f"No recording of the event is on file for {cam}."),
             meta.get("provenance"), [E_META]),
         row("Detection method", (meta.get("detection_mode") or "").replace("_", " ").capitalize() or None, "manual_annotation", [E_META]),
     ]
@@ -110,10 +112,10 @@ def build_report(incident, src, now):
                           f"Drawn by {ann.get('annotator') or 'unknown'}; "
                           + (f"reviewed by {ann['reviewed_by']}" if ann.get("reviewed_by") else "not yet reviewed")))
     else:
-        camera.append(row("Plume region", gap("No plume region is marked on the CAM-01 recording."), None, [E_META]))
+        camera.append(row("Plume region", gap(f"No plume region is marked on the {cam} recording."), None, [E_META]))
     sp = meta.get("experimental_setpoint") or {}
     camera.append(row("Release setpoint", f"{sp['rate']} {sp['unit']}" if sp.get("rate") is not None
-                      else gap("Controlled-release setpoint for the CAM-01 recording is not on file."), "experimental_setpoint", [E_META]))
+                      else gap(f"Controlled-release setpoint for the {cam} recording is not on file."), "experimental_setpoint", [E_META]))
 
     # ----- 3 Source candidates -----
     candidates = [row("Method", cands.get("method"), cand_prov, [E_LOC])]
@@ -189,7 +191,7 @@ def build_report(incident, src, now):
     datasets = [
         row("satellite_observation_id", plume.get("satellite_observation_id"), E_PLUME and evidence[E_PLUME]["provenance"],
             [E_PLUME], f"{plume.get('provider')} {plume.get('gas')} observation. Regional context only; not linked to this incident."),
-        row("ogi_clip_id", meta.get("ogi_clip_id"), meta.get("provenance"), [E_META], "Source recording behind CAM-01."),
+        row("ogi_clip_id", meta.get("ogi_clip_id"), meta.get("provenance"), [E_META], f"Source recording behind {cam}."),
         row("local_incident_id", incident["local_incident_id"], "synthetic", [E_SITE], "Incident record for this investigation."),
     ]
     limits = [

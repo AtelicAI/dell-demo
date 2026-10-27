@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=41">
+<link rel="stylesheet" href="css/shell.css?v=45">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=36" defer></script>
-<script src="js/graph.js?v=5" defer></script>
+<script src="js/shell.js?v=43" defer></script>
+<script src="js/graph.js?v=10" defer></script>
 <style>
   main.fit .lede{margin-bottom:12px}
 
@@ -19,6 +19,7 @@
   .kg-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;min-height:0}
   .kg-grid > .panel{min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .panel-head .badges{margin-left:auto;display:flex;gap:5px}
+  .kg-sub{font-size:12px;color:var(--ink-mute)}
   .note{font-size:12px;color:var(--ink-mute);line-height:1.5}
 
 
@@ -29,8 +30,9 @@
   .tg[aria-pressed=true]{color:var(--ink);border-color:var(--accent);background:var(--accent-glow)}
   .tg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .tg .n{color:var(--ink-dim);font-weight:500}
-  .kg-tools select{margin-left:auto;max-width:200px;font-family:var(--mono);font-size:11.5px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:3px;background:var(--panel);color:var(--ink)}
-  .kg-tools select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .panel-head .view{margin-left:auto;display:flex;gap:4px}
+  .panel-head .view + .badges{margin-left:8px}
+  .kg-tools .dd{margin-left:auto}
 
   .canvas{flex:1;min-height:0;position:relative}
   #kg{position:absolute;inset:0}
@@ -83,12 +85,14 @@
     <section class="panel" aria-label="Site knowledge graph">
       <div class="panel-head">
         <h2>Al Nakheel · gas-handling unit</h2>
+        <span class="kg-sub" id="kg-sub"></span>
+        <div class="rels view" id="view" role="group" aria-label="Graph view"></div>
         <span class="badges" id="kg-badge"></span>
       </div>
       <div class="kg-tools">
         <span class="lbl">Show</span>
         <div class="rels" id="rels" role="group" aria-label="Relationship types"></div>
-        <select id="pick" aria-label="Find asset"></select>
+        <div id="pick"></div>
       </div>
       <div class="canvas"><div id="kg"><div class="view-empty">Loading knowledge graph…</div></div></div>
       <div class="legend">

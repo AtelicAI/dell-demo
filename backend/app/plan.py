@@ -38,8 +38,9 @@ def version_hash(fields, sections):
     return hashlib.sha256(blob.encode()).hexdigest()[:12]
 
 
-def build_draft(candidates, quant, detections, history, doc_paths):
-    """Returns (draft, missing). draft is None when the minimum inputs are missing."""
+def build_draft(candidates, quant, detections, history, doc_paths, camera_id, files):
+    """Returns (draft, missing). draft is None when the minimum inputs are missing.
+    files: the incident's data files (app/state.py FILES), cited as evidence sources."""
     assessment = candidates.get("assessment", {})
     asset = assessment.get("asset_id") if assessment.get("result") == "likely_source" else None
     if not candidates.get("candidates"):
@@ -63,7 +64,7 @@ def build_draft(candidates, quant, detections, history, doc_paths):
         claims.setdefault(section, []).append({"id": cid, "text": text, "provenance": prov, "cites": cites})
 
     loc = ev("LOC", f"Locate candidate ranking ({candidates.get('method', 'unknown method')})", "candidates",
-             cand_prov, "skid/candidates.json",
+             cand_prov, files["candidates"],
              "Ranked candidates: " + ", ".join(c["asset_id"] for c in candidates["candidates"]),
              group="Locate candidate ranking")
     top = next((c for c in candidates["candidates"] if c["asset_id"] == asset), None)
@@ -72,15 +73,15 @@ def build_draft(candidates, quant, detections, history, doc_paths):
     meta, ann = detections["metadata"], detections["annotations"]
     if (ann.get("ranges") or ann.get("frames")) and ann.get("ogi_clip_id") == meta.get("ogi_clip_id"):
         reviewed = f"reviewed by {ann['reviewed_by']}" if ann.get("reviewed_by") else "not yet reviewed"
-        det = ev("DET", "Plume region on the CAM-01 OGI replay", "detection", "manual_annotation",
-                 "ogi/plume_annotations.json", f"Plume box drawn on the replayed clip ({reviewed}).")
-        claim("observed", f"A gas plume region is marked on the CAM-01 OGI replay ({reviewed}).",
+        det = ev("DET", f"Plume region on the {camera_id} OGI replay", "detection", "manual_annotation",
+                 files["ogi_ann"], f"Plume box drawn on the replayed clip ({reviewed}).")
+        claim("observed", f"A gas plume region is marked on the {camera_id} OGI replay ({reviewed}).",
               "manual_annotation", [det])
     if top:
         claim("observed", f"Locate ranks {asset} first of {len(candidates['candidates'])} candidates.", cand_prov, [loc])
         for e in top.get("supporting", []):
             claim("observed", e["label"] + ".", cand_prov, [ev(e["id"], e["label"], "candidate_evidence",
-                  cand_prov, "skid/candidates.json", f"Supports {asset} (source record {e['source_id']}).",
+                  cand_prov, files["candidates"], f"Supports {asset} (source record {e['source_id']}).",
                   group="Locate candidate ranking")])
     rate = quant.get("rate_kg_ch4_h") if quant else None
     if rate is not None:
@@ -100,7 +101,7 @@ def build_draft(candidates, quant, detections, history, doc_paths):
     if top:
         for e in top.get("contradicting", []):
             claim("uncertain", e["label"] + ".", cand_prov, [ev(e["id"], e["label"], "candidate_evidence",
-                  cand_prov, "skid/candidates.json", f"Contradicts {asset} (source record {e['source_id']}).",
+                  cand_prov, files["candidates"], f"Contradicts {asset} (source record {e['source_id']}).",
                   group="Locate candidate ranking")])
         for m in top.get("missing", []):
             claim("uncertain", f"Missing: {m}.", "gap", [loc])

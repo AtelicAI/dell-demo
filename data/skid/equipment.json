@@ -24,11 +24,13 @@
   "sensors": [
     { "asset_id": "PT-101", "display_name": "Separator pressure transmitter", "asset_type": "Sensor", "measures": "Process pressure (bar absolute)", "monitors": "V-101" },
     { "asset_id": "GD-01",  "display_name": "Point methane detector",         "asset_type": "Sensor", "measures": "Methane concentration (ppm)",     "monitors": "VENT-01" },
+    { "asset_id": "GD-02",  "display_name": "Point methane detector",         "asset_type": "Sensor", "measures": "Methane concentration (ppm)",     "monitors": "XV-101" },
     { "asset_id": "WS-01",  "display_name": "Anemometer",                      "asset_type": "Sensor", "measures": "Wind speed (m/s) and direction (° from north)", "monitors": "SKID-A" }
   ],
 
   "cameras": [
-    { "asset_id": "CAM-01", "display_name": "OGI camera", "asset_type": "Camera" }
+    { "asset_id": "CAM-01", "display_name": "OGI camera", "asset_type": "Camera" },
+    { "asset_id": "CAM-02", "display_name": "OGI camera (separator)", "asset_type": "Camera" }
   ],
 
   "_piping_comment": "Each entry: gas flows from 'from' to 'to'. Loader creates CONNECTED_TO and UPSTREAM_OF.",

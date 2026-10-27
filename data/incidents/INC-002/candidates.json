@@ -1,0 +1,67 @@
+{
+  "_comment": "MOCK source candidates for INC-002 (CAM-02, separator) until the Graph agent and Neo4j exist. status 'sample' -> UI shows Simulated + 'Sample values'. Order = rank; no scores on purpose (no fake confidence). Every asset_id and source_id must exist in skid/*.json or maintenance/history.json (backend checks).",
+  "status": "sample",
+  "provenance": "simulated",
+  "local_incident_id": "INC-002",
+  "method": "Manual ranking",
+  "assessment": { "result": "likely_source", "asset_id": "XV-101" },
+  "candidates": [
+    {
+      "asset_id": "XV-101",
+      "status": "candidate",
+      "rationale": [
+        "Listed in the CAM-02 camera mapping.",
+        "Point methane detector GD-02 is mounted at this valve.",
+        "First valve on the inlet line, so its stem packing sees full inlet pressure."
+      ],
+      "supporting": [
+        { "id": "EV-1", "source_id": "CAM-02", "label": "CAM-02 can observe XV-101 (manually configured mapping)", "provenance": "synthetic" },
+        { "id": "EV-2", "source_id": "GD-02", "label": "GD-02 point methane detector monitors XV-101", "provenance": "synthetic" },
+        { "id": "EV-3", "source_id": "P-100", "label": "Inlet line P-100 feeds XV-101 at full inlet pressure", "provenance": "synthetic" }
+      ],
+      "contradicting": [
+        { "id": "EV-4", "source_id": "XV-101", "label": "No earlier leak or packing work is recorded for XV-101", "provenance": "synthetic" },
+        { "id": "EV-5", "source_id": "CAM-02", "label": "No ROI polygon is drawn for XV-101, so the plume cannot be matched to it in the image", "provenance": "synthetic" }
+      ],
+      "missing": [
+        "Stem packing inspection on XV-101",
+        "Field confirmation by an operator"
+      ]
+    },
+    {
+      "asset_id": "V-101",
+      "status": "candidate",
+      "rationale": [
+        "Listed in the CAM-02 camera mapping.",
+        "Large flanged vessel next to the inlet valve."
+      ],
+      "supporting": [
+        { "id": "EV-6", "source_id": "CAM-02", "label": "CAM-02 can observe V-101 (manually configured mapping)", "provenance": "synthetic" }
+      ],
+      "contradicting": [
+        { "id": "EV-7", "source_id": "WO-2024-1120", "label": "Annual external inspection found no findings (Dec 2024)", "provenance": "synthetic" },
+        { "id": "EV-8", "source_id": "V-101", "label": "No gas detector monitors V-101", "provenance": "synthetic" }
+      ],
+      "missing": [
+        "Flange inspection on V-101"
+      ]
+    },
+    {
+      "asset_id": "P-100",
+      "status": "candidate",
+      "rationale": [
+        "Listed in the CAM-02 camera mapping."
+      ],
+      "supporting": [
+        { "id": "EV-9", "source_id": "CAM-02", "label": "CAM-02 can observe P-100 (manually configured mapping)", "provenance": "synthetic" }
+      ],
+      "contradicting": [
+        { "id": "EV-10", "source_id": "P-100", "label": "No maintenance or leak history for P-100", "provenance": "synthetic" },
+        { "id": "EV-11", "source_id": "P-100", "label": "No gas detector monitors P-100", "provenance": "synthetic" }
+      ],
+      "missing": [
+        "Flange and joint inventory for P-100"
+      ]
+    }
+  ]
+}

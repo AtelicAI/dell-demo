@@ -21,6 +21,13 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 | `scenario/release_truth.json` | 4 | synthetic | draft | — (simulation input, never shown as measured) |
 | `scenario/geometry.json` | 4 | synthetic | **draft** (assumed positions, heights, stability) | Team-reviewed skid geometry |
 | `scenario/sensors.csv`, `weather.csv` | 4 | synthetic | generated (GD-01 from the Gaussian plume model in `backend/app/plume.py`) | Run `python3 scripts/gen_scenario.py` |
-| `docs/maintenance_procedure.md`, `docs/isolation_checklist.md` | 5 | synthetic | draft | Team-authored procedures |
+| `docs/maintenance_procedure.md`, `docs/valve_procedure.md`, `docs/isolation_checklist.md` | 5 | synthetic | draft | Team-authored procedures (the drafter uses the one that names the likely source) |
+| `skid/camera_rois_cam02.json` | 3 | manual_illustrative | draft, polygons empty | CAM-02 polygons on an approved CAM-02 leak clip |
+| `incidents/history.json` | Incidents | synthetic | **sample** (3 closed incidents tied to `maintenance/history.json`; fictional reviewers; no rates) | Team-authored incident history |
+| `incidents/INC-002/candidates.json`, `geometry.json`, `release_truth.json` | 3, 4 | simulated / synthetic | **sample / draft** (XV-101 stem packing, GD-02, 4.5 kg/h simulated) | Team review of the second scenario |
+| `incidents/INC-002/sensors.csv` | 4 | synthetic | generated | `python3 scripts/gen_scenario.py INC-002` (shares `scenario/weather.csv`) |
+| `incidents/INC-002/source_metadata.json`, `plume_annotations.json` | 2 | — | **pending** (no CAM-02 leak clip yet) | A GasVid segment with a visible plume as `incidents/INC-002/clip.mp4`, then `scripts/ogi_inspect.py` and a drawn plume region |
+
+**Live incidents.** INC-001 (CAM-01, VENT-01) reads the files above under `ogi/`, `skid/candidates.json` and `scenario/`. INC-002 (CAM-02, XV-101) reads `incidents/INC-002/`; both share the skid, `scenario/site.json`, `scenario/weather.csv`, procedures and maintenance history. The per-incident file map is `FILES` in `backend/app/state.py`.
 
 Not stored as files on purpose: work orders, approvals, the audit log and agent traces. These are produced by the backend at runtime.

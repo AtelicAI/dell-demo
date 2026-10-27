@@ -15,6 +15,7 @@
   const MAP_DISC = 'Equipment relationships and camera coverage are manually configured.';
   const NO_REL = 'No verified relationship is available for this asset.';
 
+  let PAST = [];
   let G = null, C = null, D = null, byId = new Map(), rank = new Map();
   let selected = null, edgeSel = null, dtab = 'evidence';
 
@@ -106,7 +107,7 @@
   }
 
   // ----- camera frame + ROIs -----
-  let video = null, frameTime = null;
+  let video = null, frameTime = null, CAM = 'Camera';
 
   function renderCam() {
     if (!G) return;
@@ -117,7 +118,7 @@
         <i class="d${hasPoly(r) ? ' on' : ''}"></i>${esc(r.asset_id)}</button>`).join('') : `<div class="note">${NO_REL}</div>`;
     const sel = roiOf(selected);
     $('vis-sel').innerHTML = !selected ? ''
-      : !sel ? `<span class="t"><b>${esc(selected)}</b> is not in the CAM-01 mapping</span>`
+      : !sel ? `<span class="t"><b>${esc(selected)}</b> is not in the ${esc(CAM)} mapping</span>`
       : `<span class="t" title="${esc(name(selected))}"><b>${esc(selected)}</b> · ${esc(name(selected))}</span>
          <span class="roi-tag${hasPoly(sel) ? ' on' : ''}">${hasPoly(sel) ? 'ROI' : 'No ROI'}</span>`;
     const cav = $('cam-caveat');
@@ -132,6 +133,8 @@
 
   function initCam(d) {
     const meta = d.metadata, ann = d.annotations;
+    CAM = d.camera_id || CAM;
+    $('cam-name').textContent = `${CAM} replay`;
     // Same provenance rule as Screen 2: only a verified clip carries its stated provenance.
     const prov = meta.status === 'verified' && CLIP_PROV.has(meta.provenance) ? meta.provenance : meta.status === 'sample' ? 'simulated' : 'pending';
     $('cam-clip').textContent = window.AtelicShell.FACILITY.short;
@@ -154,11 +157,11 @@
     const f = first ? first.frame : 0;
     frameTime = times && times[f] != null ? (times[f] + (times[f + 1] ?? times[f] + 0.05)) / 2 : (meta.frame_rate ? (f + 0.5) / meta.frame_rate : 0);
     $('cam-frame').innerHTML = `
-      <video id="cam-video" crossorigin="anonymous" preload="auto" playsinline muted src="${window.AtelicShell.API}/ogi/clip"></video>
+      <video id="cam-video" crossorigin="anonymous" preload="auto" playsinline muted src="${window.AtelicShell.API}/incidents/${window.AtelicShell.INCIDENT_ID}/clip"></video>
       <canvas class="heat" id="cam-heat" aria-hidden="true"></canvas>
       <svg id="cam-svg" viewBox="0 0 1 1" preserveAspectRatio="none"></svg>
       <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br bR"></span>
-      <div class="cam-chip top"><span>CAM-01 · REPLAY</span></div>
+      <div class="cam-chip top"><span>${esc(CAM)} · REPLAY</span></div>
       <div class="cam-chip bot">${first ? '<span><i></i>Plume region · manual</span>' : ''}</div>`;
     const m = Math.floor(frameTime / 60), s = (frameTime % 60).toFixed(2).padStart(5, '0');
     $('cam-time').textContent = `· from ${String(m).padStart(2, '0')}:${s}, looped`;
@@ -185,7 +188,7 @@
         if (video.videoWidth && video.videoHeight) $('cam-frame').style.setProperty('--ar', video.videoWidth / video.videoHeight);
         video.currentTime = frameTime;
       }, { once: true });
-      video.addEventListener('seeked', () => ok(`CAM-01 · frame ${f}`), { once: true });
+      video.addEventListener('seeked', () => ok(`${CAM} · frame ${f}`), { once: true });
       video.addEventListener('error', () => { $('cam-frame').innerHTML = '<div class="cam-empty">Clip could not be played</div>'; fail(new Error('Clip could not be played')); }, { once: true });
       setTimeout(() => fail(new Error('Frame not loaded yet')), 6000);
     });
@@ -287,7 +290,11 @@
     const ids = n.asset_type === 'WorkOrder' ? [id] : edgesOf(id).filter((e) => e.type === 'HAS_WORK_ORDER').map((e) => e.to);
     const recs = ids.map((w) => byId.get(w)).map((w) => li('▤', 'miss',
       `<b class="id">${esc(w.asset_id)}</b> · ${esc(w.date)} · ${esc(w.work_type)} · ${esc(w.work_status)}<span class="src" style="color:var(--ink-mute)">${esc(w.display_name)}</span><span class="src">${esc(w.source)} <span class="pdot"></span></span>`));
-    return `<h4>Related documents</h4>${list(recs, 'No maintenance records for this asset.')}`;
+    // Closed incidents on this asset (GET /incidents history), newest first.
+    const past = PAST.filter((h) => h.asset_id === id).map((h) => li('◷', 'miss',
+      `<a class="id" href="incidents.html?id=${encodeURIComponent(h.incident_id)}">${esc(h.incident_id)}</a> · ${esc(h.opened_utc.slice(0, 10))} · ${esc(h.outcome_label)}<span class="src" style="color:var(--ink-mute)">${esc(h.summary)}</span>`));
+    return `<h4>Related documents</h4>${list(recs, 'No maintenance records for this asset.')}
+      <h4>Previous incidents</h4>${list(past, 'No earlier incidents on this asset.')}`;
   }
 
   function mappingTab() {
@@ -341,6 +348,8 @@
   async function init() {
     wire();
     const { get, INCIDENT_ID } = window.AtelicShell;
+    // Closed incidents for the Maintenance tab; loaded alongside, not waited for.
+    get('/incidents').then((d) => { PAST = d.history ? d.history.incidents : []; if (G) renderDetail(); }, () => {});
     const graphP = step('graph', get(`/incidents/${INCIDENT_ID}/graph`),
       (v) => `${v.nodes.length} assets · ${v.edges.length} relationships · ${v.store === 'json' ? 'JSON' : v.store}`);
     const candP = step('cands', get(`/incidents/${INCIDENT_ID}/candidates`),

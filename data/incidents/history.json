@@ -1,0 +1,60 @@
+{
+  "_comment": "DRAFT for team review. Closed incidents on SKID-A before this run, written by Atelic so the Incidents page shows a believable history. Fictional events and people. Each one ties to an existing record in maintenance/history.json on purpose. No emission rates are recorded for them (none were measured). status 'sample' -> Simulated (hidden on screen, kept in exports).",
+  "status": "sample",
+  "provenance": "synthetic",
+  "reviewed_by": null,
+  "incidents": [
+    {
+      "incident_id": "INC-2026-003",
+      "camera_id": "CAM-03",
+      "asset_id": null,
+      "opened_utc": "2026-02-11T11:05:00Z",
+      "closed_utc": "2026-02-11T11:40:00Z",
+      "outcome": "false_alarm",
+      "outcome_label": "False alarm",
+      "summary": "CAM-03 flagged a moving thermal pattern near PSV-102. The reviewer matched it to hot exhaust from a parked service truck; a handheld check read background methane.",
+      "decision": { "decision": "dismissed", "reviewer": "Rashid Haddad", "role": "Operations supervisor", "reason": "Hot exhaust from a service truck; handheld detector read background." },
+      "work_order": null,
+      "timeline": [
+        { "at_utc": "2026-02-11T11:05:00Z", "event": "CAM-03 alert raised" },
+        { "at_utc": "2026-02-11T11:22:00Z", "event": "Handheld check near PSV-102: background methane" },
+        { "at_utc": "2026-02-11T11:40:00Z", "event": "Dismissed as false alarm by Rashid Haddad" }
+      ]
+    },
+    {
+      "incident_id": "INC-2025-014",
+      "camera_id": "CAM-01",
+      "asset_id": "VENT-01",
+      "opened_utc": "2025-08-29T05:42:00Z",
+      "closed_utc": "2025-09-03T14:10:00Z",
+      "outcome": "repaired",
+      "outcome_label": "Leak repaired",
+      "summary": "CAM-01 showed a small plume at the vent. The field crew confirmed a release at the vent-base flange and the gasket was replaced.",
+      "decision": { "decision": "approve", "reviewer": "Rashid Haddad", "role": "Operations supervisor", "reason": null },
+      "work_order": "WO-2025-0412",
+      "timeline": [
+        { "at_utc": "2025-08-29T05:42:00Z", "event": "CAM-01 alert raised" },
+        { "at_utc": "2025-08-29T07:15:00Z", "event": "Field crew confirmed a release at the vent-base flange" },
+        { "at_utc": "2025-08-29T09:30:00Z", "event": "Work order WO-2025-0412 approved by Rashid Haddad" },
+        { "at_utc": "2025-09-03T14:10:00Z", "event": "Gasket replaced; retest clean; incident closed" }
+      ]
+    },
+    {
+      "incident_id": "INC-2025-009",
+      "camera_id": "CAM-01",
+      "asset_id": "XV-104",
+      "opened_utc": "2025-05-08T16:20:00Z",
+      "closed_utc": "2025-05-10T12:00:00Z",
+      "outcome": "no_leak_found",
+      "outcome_label": "No leak found",
+      "summary": "Intermittent plume-like signal near XV-104 on CAM-01. The stem packing was adjusted as a precaution; the retest found no leak.",
+      "decision": { "decision": "approve", "reviewer": "Sara Al-Mansoori", "role": "Maintenance engineer", "reason": null },
+      "work_order": "WO-2025-0301",
+      "timeline": [
+        { "at_utc": "2025-05-08T16:20:00Z", "event": "CAM-01 alert raised" },
+        { "at_utc": "2025-05-09T08:00:00Z", "event": "Inspection work order approved by Sara Al-Mansoori" },
+        { "at_utc": "2025-05-10T12:00:00Z", "event": "Packing adjusted; retest found no leak; incident closed" }
+      ]
+    }
+  ]
+}

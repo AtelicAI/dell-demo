@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=41">
-<script src="js/shell.js?v=36" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=45">
+<script src="js/shell.js?v=43" defer></script>
 <script src="js/plan.js?v=10" defer></script>
 <style>
   @keyframes lnin{from{opacity:0;transform:translateX(-6px)}}
@@ -213,7 +213,7 @@
 
   <!-- incident summary -->
   <section class="panel brief rise" aria-label="Incident summary">
-    <div class="panel-head"><h2>Incident summary</h2><span class="meta">INC-001</span></div>
+    <div class="panel-head"><h2>Incident summary</h2><span class="meta" data-inc></span></div>
     <div class="brief-top">
       <div class="assess" id="assess"><p class="sub">Loading…</p></div>
       <div class="facts" id="facts"></div>
@@ -232,7 +232,7 @@
     <article class="panel doc rise" style="animation-delay:60ms" aria-label="Proposed work order">
       <div class="doc-head">
         <div>
-          <span class="lbl">Work order · INC-001</span>
+          <span class="lbl">Work order · <span data-inc></span></span>
           <h2>Proposed work order</h2>
           <div class="doc-meta" id="doc-meta">No draft yet</div>
         </div>

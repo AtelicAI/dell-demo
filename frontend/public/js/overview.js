@@ -195,6 +195,13 @@
   }
 
   async function init() {
+    // Site incidents at a glance, linking to the Incidents page.
+    window.AtelicShell.get('/incidents').then((d) => {
+      const open = d.live.filter((l) => l.triggered).length, closed = d.history ? d.history.incidents.length : 0;
+      const el = document.getElementById('inc-count');
+      el.textContent = `${open} open · ${closed} closed incidents →`;
+      el.hidden = false;
+    }, () => {});
     wireModal();
     try {
       const rec = await window.AtelicShell.get('/overview/plume');

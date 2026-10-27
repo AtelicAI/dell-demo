@@ -1,5 +1,6 @@
 // Plant knowledge graph — site-level explorer. Reads GET /incidents/:id/graph (the same skid graph Locate uses).
 // ?asset=<id>&from=<page> preselects an asset and shows a back link (opened from Locate).
+// Opened for an asset, it shows only that asset and its direct links (Focus); ?view=site shows the whole site.
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -20,8 +21,10 @@
   const on = { CONNECTED_TO: true, MONITORS: true, CAN_OBSERVE: true, HAS_WORK_ORDER: true, CONTAINS: false };
   const EQUIP = new Set(['Vessel', 'Valve', 'PipeSegment', 'Vent']);
 
-  let G = null, byId = new Map(), at = null, topRow = 0, selected = null, edgeSel = null, chart = null;
+  let G = null, byId = new Map(), at = null, topRow = 0, selected = null, edgeSel = null, chart = null, picker = null, PAST = [];
   const params = new URLSearchParams(location.search);
+  let focus = params.get('view') ? params.get('view') === 'focus' : params.has('asset');
+  params.set('view', focus ? 'focus' : 'site');
 
   const typeOf = (id) => (byId.get(id) || {}).asset_type;
   const name = (id) => (byId.get(id) || {}).display_name || '';
@@ -81,6 +84,11 @@
   // ----- what is shown -----
   const shownEdges = () => G.edges.map((e, i) => ({ e, i })).filter(({ e }) => on[e.type]);
   function shownNodes() {
+    if (focus && selected) {
+      const s = new Set([selected]);
+      shownEdges().forEach(({ e }) => { if (e.from === selected) s.add(e.to); if (e.to === selected) s.add(e.from); });
+      return s;
+    }
     const s = new Set(G.nodes.filter((n) => EQUIP.has(n.asset_type) || n.asset_type === 'EquipmentArea').map((n) => n.asset_id));
     shownEdges().forEach(({ e }) => { s.add(e.from); s.add(e.to); });
     return s;
@@ -90,8 +98,8 @@
     if (!id || !byId.has(id)) return;
     selected = id;
     edgeSel = null;
-    $('pick').value = id;
-    try { history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(params), asset: id })}`); } catch (e) { /* ignore */ }
+    params.set('asset', id);
+    try { history.replaceState(null, '', `?${params}`); } catch (e) { /* ignore */ }
     render();
   }
 
@@ -101,6 +109,26 @@
   });
 
   function render() { renderGraph(); renderAsset(); renderEdgeInfo(); }
+
+  function setFocus(v) {
+    focus = v;
+    params.set('view', focus ? 'focus' : 'site');
+    try { history.replaceState(null, '', `?${params}`); } catch (e) { /* ignore */ }
+    edgeSel = null;
+    renderGraph(); renderEdgeInfo();
+  }
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-view]');
+    if (b) setFocus(b.dataset.view === 'focus');
+  });
+  // Focus | Whole site toggle, plus a line saying how much of the graph is on screen.
+  function renderView(vis) {
+    if (picker) picker.set(focus ? selected : 'all');
+    $('view').innerHTML = `<button class="tg" data-view="focus" aria-pressed="${focus}">Focus · ${esc(selected)}</button><button class="tg" data-view="site" aria-pressed="${!focus}">Whole site</button>`;
+    $('kg-sub').innerHTML = focus
+      ? `Showing ${esc(selected)} and ${vis.size - 1} connected asset${vis.size === 2 ? '' : 's'}`
+      : `Whole site · ${vis.size} assets`;
+  }
 
   // ----- graph (ECharts, layout in real pixels) -----
   function renderGraph() {
@@ -115,6 +143,7 @@
       });
     }
     const vis = shownNodes(), edges = shownEdges().filter(({ e }) => vis.has(e.from) && vis.has(e.to));
+    renderView(vis);
     const near = new Set(selected ? [selected] : []);
     edges.forEach(({ e }) => { if (e.from === selected) near.add(e.to); if (e.to === selected) near.add(e.from); });
     const dim = (id) => selected && !near.has(id);
@@ -267,6 +296,8 @@
           ? `<li><span class="dir">${esc(w.date)}</span>${assetLink(w.asset_id)} · ${esc(w.work_type)} · ${esc(w.work_status)}<br><span style="color:var(--ink-mute)">${esc(w.display_name)}</span>${src(e)}</li>`
           : row('Record for', e);
       }), 'No maintenance records.')}
+      ${group('Incidents', PAST.filter((h) => h.asset_id === selected).map((h) =>
+        `<li><span class="dir">${esc(h.opened_utc.slice(0, 10))}</span><a class="linkish" href="incidents.html?id=${encodeURIComponent(h.incident_id)}">${esc(h.incident_id)}</a> · ${esc(h.outcome_label)}<br><span style="color:var(--ink-mute)">${esc(h.summary)}</span></li>`), 'No earlier incidents on this asset.')}
       ${group('Area', of('CONTAINS').map((e) => row(e.from === selected ? 'Contains' : 'Part of', e)), 'Not linked to an area.')}
       <h4>Asset details</h4><div class="kv">${facts.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v == null ? '<span style="color:var(--ink-dim)">Not available</span>' : esc(v)}</div>`).join('')}</div>`;
   }
@@ -284,9 +315,18 @@
       renderGraph(); renderEdgeInfo();
     });
     const types = [...new Set(G.nodes.map((n) => n.asset_type))];
-    $('pick').innerHTML = `<option value="" disabled>Find asset…</option>${types.map((t) => `<optgroup label="${esc(TYPE_NAME[t] || t)}">${G.nodes.filter((n) => n.asset_type === t)
-      .map((n) => `<option value="${esc(n.asset_id)}">${esc(n.asset_id)} · ${esc(n.display_name.slice(0, 40))}</option>`).join('')}</optgroup>`).join('')}`;
-    $('pick').addEventListener('change', (ev) => select(ev.target.value));
+    // "All assets" = whole site; picking an asset focuses the graph on it.
+    picker = window.AtelicShell.dropdown($('pick'), {
+      label: 'Find asset', search: 'Find asset by ID or name…', value: 'all',
+      options: [{ value: 'all', label: 'All assets', sub: 'whole site' }, ...types.flatMap((t) => G.nodes.filter((n) => n.asset_type === t)
+        .map((n) => ({ value: n.asset_id, label: n.asset_id, sub: n.display_name, group: TYPE_NAME[t] || t, color: TYPE_COLOR[t] || '--ink-dim' })))],
+      onChange: (v) => {
+        if (v === 'all') { setFocus(false); return; }
+        focus = true;
+        params.set('view', 'focus');
+        select(v);
+      },
+    });
   }
 
   async function init() {
@@ -294,6 +334,8 @@
     const { get, INCIDENT_ID } = window.AtelicShell;
     try {
       G = await get(`/incidents/${INCIDENT_ID}/graph`);
+      // Closed incidents per asset for the asset panel; the page works without them.
+      PAST = await get('/incidents').then((d) => (d.history ? d.history.incidents : []), () => []);
     } catch (e) {
       $('kg').innerHTML = '<div class="view-empty">Knowledge graph data not available.</div>';
       $('kg-badge').innerHTML = badge('pending');

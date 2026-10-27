@@ -15,7 +15,7 @@ from fastapi.responses import Response
 from app.plan import GENERATOR, build_draft, version_hash
 from app.plume import ppm_per_kg_h
 from app.report import build_report, to_markdown
-from app.state import INCIDENTS
+from app.state import FILES, INCIDENTS
 
 # Docker mounts ./data at /data; locally fall back to the repo's data/ folder.
 DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
@@ -55,8 +55,8 @@ def get_incident(incident_id: str):
     if not incident["triggered"]:
         # Normal operations: no alert yet, so nothing in the workflow has started.
         return {**incident, "source_status": "No active alert", "stages": stages}
-    stages[0]["status"] = detect_status()
-    stages[1]["status"] = locate_status()
+    stages[0]["status"] = detect_status(incident)
+    stages[1]["status"] = locate_status(incident)
     # A stored estimate is a model output awaiting engineer review; never "completed" on its own.
     stages[2]["status"] = "ready_for_review" if incident.get("quantification") else "not_started"
     # Draft exists -> in progress; submitted -> awaiting engineer review; approved by a named
@@ -77,10 +77,10 @@ def get_incident(incident_id: str):
     return {**incident, "stages": stages}
 
 
-def locate_status():
+def locate_status(incident):
     # Candidates on file (sample ones count; the page labels them Simulated) -> ready for review.
     # Completed only with a named reviewer on real (non-sample) candidates.
-    data = read_json("skid", "candidates.json")
+    data = fjson(incident, "candidates")
     if not data.get("candidates"):
         return "not_started"
     if data.get("reviewed_by") and data.get("status") != "sample":
@@ -88,11 +88,11 @@ def locate_status():
     return "ready_for_review"
 
 
-def detect_status():
+def detect_status(incident):
     # Detect is driven by the plume annotation for the current clip: a region exists -> ready for
     # review; a named reviewer -> completed. Never completed without a reviewer.
-    meta = read_json("ogi", "source_metadata.json")
-    ann = read_json("ogi", "plume_annotations.json")
+    meta = fjson(incident, "ogi_meta")
+    ann = fjson(incident, "ogi_ann")
     has_region = bool(ann.get("frames") or ann.get("ranges"))
     if not has_region or not ann.get("ogi_clip_id") or ann["ogi_clip_id"] != meta.get("ogi_clip_id"):
         return "not_started"
@@ -101,18 +101,33 @@ def detect_status():
 
 def require_triggered(incident):
     if not incident["triggered"]:
-        raise HTTPException(status_code=409, detail="No active incident: CAM-01 has not raised an alert")
+        raise HTTPException(status_code=409, detail=f"No active incident: {incident['camera_id']} has not raised an alert")
 
 
 @app.post("/incidents/{incident_id}/trigger")
 def post_trigger(incident_id: str):
-    # The alert event: CAM-01 switches from the pre-leak view to the leak and the workflow opens.
+    # The alert event: the incident's camera switches from the pre-leak view to the leak and the workflow opens.
     incident = incident_or_404(incident_id)
     if not incident["triggered"]:
         incident["triggered"] = True
         incident["triggered_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        audit(incident, "alert_triggered", "Presenter (Trigger event control)", "CAM-01 alert raised; workflow opened")
+        audit(incident, "alert_triggered", "Presenter (Trigger event control)", f"{incident['camera_id']} alert raised; workflow opened")
+        auto_run(incident)
     return get_incident(incident_id)
+
+
+AUTO = "System (automatic on alert)"
+AUTO_NOTE = "Started automatically when the alert was raised."
+
+
+def auto_run(incident):
+    """On the alert, run the steps that need no human decision: the emission estimate, then the work
+    order draft. Each is the same real run as its button (span + audit). Priority, submission and
+    approval stay with people; nothing here approves anything."""
+    if not next(m for m in methods(incident) if m["id"] == GAUSSIAN)["missing"]:
+        run_quantify(incident, AUTO, AUTO_NOTE)
+    if not make_draft(incident)[1]:
+        run_draft(incident, AUTO_NOTE)
 
 
 @app.post("/incidents/{incident_id}/reset")
@@ -144,22 +159,65 @@ def read_json(*parts):
     return json.loads((DATA_DIR.joinpath(*parts)).read_text())
 
 
+# Per-incident data files (app/state.py FILES), so each live incident reads its own scenario.
+def frel(incident, key):
+    return FILES[incident["local_incident_id"]][key]
+
+
+def fpath(incident, key):
+    return DATA_DIR / frel(incident, key)
+
+
+def fjson(incident, key):
+    return json.loads(fpath(incident, key).read_text())
+
+
+@app.get("/incidents")
+def list_incidents():
+    # Live incidents (state from this backend) plus the closed history file (sample data, read-only).
+    live = []
+    for iid, inc in INCIDENTS.items():
+        view = get_incident(iid)
+        cands = fjson(inc, "candidates")
+        a = cands.get("assessment", {})
+        q, wo = inc.get("quantification"), inc.get("work_order")
+        live.append({
+            "incident_id": iid, "camera_id": inc["camera_id"], "triggered": inc["triggered"],
+            "clip_available": fpath(inc, "clip").is_file(),
+            "triggered_at": inc["triggered_at"], "stages": view["stages"],
+            "asset_id": a.get("asset_id") if inc["triggered"] and a.get("result") == "likely_source" else None,
+            "asset_provenance": "hypothesis",
+            "rate_kg_ch4_h": q.get("rate_kg_ch4_h") if q else None,
+            "review": latest_review(wo),
+        })
+    path = DATA_DIR / "incidents" / "history.json"
+    history = json.loads(path.read_text()) if path.is_file() else None
+    return {"live": live, "history": history}
+
+
+@app.get("/audit")
+def all_audit():
+    # Every live incident's audit log in one list (for notifications), oldest first.
+    events = [{**e, "incident_id": iid} for iid, inc in INCIDENTS.items() for e in inc.get("audit", [])]
+    return {"events": sorted(events, key=lambda e: (e["at"], e["incident_id"], e["seq"]))}
+
+
 @app.get("/incidents/{incident_id}/detections")
 def get_detections(incident_id: str):
-    if incident_id not in INCIDENTS:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = incident_or_404(incident_id)
     # Served as-is; the UI decides status and badges. clip_available is a real file check.
     return {
-        "metadata": read_json("ogi", "source_metadata.json"),
-        "annotations": read_json("ogi", "plume_annotations.json"),
-        "triggered": INCIDENTS[incident_id]["triggered"],
-        "clip_available": (DATA_DIR / "ogi" / "source_clip.mp4").is_file(),
-        # CAM-01 before the leak (normal operations), played until the alert is triggered.
-        "before_available": (DATA_DIR / "ogi" / "before_clip.mp4").is_file(),
-        # Unprocessed infrared for the same frames, for the before/after slider on CAM-01.
-        "original_available": (DATA_DIR / "ogi" / "source_clip_original.mp4").is_file(),
+        "camera_id": incident["camera_id"],
+        "metadata": fjson(incident, "ogi_meta"),
+        "annotations": fjson(incident, "ogi_ann"),
+        "triggered": incident["triggered"],
+        "clip_available": fpath(incident, "clip").is_file(),
+        # The camera before the leak (normal operations), played until the alert is triggered.
+        "before_available": fpath(incident, "clip_before").is_file(),
+        # Unprocessed infrared for the same frames, for the before/after slider.
+        "original_available": fpath(incident, "clip_original").is_file(),
         # Per-frame start times from scripts/ogi_inspect.py; needed for exact frames on variable-rate clips.
-        "frame_times": read_json("ogi", "frame_times.json") if (DATA_DIR / "ogi" / "frame_times.json").is_file() else None,
+        "frame_times": fjson(incident, "frame_times") if fpath(incident, "frame_times").is_file() else None,
         "camera_wall": read_json("skid", "camera_wall.json") if (DATA_DIR / "skid" / "camera_wall.json").is_file() else None,
     }
 
@@ -167,19 +225,19 @@ def get_detections(incident_id: str):
 CHUNK = 2 * 1024 * 1024
 
 
-@app.get("/ogi/clip")
-def ogi_clip(request: Request):
-    return serve_mp4(DATA_DIR / "ogi" / "source_clip.mp4", request)
+@app.get("/incidents/{incident_id}/clip")
+def incident_clip(incident_id: str, request: Request):
+    return serve_mp4(fpath(incident_or_404(incident_id), "clip"), request)
 
 
-@app.get("/ogi/clip/before")
-def ogi_clip_before(request: Request):
-    return serve_mp4(DATA_DIR / "ogi" / "before_clip.mp4", request)
+@app.get("/incidents/{incident_id}/clip/before")
+def incident_clip_before(incident_id: str, request: Request):
+    return serve_mp4(fpath(incident_or_404(incident_id), "clip_before"), request)
 
 
-@app.get("/ogi/clip/original")
-def ogi_clip_original(request: Request):
-    return serve_mp4(DATA_DIR / "ogi" / "source_clip_original.mp4", request)
+@app.get("/incidents/{incident_id}/clip/original")
+def incident_clip_original(incident_id: str, request: Request):
+    return serve_mp4(fpath(incident_or_404(incident_id), "clip_original"), request)
 
 
 @app.get("/ogi/cams/{camera_id}")
@@ -225,7 +283,7 @@ def serve_mp4(path, request):
 
 def skid_graph():
     eq = read_json("skid", "equipment.json")
-    rois = read_json("skid", "camera_rois.json")
+    roi_files = sorted({f["rois"] for f in FILES.values()})
     history = read_json("maintenance", "history.json")
     src, ver = eq["source"], eq["mapping_version"]
 
@@ -249,9 +307,10 @@ def skid_graph():
         edge("CONNECTED_TO", p["from"], p["to"], f"{src} (piping)", "manually configured")
     for s in eq["sensors"]:
         edge("MONITORS", s["asset_id"], s["monitors"], src, "manually configured")
-    for r in rois["regions"]:
-        edge("CAN_OBSERVE", rois["camera_id"], r["asset_id"], "skid/camera_rois.json",
-             rois["mapping_method"], rois["mapping_version"])
+    for rel in roi_files:
+        rois = read_json(rel)
+        for r in rois["regions"]:
+            edge("CAN_OBSERVE", rois["camera_id"], r["asset_id"], rel, rois["mapping_method"], rois["mapping_version"])
     for r in history["records"]:
         edge("HAS_WORK_ORDER", r["asset_id"], r["record_id"], "maintenance/history.json", "manually configured", None)
     return nodes, edges
@@ -259,24 +318,21 @@ def skid_graph():
 
 @app.get("/incidents/{incident_id}/graph")
 def get_graph(incident_id: str):
-    if incident_id not in INCIDENTS:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = incident_or_404(incident_id)
     nodes, edges = skid_graph()
     # Full skid graph (~20 nodes); the UI starts from the selected asset's one-hop neighbourhood.
     return {
         "nodes": nodes,
         "edges": edges,
         "layout": read_json("skid", "layout.json"),
-        "camera_rois": read_json("skid", "camera_rois.json"),
+        "camera_rois": fjson(incident, "rois"),
         "store": "json",
     }
 
 
 @app.get("/incidents/{incident_id}/candidates")
 def get_candidates(incident_id: str):
-    if incident_id not in INCIDENTS:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    data = read_json("skid", "candidates.json")
+    data = fjson(incident_or_404(incident_id), "candidates")
     # PRD acceptance: all IDs valid. Report any that are not in the graph instead of hiding them.
     ids = {n["asset_id"] for n in skid_graph()[0]}
     cited = [data.get("assessment", {}).get("asset_id")]
@@ -291,21 +347,24 @@ def get_candidates(incident_id: str):
 # Interim Gaussian plume inversion over the simulated scenario. The backend team will replace it
 # with pyELQ (same response shape). Inputs are synthetic, so the result is a simulated estimate.
 
-def read_rows(name):
-    path = DATA_DIR / "scenario" / name
+WEATHER = "scenario/weather.csv"  # one anemometer for the whole site, shared by every incident
+
+
+def read_rows(rel):
+    path = DATA_DIR / rel
     if not path.is_file():
         return []
     with path.open() as f:
         return list(csv.DictReader(f))
 
 
-def sensor_series():
+def sensor_series(incident):
     series = {"methane_ppm": [], "pressure_bara": [], "wind_speed_m_s": [], "wind_dir_deg_from_north": []}
     sensor_of = {}
-    for r in read_rows("sensors.csv"):
+    for r in read_rows(frel(incident, "sensors")):
         series.setdefault(r["quantity"], []).append([r["timestamp_utc"], float(r["value"])])
         sensor_of[r["quantity"]] = r["sensor_id"]
-    for r in read_rows("weather.csv"):
+    for r in read_rows(WEATHER):
         for q in ("wind_speed_m_s", "wind_dir_deg_from_north"):
             series[q].append([r["timestamp_utc"], float(r[q])])
             sensor_of[q] = r["sensor_id"]
@@ -314,11 +373,10 @@ def sensor_series():
 
 @app.get("/incidents/{incident_id}/sensor-series")
 def get_sensor_series(incident_id: str):
-    if incident_id not in INCIDENTS:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    series, sensor_of = sensor_series()
+    incident = incident_or_404(incident_id)
+    series, sensor_of = sensor_series(incident)
     return {"series": series, "sensor_of": sensor_of, "provenance": "synthetic",
-            "source": ["scenario/sensors.csv", "scenario/weather.csv"], "site": read_json("scenario", "site.json")}
+            "source": [frel(incident, "sensors"), WEATHER], "site": read_json("scenario", "site.json")}
 
 
 GAUSSIAN = "gaussian_plume"
@@ -330,39 +388,39 @@ MIN_SAMPLES = 5
 FAILURE = "Insufficient concentration, wind or source geometry data to estimate the release rate reliably."
 
 
-def gaussian_inputs():
+def gaussian_inputs(incident):
     """What the Gaussian method needs, and which pieces are missing."""
     missing = []
-    geo_path = DATA_DIR / "scenario" / "geometry.json"
-    geo = json.loads(geo_path.read_text()) if geo_path.is_file() else None
-    source = read_json("skid", "candidates.json").get("assessment", {}).get("asset_id")
-    series, sensor_of = sensor_series()
+    geo_rel = frel(incident, "geometry")
+    geo = fjson(incident, "geometry") if fpath(incident, "geometry").is_file() else None
+    source = fjson(incident, "candidates").get("assessment", {}).get("asset_id")
+    series, sensor_of = sensor_series(incident)
     if not series["methane_ppm"]:
-        missing.append("Methane concentration series (scenario/sensors.csv)")
+        missing.append(f"Methane concentration series ({frel(incident, 'sensors')})")
     if not series["wind_speed_m_s"]:
-        missing.append("Wind speed and direction series (scenario/weather.csv)")
+        missing.append(f"Wind speed and direction series ({WEATHER})")
     if not source:
         missing.append("Assumed source asset (no Locate assessment)")
     if not geo:
-        missing.append("Source and detector geometry (scenario/geometry.json)")
+        missing.append(f"Source and detector geometry ({geo_rel})")
     else:
         for a in filter(None, (source, sensor_of.get("methane_ppm"))):
             if a not in geo["assets"]:
-                missing.append(f"Position and height for {a} (scenario/geometry.json)")
+                missing.append(f"Position and height for {a} ({geo_rel})")
     return geo, source, series, sensor_of, missing
 
 
-def methods():
-    meta = read_json("ogi", "source_metadata.json")
+def methods(incident):
+    meta = fjson(incident, "ogi_meta")
     sp = meta.get("experimental_setpoint") or {}
     sp_missing = []
     if sp.get("rate") is None:
-        sp_missing.append("Release setpoint for the CAM-01 clip not on file")
+        sp_missing.append(f"Release setpoint for the {incident['camera_id']} clip not on file")
     if meta.get("status") != "verified":
         sp_missing.append("OGI clip licence and metadata not verified")
     return [
         {"id": GAUSSIAN, "label": "Gaussian plume inversion", "note": "Interim, deterministic. Single point detector.",
-         "missing": gaussian_inputs()[4]},
+         "missing": gaussian_inputs(incident)[4]},
         {"id": "pyelq", "label": "pyELQ source inversion", "note": "Backend service", "missing": ["pyELQ service not connected"]},
         {"id": "experimental_setpoint", "label": "Controlled-release setpoint", "note": "Known controlled-release rate",
          "missing": sp_missing},
@@ -376,8 +434,8 @@ def percentile(xs, p):
     return xs[lo] + (xs[hi] - xs[lo]) * (k - lo)
 
 
-def run_gaussian():
-    geo, source, series, sensor_of, missing = gaussian_inputs()
+def run_gaussian(incident):
+    geo, source, series, sensor_of, missing = gaussian_inputs(incident)
     base = {"method": GAUSSIAN, "model_version": MODEL_VERSION, "model_note": "Interim, pyELQ pending", "provenance": "model_estimated",
             "input_provenance": "synthetic", "source_asset_id": source,
             "run_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
@@ -435,8 +493,8 @@ def d_on_axis(src, rec):
     return (math.degrees(math.atan2(rec["x_m"] - src["x_m"], rec["y_m"] - src["y_m"])) + 180) % 360
 
 
-def release_check():
-    truth = read_json("scenario", "release_truth.json")
+def release_check(incident):
+    truth = fjson(incident, "release_truth")
     return {"rate_kg_ch4_h": truth["rate_kg_ch4_h"], "source_asset_id": truth["source_asset_id"],
             "provenance": truth["provenance"]}
 
@@ -447,7 +505,7 @@ def get_quantification(incident_id: str):
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
     q = incident.get("quantification")
-    return {"result": q, "methods": methods(), "release_check": release_check() if q else None}
+    return {"result": q, "methods": methods(incident), "release_check": release_check(incident) if q else None}
 
 
 @app.post("/incidents/{incident_id}/quantify")
@@ -457,22 +515,30 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
         raise HTTPException(status_code=404, detail="Incident not found")
     require_triggered(incident)
     method = body.get("method", GAUSSIAN)
-    m = next((m for m in methods() if m["id"] == method), None)
+    m = next((m for m in methods(incident) if m["id"] == method), None)
     if m is None:
         raise HTTPException(status_code=400, detail="Unknown method")
     if method != GAUSSIAN or m["missing"]:
         raise HTTPException(status_code=409, detail={"failure": FAILURE, "missing": m["missing"]})
+    run_quantify(incident, OPERATOR)
+    return {"result": incident["quantification"], "methods": methods(incident), "release_check": release_check(incident)}
+
+
+def run_quantify(incident, actor, note=None):
     t0, at = time.perf_counter(), now_utc()
-    incident["quantification"] = run_gaussian()
+    incident["quantification"] = run_gaussian(incident)
     q = incident["quantification"]
+    rate = q["rate_kg_ch4_h"]
     add_span(incident, "emission_estimate", at, elapsed_ms(t0), component="Emissions (Atelic backend)",
              tool="run_gaussian: Gaussian plume inversion", model=None, model_version=q["model_version"],
-             evidence=[{"label": "Sensor and wind traces", "path": "scenario/sensors.csv, scenario/weather.csv", "screen": "quantify.html"},
-                       {"label": "Draft skid geometry", "path": "scenario/geometry.json", "screen": "quantify.html"}],
-             result=f"{q['rate_kg_ch4_h']} kg CH₄/h, P10–P90 {q['interval']['low']}–{q['interval']['high']} "
-                    f"({q['qc']['samples_used']} of {q['qc']['samples_in_window']} samples)")
-    audit(incident, "quantification_run", OPERATOR, f"{q['model_version']}: {q['rate_kg_ch4_h']} kg CH₄/h (model estimated)")
-    return {"result": incident["quantification"], "methods": methods(), "release_check": release_check()}
+             evidence=[{"label": "Sensor and wind traces", "path": f"{frel(incident, 'sensors')}, {WEATHER}", "screen": "quantify.html"},
+                       {"label": "Draft skid geometry", "path": frel(incident, "geometry"), "screen": "quantify.html"}],
+             result=(f"{rate} kg CH₄/h, P10–P90 {q['interval']['low']}–{q['interval']['high']} "
+                     f"({q['qc']['samples_used']} of {q['qc']['samples_in_window']} samples)") if rate is not None
+                    else f"Not estimated: {'; '.join(q.get('missing') or [q.get('failure', '')])}",
+             note=note, status="ok" if rate is not None else "blocked")
+    audit(incident, "quantification_run", actor,
+          f"{q['model_version']}: {rate} kg CH₄/h (model estimated)" if rate is not None else f"{q['model_version']}: not estimated")
 
 
 # ----- Screen 5: Plan -----
@@ -508,21 +574,26 @@ def check_unlocked(wo):
         raise HTTPException(status_code=409, detail=f"Approved by {rv['reviewer']}; the draft is locked.")
 
 
+# Site procedures; the drafter picks the one that names the likely source.
+DOCS = ("maintenance_procedure.md", "valve_procedure.md", "isolation_checklist.md")
+
+
 def make_draft(incident):
-    det = {"metadata": read_json("ogi", "source_metadata.json"), "annotations": read_json("ogi", "plume_annotations.json")}
-    docs = [(DATA_DIR / "docs" / n, f"docs/{n}") for n in ("maintenance_procedure.md", "isolation_checklist.md")]
-    return build_draft(read_json("skid", "candidates.json"), incident.get("quantification"), det,
-                       read_json("maintenance", "history.json"), [d for d in docs if d[0].is_file()])
+    det = {"metadata": fjson(incident, "ogi_meta"), "annotations": fjson(incident, "ogi_ann")}
+    docs = [(DATA_DIR / "docs" / n, f"docs/{n}") for n in DOCS]
+    return build_draft(fjson(incident, "candidates"), incident.get("quantification"), det,
+                       read_json("maintenance", "history.json"), [d for d in docs if d[0].is_file()],
+                       incident["camera_id"], FILES[incident["local_incident_id"]])
 
 
 def draft_inputs(incident):
     """What the drafter reads right now, so the page can show its real inputs before and after drafting."""
-    cands = read_json("skid", "candidates.json")
+    cands = fjson(incident, "candidates")
     a = cands.get("assessment", {})
     q = incident.get("quantification")
-    meta, ann = read_json("ogi", "source_metadata.json"), read_json("ogi", "plume_annotations.json")
+    meta, ann = fjson(incident, "ogi_meta"), fjson(incident, "ogi_ann")
     marked = bool(ann.get("ranges") or ann.get("frames")) and ann.get("ogi_clip_id") == meta.get("ogi_clip_id")
-    docs = [n for n in ("maintenance_procedure.md", "isolation_checklist.md") if (DATA_DIR / "docs" / n).is_file()]
+    docs = [n for n in DOCS if (DATA_DIR / "docs" / n).is_file()]
     records = read_json("maintenance", "history.json")["records"]
     rate = q and q.get("rate_kg_ch4_h")
     return [
@@ -533,12 +604,12 @@ def draft_inputs(incident):
          "detail": (f"P10–P90 {q['interval']['low']}–{q['interval']['high']}" if rate is not None
                     else "Not estimated yet"), "provenance": "model_estimated" if rate is not None else "pending",
          "screen": "quantify.html"},
-        {"id": "detection", "label": "Camera observation", "value": "CAM-01" if marked else None,
+        {"id": "detection", "label": "Camera observation", "value": incident["camera_id"] if marked else None,
          "detail": ("Plume region marked, " + ("reviewed" if ann.get("reviewed_by") else "not yet reviewed")) if marked
                    else "No plume region marked", "provenance": "manual_annotation" if marked else "pending",
          "screen": "detection.html"},
         {"id": "docs", "label": "Procedures", "value": f"{len(docs)} documents",
-         "detail": f"Procedure and checklist, plus {len(records)} maintenance records",
+         "detail": f"Procedures and checklist, plus {len(records)} maintenance records",
          "provenance": "synthetic", "screen": None},
     ]
 
@@ -588,6 +659,11 @@ def get_work_order(incident_id: str):
 def post_work_order_draft(incident_id: str):
     incident = incident_or_404(incident_id)
     require_triggered(incident)
+    run_draft(incident)
+    return work_order_view(incident)
+
+
+def run_draft(incident, note=None):
     t0, at = time.perf_counter(), now_utc()
     draft, missing = make_draft(incident)
     ms = elapsed_ms(t0)
@@ -602,18 +678,17 @@ def post_work_order_draft(incident_id: str):
              evidence=[{"label": g, "path": next(e["uri"].split("#")[0] for e in procs if e["group"] == g), "screen": "plan.html"}
                        for g in dict.fromkeys(e["group"] for e in procs)],
              result=f"{len(procs)} passages cited from {len({e['group'] for e in procs})} documents",
-             note="Runs inside the work order draft call; not timed separately.")
+             note=" ".join(filter(None, ["Runs inside the work order draft call; not timed separately.", note])))
     add_span(incident, "work_order", at, ms, tool=tool, model=None, model_version=GENERATOR["version"],
-             evidence=[{"label": "Source candidates", "path": "skid/candidates.json", "screen": "locate.html"},
+             evidence=[{"label": "Source candidates", "path": frel(incident, "candidates"), "screen": "locate.html"},
                        {"label": "Emission estimate", "path": "POST /incidents/{id}/quantify", "screen": "quantify.html"},
                        {"label": "Maintenance history", "path": "maintenance/history.json", "screen": None}],
-             result=f"{sum(len(v) for v in draft['sections'].values())} claims, {len(draft['evidence'])} cited sources")
+             result=f"{sum(len(v) for v in draft['sections'].values())} claims, {len(draft['evidence'])} cited sources", note=note)
     fields = draft.pop("fields")
     old = incident.get("work_order")
     add_version(incident, draft, fields, f"{GENERATOR['id']} {GENERATOR['version']}", ["Generated"] if not old else ["Regenerated"])
     # Flags point at claims of the replaced text, so they go with it.
     incident["work_order"]["flags"] = {}
-    return work_order_view(incident)
 
 
 @app.post("/incidents/{incident_id}/work-order/edit")
@@ -730,8 +805,9 @@ def get_audit(incident_id: str):
 # One snapshot (app/report.py) feeds the page and every export, so an export matches the UI.
 
 def make_report(incident):
-    src = {"ogi_meta": read_json("ogi", "source_metadata.json"), "ogi_ann": read_json("ogi", "plume_annotations.json"),
-           "candidates": read_json("skid", "candidates.json"), "site": read_json("scenario", "site.json"),
+    src = {"ogi_meta": fjson(incident, "ogi_meta"), "ogi_ann": fjson(incident, "ogi_ann"),
+           "candidates": fjson(incident, "candidates"), "site": read_json("scenario", "site.json"),
+           "files": {**FILES[incident["local_incident_id"]], "weather": WEATHER},
            "plume": read_json("carbon_mapper", "verified_plume.json"),
            "review": latest_review(incident.get("work_order")), "generator": GENERATOR, "status": status()}
     return build_report(incident, src, now_utc())
@@ -798,13 +874,12 @@ def add_span(incident, step, started_at, duration_ms, tool, model, model_version
 def get_agent_runs(incident_id: str):
     incident = incident_or_404(incident_id)
     spans = incident.get("spans", [])
-    cands = read_json("skid", "candidates.json")
-    ann = read_json("ogi", "plume_annotations.json")
+    ann = fjson(incident, "ogi_ann")
     not_run = {
         "camera_event": "No camera event reached the backend in this run. The OGI clip is a replay"
-                        + ("; its plume region was drawn by hand (ogi/plume_annotations.json)." if ann.get("ranges") or ann.get("frames") else "."),
+                        + (f"; its plume region was drawn by hand ({frel(incident, 'ogi_ann')})." if ann.get("ranges") or ann.get("frames") else "."),
         "equipment_mapping": "No agent queried the camera-to-equipment mapping. The source candidates "
-                             "come from a manual ranking file (skid/candidates.json).",
+                             f"come from a manual ranking file ({frel(incident, 'candidates')}).",
         "graph": "No agent queried the knowledge graph. Neo4j is not connected; the Locate screen reads the site graph from JSON files.",
         "procedure_passages": "Not run yet. Passages are retrieved when a work order is drafted on Plan.",
         "emission_estimate": "Not run yet. Starts with Run estimate on Quantify.",

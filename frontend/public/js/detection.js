@@ -1,5 +1,6 @@
 // Screen 2 — Detect / Camera. Reads GET /incidents/:id/detections. A 2×2 wall plays all skid cameras;
-// CAM-01 replays GET /ogi/clip, the others loop GET /ogi/cams/:id.
+// the incident's camera replays GET /incidents/:id/clip, a camera with another live incident shows that
+// incident's view, the others loop GET /ogi/cams/:id.
 // Overlays are drawn only for frames that have an annotation; nothing is interpolated or inferred.
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -22,7 +23,7 @@
   }
   // Simulated / synthetic provenance is tracked in the data but not shown.
 
-  let meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
+  let CAM = 'CAM-01', live = [], raised = false, meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
 
   // ----- data rules -----
   const hasRegion = (a) => a && ((a.mask_polygon_normalized || []).length > 2 || a.bbox_normalized || a.origin_normalized);
@@ -71,7 +72,7 @@
         <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
         ${heat ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
         ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
-        ${row('Source', `CAM-01 · ${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
+        ${row('Source', `${CAM} · ${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
       </div>
       <details class="more">
@@ -102,11 +103,14 @@
         : (meta.model_version ? `Output of ${esc(meta.model_version)}` : 'Model output');
     } else if (byFrame.size) {
       by = 'All cameras watching. No plume seen yet.';
+    } else if (!raised) {
+      by = 'All cameras watching. No alert raised.';
     } else {
       by = noDetectionNote;
     }
     setAlert(now);
-    const waiting = !now && byFrame.size > 0;
+    // Nothing to investigate before the alert (or, on an annotated replay, before the plume appears).
+    const waiting = !now && (byFrame.size > 0 || !raised);
     document.querySelector('.meta-panel').classList.toggle('waiting', waiting);
     $('btn-investigate').classList.toggle('disabled', waiting);
     $('btn-investigate').setAttribute('aria-disabled', String(waiting));
@@ -142,38 +146,45 @@
   }
 
   // ----- camera wall -----
-  // Every skid camera plays at once, so the viewer sees that only CAM-01 raises something.
-  // CAM-01 is the annotated replay; the others loop a recorded segment picked as plume-free.
+  // Every skid camera plays at once, so the viewer sees which one raises something.
+  // The incident's camera is the annotated replay; the others loop a recorded segment picked as plume-free.
   let wall = null;
   const API = () => window.AtelicShell.API;
 
-  // CAM-01 screen: the pre-leak view during normal operations, the leak (with before/after compare) after the alert.
+  // Incident camera screen: the pre-leak view during normal operations, the leak (with before/after compare) after the alert.
   function cam1Screen(mode, clipOk, origOk) {
     if (mode === 'before') {
-      return `<div class="frame" id="frame-before"><video id="video-before" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip/before"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
+      return `<div class="frame" id="frame-before"><video id="video-before" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/before"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
     }
-    return clipOk ? `<div class="frame${origOk ? ' cmp-on' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay loop playsinline preload="auto" src="${API()}/ogi/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
-      : `<div class="no-feed"><b>Camera clip not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
+    return clipOk ? `<div class="frame${origOk ? ' cmp-on' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
+      : `<div class="no-feed"><b>${esc(CAM)} leak recording not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
   }
 
   function renderWall(clipOk, origOk, mode) {
-    const cams = wall ? wall.cameras : [{ camera_id: 'CAM-01', area: '', watches: [], feed: 'ogi_clip' }];
+    const cams = wall ? wall.cameras : [{ camera_id: CAM, area: '', watches: [], feed: 'ogi_clip' }];
     const wallP = wall ? (wall.status === 'sample' ? 'simulated' : wall.provenance) : null;
+    const video = (src) => `<div class="frame"><video muted autoplay loop playsinline preload="auto" src="${src}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
     $('wall').innerHTML = cams.map((c) => {
-      const live = c.feed === 'ogi_clip';
-      const loop = c.feed && typeof c.feed === 'object' && c.feed.file;
-      const tip = live ? `${c.camera_id} · watches ${c.watches.join(', ')} · ${esc(window.AtelicShell.FACILITY.short)}`
-        : loop ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded, looped`
+      const mine = c.camera_id === CAM;
+      // Another live incident on this camera: its normal view, or its alarm with a link to open it.
+      const other = !mine && live.find((l) => l.camera_id === c.camera_id);
+      const loop = !mine && !other && c.feed && typeof c.feed === 'object' && c.feed.file;
+      const on = mine || other || loop;
+      const tip = mine ? `${c.camera_id} · watches ${c.watches.join(', ')} · ${esc(window.AtelicShell.FACILITY.short)}`
+        : on ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded, looped`
         : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed`;
-      const screen = live
-        ? cam1Screen(mode, clipOk, origOk)
-        : loop ? `<div class="frame"><video muted autoplay loop playsinline preload="auto" src="${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`
+      const screen = mine ? cam1Screen(mode, clipOk, origOk)
+        : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`)
+        : loop ? video(`${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}`)
         : '<div class="no-feed"><b>No feed</b></div>';
-      return `<div class="cell${live ? ' cam1' : ''}" title="${esc(tip)}">
+      const state = other && other.triggered
+        ? `ALARM · <a class="open-inc" href="detection.html?inc=${encodeURIComponent(other.incident_id)}">Open ${esc(other.incident_id)} →</a>`
+        : on ? 'Watching' : 'No feed';
+      return `<div class="cell${mine ? ' cam1' : ''}${other && other.triggered ? ' alert' : ''}" title="${esc(tip)}">
         <div class="cv">${screen}</div>
         <div class="cl"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
-          <span class="st${loop || live ? ' on' : ''}"><i></i><span class="sv">${loop || live ? 'Watching' : 'No feed'}</span></span>
-          ${badge(live ? prov : wallP)}</div>
+          <span class="st${on ? ' on' : ''}"><i></i><span class="sv">${state}</span></span>
+          ${badge(mine ? prov : wallP)}</div>
       </div>`;
     }).join('');
     // Same replay clock on every feed (the shell's incident clock), not each clip's own position,
@@ -188,14 +199,16 @@
     $('wall-foot').textContent = `Recorded replays, looped · ${window.AtelicShell.FACILITY.name}, ${window.AtelicShell.FACILITY.location}`;
   }
 
+  // An alert raised with no annotated recording behind it says so instead of "Watching".
   function setAlert(now) {
     const c = document.querySelector('.cell.cam1');
     if (!c) return;
-    c.classList.toggle('alert', !!now);
-    c.querySelector('.sv').textContent = now ? 'ALARM · Plume observed' : 'Watching';
+    const bare = raised && !byFrame.size;
+    c.classList.toggle('alert', !!now || bare);
+    c.querySelector('.sv').textContent = now ? 'ALARM · Plume observed' : bare ? 'Alert raised · no recording' : 'Watching';
   }
 
-  // ----- CAM-01 before/after: original infrared (left) vs Atelic detection output (right) -----
+  // ----- incident camera before/after: original infrared (left) vs Atelic detection output (right) -----
   const CMP_UI = `<span class="cmp-tag l">Original IR</span><span class="cmp-tag r">Atelic detection</span>
     <span class="cmp-line" aria-hidden="true"></span>
     <span class="cmp-grip" id="cmp-grip" role="slider" tabindex="0" aria-label="Compare original infrared with Atelic detection"
@@ -238,7 +251,7 @@
     raw.playbackRate = Math.max(0.9, Math.min(1.1, 1 + diff * 2));
   }
 
-  // ----- CAM-01 replay -----
+  // ----- incident camera replay -----
   // With a frame-time table (variable-rate clips) look the frame up; otherwise derive it from fps.
   function frameAt(t) {
     if (!times) return Math.min(total - 1, Math.max(0, Math.floor(t * fps + 1e-3)));
@@ -266,7 +279,7 @@
     return a;
   }
 
-  // Heat map: see plumeheat.js (computed from CAM-01's pixels, drawn only inside the drawn region).
+  // Heat map: see plumeheat.js (computed from the incident camera's pixels, drawn only inside the drawn region).
   let heatStep = null;
 
   function update(t) {
@@ -293,7 +306,7 @@
       update(video.currentTime);
     }, { once: true });
     video.addEventListener('error', () => {
-      $('frame').outerHTML = '<div class="no-feed"><b>Recording could not be played</b><span>Check data/ogi/source_clip.mp4 (H.264 MP4)</span></div>';
+      $('frame').outerHTML = `<div class="no-feed"><b>Recording could not be played</b><span>Check the ${esc(CAM)} clip file (H.264 MP4)</span></div>`;
     }, { once: true });
   }
 
@@ -304,13 +317,26 @@
     if (d.clip_available) wireVideo(frames);
   }
 
-  // Presenter controls in the camera panel header: trigger the alert (or press T), reset for the next run.
+  // Presenter controls in the camera panel header: pick a camera with no alert yet and trigger it (or
+  // press T), reset this incident for the next run.
+  let pick = null;
   function renderControls(mode) {
     const box = $('event-ctl');
     if (!box) return;
-    box.innerHTML = mode === 'before'
-      ? '<button class="ctl" id="btn-trigger" type="button" title="Shortcut: T">Trigger event <kbd>T</kbd></button>'
-      : '<button class="ctl" id="btn-reset" type="button" title="Back to normal operations">Reset</button>';
+    const idle = live.filter((l) => !l.triggered && !(l.incident_id === window.AtelicShell.INCIDENT_ID && mode === 'event'));
+    if (!idle.some((l) => l.incident_id === pick)) {
+      pick = (idle.find((l) => l.incident_id === window.AtelicShell.INCIDENT_ID) || idle[0] || {}).incident_id || null;
+    }
+    box.innerHTML = `${idle.length > 1 ? '<span class="ctl-pick" id="trig-pick"></span>' : ''}${pick
+      ? `<button class="ctl" id="btn-trigger" type="button" title="Shortcut: T">Trigger ${esc(live.find((l) => l.incident_id === pick).camera_id)} event <kbd>T</kbd></button>` : ''}${mode === 'event'
+      ? '<button class="ctl" id="btn-reset" type="button" title="Back to normal operations">Reset</button>' : ''}`;
+    if (idle.length > 1) {
+      window.AtelicShell.dropdown($('trig-pick'), {
+        label: 'Camera to trigger', value: pick,
+        options: idle.map((l) => ({ value: l.incident_id, label: l.camera_id, sub: l.incident_id })),
+        onChange: (v) => { pick = v; renderControls(mode); },
+      });
+    }
     const t = $('btn-trigger'), r = $('btn-reset');
     if (t) t.addEventListener('click', trigger);
     if (r) r.addEventListener('click', reset);
@@ -318,25 +344,38 @@
 
   let triggering = false;
   async function trigger() {
-    if (triggering || !$('btn-trigger')) return;
+    if (triggering || !$('btn-trigger') || !pick) return;
     triggering = true;
+    // Another camera's alert opens its own incident.
+    if (pick !== window.AtelicShell.INCIDENT_ID) {
+      try {
+        await post(`/incidents/${pick}/trigger`);
+        location.href = `detection.html?inc=${encodeURIComponent(pick)}`;
+      } catch (e) { console.error(e); triggering = false; }
+      return;
+    }
     try {
       await post(`/incidents/${window.AtelicShell.INCIDENT_ID}/trigger`);
+      live = live.map((l) => (l.incident_id === window.AtelicShell.INCIDENT_ID ? { ...l, triggered: true } : l));
+      raised = true;
       const d = await window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`);
       const frames = usableAnnotations(d);
       const origOk = d.clip_available && d.original_available && meta.plume_rendering === 'burned_in';
-      // CAM-01 is a PTZ view: on the alert it zooms from the wide shot to the vent, then the leak view takes over.
+      // The incident camera is a PTZ view: on the alert it zooms from the wide shot to the first asset it watches,
+      // then the leak view takes over.
       const cell = document.querySelector('.cell.cam1'), cv = cell && cell.querySelector('.cv');
       if (cv) {
         cell.classList.add('ptz');
         await new Promise((ok) => setTimeout(ok, 650));
-        cv.innerHTML = cam1Screen('event', d.clip_available, origOk) + '<span class="ptz-note">PTZ · zoom to VENT-01</span>';
+        const cam = wall && wall.cameras.find((c) => c.camera_id === CAM), target = cam && cam.watches[0];
+        cv.innerHTML = cam1Screen('event', d.clip_available, origOk) + (target ? `<span class="ptz-note">PTZ · zoom to ${esc(target)}</span>` : '');
         const now = window.AtelicShell.replayNow(), stamp = cv.querySelector('.tcx span');
         if (now && stamp) stamp.textContent = window.AtelicShell.fmtUtc(now, true);
         cell.classList.remove('ptz');
         setTimeout(() => { const n = cv.querySelector('.ptz-note'); if (n) n.remove(); }, 2500);
       }
       startEvent(d, frames, origOk);
+      renderStatus(observedNow);
       renderControls('event');
       window.AtelicShell.refresh();
     } catch (e) {
@@ -364,7 +403,11 @@
 
   async function init() {
     try {
-      const d = await window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`);
+      const [d, list] = await Promise.all([window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`),
+        window.AtelicShell.get('/incidents').catch(() => ({ live: [] }))]);
+      CAM = d.camera_id || CAM;
+      raised = d.triggered;
+      live = list.live || [];
       meta = d.metadata; ann = d.annotations; wall = d.camera_wall;
       prov = clipProv(meta);
       annP = ann.status === 'sample' ? 'simulated' : (CLIP_PROV.has(ann.provenance) ? ann.provenance : 'pending');
@@ -376,7 +419,7 @@
 
       $('clip-badge').innerHTML = wall ? badge(wall.status === 'sample' ? 'simulated' : wall.provenance) : '';
       const origOk = d.clip_available && d.original_available && meta.plume_rendering === 'burned_in';
-      // Normal operations (no alert yet) show CAM-01's pre-leak view; without that clip, go straight to the event.
+      // Normal operations (no alert yet) show the camera's pre-leak view; without that clip, go straight to the event.
       const before = !d.triggered && d.before_available;
       renderWall(d.clip_available, origOk, before ? 'before' : 'event');
       renderMeta(d, frames);

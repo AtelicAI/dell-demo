@@ -1,0 +1,12 @@
+{
+  "_comment": "DRAFT for team review. Declares which assets CAM-02 (separator) can see (drives CAN_OBSERVE); same as its camera_wall.json 'watches'. Polygons stay empty until they are drawn on an approved CAM-02 leak clip.",
+  "mapping_version": "rois-v0.1-draft",
+  "camera_id": "CAM-02",
+  "clip_id": null,
+  "mapping_method": "manual_illustrative",
+  "regions": [
+    { "asset_id": "XV-101", "polygon_normalized": [] },
+    { "asset_id": "V-101",  "polygon_normalized": [] },
+    { "asset_id": "P-100",  "polygon_normalized": [] }
+  ]
+}

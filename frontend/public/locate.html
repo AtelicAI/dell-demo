@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=41">
-<script src="js/shell.js?v=36" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=45">
+<script src="js/shell.js?v=43" defer></script>
 <script src="js/plumeheat.js?v=1" defer></script>
-<script src="js/locate.js?v=36" defer></script>
+<script src="js/locate.js?v=37" defer></script>
 <style>
 
   /* PRD Screen 3: investigation (camera strip + plant view) | ranked candidates */
@@ -50,7 +50,7 @@
   .id{font-family:var(--mono);font-weight:600;color:var(--ink);white-space:nowrap}
   .panel-head h2{white-space:nowrap}
 
-  /* ----- camera strip (top of the investigation panel): looping replay with heat map + what CAM-01 can see ----- */
+  /* ----- camera strip (top of the investigation panel): looping replay with heat map + what the incident camera can see ----- */
   .cam-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
   .cam-stage{width:150px;height:100px;container-type:size;display:grid;place-items:center}
   .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw,100cqh * var(--ar));background:#000;border-radius:4px;overflow:hidden;
@@ -224,7 +224,7 @@
       <div class="cam-strip" aria-label="Camera view">
         <div class="cam-stage"><div class="cam-frame" id="cam-frame"><div class="cam-empty">Loading frame…</div></div></div>
         <div class="cam-info">
-          <div class="cam-meta"><b>CAM-01 replay</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
+          <div class="cam-meta"><b id="cam-name">Camera replay</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
           <div class="vis-row"><span class="lbl">Camera can see</span><div class="vchips" id="vis-list"></div><div class="vis-sel" id="vis-sel"></div></div>
           <div class="cam-note" id="cam-caveat" hidden></div>
         </div>

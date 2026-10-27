@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=41">
-<script src="js/shell.js?v=36" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=45">
+<script src="js/shell.js?v=43" defer></script>
 <script src="js/plumeheat.js?v=1" defer></script>
-<script src="js/detection.js?v=45" defer></script>
+<script src="js/detection.js?v=48" defer></script>
 <style>
 
   /* PRD Screen 2: 65% video / 35% detection metadata */
@@ -100,7 +100,11 @@
   .cmp-tag.r{background:none;color:#fff}
 
   /* presenter controls + PTZ zoom on the alert */
-  .event-ctl{margin-left:auto}
+  .event-ctl{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+  .ctl-pick .dd-btn{width:auto;height:24px;padding:0 7px 0 9px;font-size:11px}
+  .ctl-pick .dd-v span{display:none}
+  .ctl-pick .dd-pop{width:220px}
+  .cl .open-inc{color:inherit;text-decoration:underline;text-underline-offset:2px}
   .ctl{display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border:1px solid var(--line-strong);border-radius:3px;background:var(--panel);font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink-mute);cursor:pointer}
   .ctl:hover{border-color:var(--ink-dim);color:var(--ink)}
   .ctl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

@@ -9,16 +9,18 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="css/shell.css?v=41">
-<script src="js/shell.js?v=36" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=45">
+<script src="js/shell.js?v=43" defer></script>
 <script src="vendor/leaflet/leaflet.js" defer></script>
-<script src="js/overview.js?v=22" defer></script>
+<script src="js/overview.js?v=23" defer></script>
 <style>
   /* PRD Screen 1: 65% map / 35% source details */
   .ov-grid{display:grid;grid-template-columns:65fr 35fr;gap:14px;margin-top:14px;align-items:stretch}
   .ov-grid > .panel{min-height:0}
   .ov-grid.fill{flex:0 1 auto;height:100%;max-height:700px}
   main.fit .lede{margin-bottom:12px}
+  .inc-count{margin-left:auto;color:var(--accent);text-decoration:none}
+  .inc-count:hover{text-decoration:underline}
 
   /* ----- satellite map (Leaflet) ----- */
   .map-panel{overflow:hidden;display:flex;flex-direction:column}
@@ -116,6 +118,7 @@
 <main class="wide fit">
   <div class="page-head">
     <h1 id="page-title">Methane observations</h1>
+    <a class="sub inc-count" id="inc-count" href="incidents.html" hidden></a>
   </div>
   <p class="lede">Review regional emissions observations and explore an equipment-level investigation.</p>
 

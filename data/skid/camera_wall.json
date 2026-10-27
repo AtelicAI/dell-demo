@@ -4,7 +4,7 @@
   "provenance": "simulated",
   "cameras": [
     { "camera_id": "CAM-01", "area": "Vent & outlet", "watches": ["VENT-01", "XV-104", "P-101"], "feed": "ogi_clip" },
-    { "camera_id": "CAM-02", "area": "Separator", "watches": ["P-100", "XV-101", "V-101"],
+    { "camera_id": "CAM-02", "area": "Separator", "watches": ["XV-101", "V-101", "P-100"],
       "feed": { "file": "cam02_MOV_2571.mp4", "ogi_clip_id": "MOV_2571", "segment": { "start": "00:00", "end": "04:40" }, "picked_by": "Atelic team (no visible plume)" } },
     { "camera_id": "CAM-03", "area": "Relief valves", "watches": ["PSV-102", "BDV-103", "P-102"],
       "feed": { "file": "cam03_MOV_2583.mp4", "ogi_clip_id": "MOV_2583", "segment": { "start": "00:00", "end": "05:00" }, "picked_by": "Atelic team (no visible plume)" } },
