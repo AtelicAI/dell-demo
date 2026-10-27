@@ -55,6 +55,17 @@ def get_incident(incident_id: str):
     if not incident["triggered"]:
         # Normal operations: no alert yet, so nothing in the workflow has started.
         return {**incident, "source_status": "No active alert", "stages": stages}
+    dis = incident.get("dismissal")
+    if dis:
+        # Closed as a false alarm by a named person: the detection was reviewed; nothing after it is needed.
+        # The closure record is filed once it is exported.
+        filed = any(x["status"] == "final" and x["hash"] == make_report(incident)["report_hash"]
+                    for x in incident.get("report_exports", []))
+        for st in stages:
+            st["status"] = "not_needed"
+        stages[0]["status"] = "completed"
+        stages[5]["status"] = "completed" if filed else "in_progress"
+        return {**incident, "source_status": "False alarm (dismissed)", "stages": stages}
     stages[0]["status"] = detect_status(incident)
     stages[1]["status"] = locate_status(incident)
     # A stored estimate is a model output awaiting engineer review; never "completed" on its own.
@@ -104,6 +115,55 @@ def require_triggered(incident):
         raise HTTPException(status_code=409, detail=f"No active incident: {incident['camera_id']} has not raised an alert")
 
 
+def require_open(incident):
+    # A dismissed incident is closed: no estimate, draft, submission or review until it is reopened.
+    require_triggered(incident)
+    d = incident.get("dismissal")
+    if d:
+        raise HTTPException(status_code=409, detail=f"Closed as a false alarm by {d['by']}. Reopen it on the Camera screen first.")
+
+
+DISMISS_REASONS = {"steam": "Steam or water vapour", "exhaust": "Hot exhaust or engine heat", "reflection": "Reflection or sun glint",
+                   "planned": "Planned venting or maintenance", "other": "Other"}
+
+
+@app.post("/incidents/{incident_id}/dismiss")
+def post_dismiss(incident_id: str, body: dict = Body(...)):
+    """A named person closes the alert as a false alarm, with a reason. Never automatic."""
+    incident = incident_or_404(incident_id)
+    require_triggered(incident)
+    if incident.get("dismissal"):
+        raise HTTPException(status_code=409, detail=f"Already closed by {incident['dismissal']['by']}")
+    if latest_review(incident.get("work_order")) and latest_review(incident["work_order"])["decision"] == "approve":
+        raise HTTPException(status_code=409, detail="A work order is approved for this incident; it cannot be dismissed as a false alarm.")
+    by, code, comment = (body.get("by") or "").strip(), body.get("reason"), (body.get("comment") or "").strip()
+    if not by:
+        raise HTTPException(status_code=400, detail="Enter your name")
+    if code not in DISMISS_REASONS:
+        raise HTTPException(status_code=400, detail="Choose a reason")
+    if not comment:
+        raise HTTPException(status_code=400, detail="Say what you saw")
+    incident["dismissal"] = {"by": by, "reason": code, "reason_label": DISMISS_REASONS[code], "comment": comment, "at": now_utc()}
+    wo = incident.get("work_order")
+    if wo and wo["submitted"]:
+        wo["submitted"] = None  # nothing is left for the reviewer to decide
+    audit(incident, "incident_dismissed", by, f"Closed as a false alarm: {DISMISS_REASONS[code]}. {comment}")
+    return get_incident(incident_id)
+
+
+@app.post("/incidents/{incident_id}/reopen")
+def post_reopen(incident_id: str, body: dict = Body(...)):
+    incident = incident_or_404(incident_id)
+    by = (body.get("by") or "").strip()
+    if not incident.get("dismissal"):
+        raise HTTPException(status_code=409, detail="This incident is not closed")
+    if not by:
+        raise HTTPException(status_code=400, detail="Enter your name")
+    d = incident.pop("dismissal")
+    audit(incident, "incident_reopened", by, f"Reopened after it was closed as a false alarm by {d['by']}")
+    return get_incident(incident_id)
+
+
 @app.post("/incidents/{incident_id}/trigger")
 def post_trigger(incident_id: str):
     # The alert event: the incident's camera switches from the pre-leak view to the leak and the workflow opens.
@@ -135,7 +195,7 @@ def post_reset(incident_id: str):
     # Back to normal operations for the next run: drop the alert and everything derived from it.
     incident = incident_or_404(incident_id)
     incident.update(triggered=False, triggered_at=None)
-    for k in ("quantification", "work_order", "audit", "spans", "report_exports"):
+    for k in ("quantification", "work_order", "audit", "spans", "report_exports", "dismissal"):
         incident.pop(k, None)
     return get_incident(incident_id)
 
@@ -189,6 +249,7 @@ def list_incidents():
             "asset_provenance": "hypothesis",
             "rate_kg_ch4_h": q.get("rate_kg_ch4_h") if q else None,
             "review": latest_review(wo),
+            "dismissal": inc.get("dismissal"),
         })
     path = DATA_DIR / "incidents" / "history.json"
     history = json.loads(path.read_text()) if path.is_file() else None
@@ -211,6 +272,7 @@ def get_detections(incident_id: str):
         "metadata": fjson(incident, "ogi_meta"),
         "annotations": fjson(incident, "ogi_ann"),
         "triggered": incident["triggered"],
+        "dismissal": incident.get("dismissal"),
         "clip_available": fpath(incident, "clip").is_file(),
         # The camera before the leak (normal operations), played until the alert is triggered.
         "before_available": fpath(incident, "clip_before").is_file(),
@@ -513,7 +575,7 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
     incident = INCIDENTS.get(incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
-    require_triggered(incident)
+    require_open(incident)
     method = body.get("method", GAUSSIAN)
     m = next((m for m in methods(incident) if m["id"] == method), None)
     if m is None:
@@ -658,7 +720,7 @@ def get_work_order(incident_id: str):
 @app.post("/incidents/{incident_id}/work-order/draft")
 def post_work_order_draft(incident_id: str):
     incident = incident_or_404(incident_id)
-    require_triggered(incident)
+    require_open(incident)
     run_draft(incident)
     return work_order_view(incident)
 
@@ -694,6 +756,7 @@ def run_draft(incident, note=None):
 @app.post("/incidents/{incident_id}/work-order/edit")
 def post_work_order_edit(incident_id: str, body: dict = Body(...)):
     incident = incident_or_404(incident_id)
+    require_open(incident)
     wo = incident.get("work_order")
     if not wo:
         raise HTTPException(status_code=409, detail="No draft to edit")
@@ -714,6 +777,7 @@ def post_work_order_edit(incident_id: str, body: dict = Body(...)):
 @app.post("/incidents/{incident_id}/work-order/flag")
 def post_work_order_flag(incident_id: str, body: dict = Body(...)):
     incident = incident_or_404(incident_id)
+    require_open(incident)
     wo = incident.get("work_order")
     if not wo:
         raise HTTPException(status_code=409, detail="No draft")
@@ -735,6 +799,7 @@ def post_work_order_flag(incident_id: str, body: dict = Body(...)):
 @app.post("/incidents/{incident_id}/work-order/submit")
 def post_work_order_submit(incident_id: str, body: dict = Body(...)):
     incident = incident_or_404(incident_id)
+    require_open(incident)
     wo = incident.get("work_order")
     if not wo:
         raise HTTPException(status_code=409, detail="No draft")
@@ -766,6 +831,7 @@ DECISIONS = {"approve": "Approved", "request_changes": "Changes requested", "rej
 @app.post("/incidents/{incident_id}/review")
 def post_review(incident_id: str, body: dict = Body(...)):
     incident = incident_or_404(incident_id)
+    require_open(incident)
     wo = incident.get("work_order")
     decision = body.get("decision")
     reviewer = (body.get("reviewer") or "").strip()[:80]
@@ -887,7 +953,7 @@ def get_agent_runs(incident_id: str):
     }
     wo = incident.get("work_order")
     rv = latest_review(wo)
-    human = [e for e in incident.get("audit", []) if e["event"] == "submitted_for_review" or e["event"].startswith("review_")]
+    human = [e for e in incident.get("audit", []) if e["event"] == "submitted_for_review" or e["event"].startswith(("review_", "incident_"))]
     approval = ("approved" if rv and rv["decision"] == "approve" else "returned" if rv
                 else "waiting" if wo and wo["submitted"] else "not_reached")
     steps = []

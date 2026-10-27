@@ -145,8 +145,10 @@
     const f = d.fields, sub = W.submitted, rv = W.review, approved = !!(rv && rv.decision === 'approve');
     // An approved draft is locked by the backend; a returned one shows the reviewer's reason.
     document.body.classList.toggle('locked', approved);
-    $('stamp').textContent = approved ? 'Approved' : sub ? 'Submitted for review' : 'Status: Draft';
-    $('stamp').className = `stamp${approved ? ' ok' : sub ? ' sub' : ''}`;
+    const back = returned(), rej = back && back.decision === 'reject';
+    const onThis = Boolean(back && back.version === d.version);  // the returned decision is on the version shown
+    $('stamp').textContent = approved ? 'Approved' : sub ? 'Submitted for review' : onThis ? (rej ? 'Rejected' : 'Changes requested') : 'Status: Draft';
+    $('stamp').className = `stamp${approved ? ' ok' : sub ? ' sub' : onThis ? (rej ? ' rej' : ' chg') : ''}`;
     $('tools').hidden = approved;
     const latest = W.versions[W.versions.length - 1];
     $('doc-meta').innerHTML = `<span><b>v${d.version}</b></span><span>${esc(d.hash)}</span><span>${esc(latest.author)}</span><span>${hhmmss(latest.created_at)}</span>`;
@@ -156,7 +158,7 @@
     $('btn-cancel').hidden = !editing;
     $('btn-regen').hidden = editing;
     body.innerHTML = `
-      ${rv && !approved ? `<div class="banner returned"><span><b>${rv.decision === 'reject' ? 'Rejected' : 'Changes requested'}</b> by ${esc(rv.reviewer)}: ${esc(rv.reason)}</span></div>` : ''}
+      ${back && !approved ? returnedCard(back, onThis, d.version, sub) : ''}
       ${W.stale && !approved ? '<div class="banner">The emission estimate changed after this draft was made.<button class="btn sm" data-regen>Regenerate draft</button></div>' : ''}
       <div class="doc-msg" id="doc-msg" role="status" aria-live="polite" hidden></div>
       <div class="wo">
@@ -214,6 +216,25 @@
   }
 
   // ----- readiness bar -----
+  // Last decision that sent a draft back (reject / request changes), kept after the draft is edited.
+  function returned() {
+    if (W.review && W.review.decision === 'approve') return null;
+    const r = (W.reviews || []).filter((x) => x.decision !== 'approve');
+    return r[r.length - 1] || null;
+  }
+  function returnedCard(r, current, version, sub) {
+    const rej = r.decision === 'reject', word = rej ? 'Rejected' : 'Changes requested';
+    return `<section class="rv-card ${rej ? 'rej' : 'chg'}" role="alert">
+      <div class="rv-h"><span class="rv-ic" aria-hidden="true">${rej ? '✕' : '↺'}</span>
+        <div><b>${word} by ${esc(r.reviewer)}</b><span>v${r.version} · ${hhmmss(r.at)}${current ? '' : ` · you are on v${version}`}</span></div>
+        <a href="review.html">Open Approve →</a></div>
+      <div class="rv-q"><span class="lbl">Reviewer's comment</span><blockquote>${esc(r.reason || 'No comment given.')}</blockquote></div>
+      <p class="rv-next">${current
+        ? `Edit the fields or regenerate the draft, then submit again. v${r.version} cannot go back to the reviewer unchanged.`
+        : sub ? `v${version} was changed and resubmitted for review.` : `Changes made since v${r.version}. Submit v${version} when it is ready.`}</p>
+    </section>`;
+  }
+
   function renderReady() {
     const d = W && W.draft, btn = $('btn-submit'), body = $('ready-body');
     btn.textContent = 'Submit for engineer review';
@@ -234,7 +255,7 @@
     const li = (cls, html) => `<li class="${cls}"><span class="ic">${cls === 'ok' ? '✓' : cls === 'info' ? '!' : ''}</span>${html}</li>`;
     body.innerHTML = `<ul class="checks">
       ${li('ok', `Draft <b>v${d.version}</b>`)}
-      ${rv ? li('todo', `Returned by ${esc(rv.reviewer)}: edit or regenerate first`) : ''}
+      ${rv ? li('bad', `${rv.decision === 'reject' ? 'Rejected' : 'Changes requested'} by ${esc(rv.reviewer)}: edit or regenerate first`) : ''}
       ${li(p ? 'ok' : 'todo', p ? `Priority <b>${esc(p)}</b>` : 'Set a priority')}
       ${li(flags ? 'info' : 'ok', flags ? `${flags} flagged claim${flags > 1 ? 's' : ''} go${flags > 1 ? '' : 'es'} to the reviewer` : 'No flagged claims')}
       ${editing ? li('todo', 'Save or cancel your edits') : ''}

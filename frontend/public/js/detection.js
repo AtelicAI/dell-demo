@@ -23,7 +23,7 @@
   }
   // Simulated / synthetic provenance is tracked in the data but not shown.
 
-  let CAM = 'CAM-01', live = [], raised = false, meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
+  let CAM = 'CAM-01', live = [], raised = false, dismissal = null, meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
 
   // ----- data rules -----
   const hasRegion = (a) => a && ((a.mask_polygon_normalized || []).length > 2 || a.bbox_normalized || a.origin_normalized);
@@ -96,6 +96,7 @@
   function renderStatus(now) {
     const el = $('status-block');
     if (!el) return;
+    if (dismissal) { renderClosed(el); return; }
     let by;
     if (now) {
       by = annP === 'manual_annotation'
@@ -114,11 +115,29 @@
     document.querySelector('.meta-panel').classList.toggle('waiting', waiting);
     $('btn-investigate').classList.toggle('disabled', waiting);
     $('btn-investigate').setAttribute('aria-disabled', String(waiting));
+    $('btn-dismiss').hidden = !raised;
     el.className = `status ${now ? 'observed' : 'unconfirmed'}`;
     el.innerHTML = `<div class="lbl">Status</div>
       <div class="big"><span class="sig"></span>${now ? 'Plume observed' : waiting ? 'No detection' : 'Detection not confirmed'}</div>
       <div class="by">${by}</div>
       ${now ? `<div class="gb">${window.AtelicShell.traceLink('camera_event')}</div>` : ''}`;
+  }
+
+  // Closed as a false alarm by a named person: say who, why and what they saw; offer Reopen.
+  function renderClosed(el) {
+    const d = dismissal;
+    setAlert(false);
+    document.querySelector('.meta-panel').classList.remove('waiting');
+    $('btn-investigate').classList.add('disabled');
+    $('btn-investigate').setAttribute('aria-disabled', 'true');
+    $('btn-dismiss').hidden = true;
+    el.className = 'status closed';
+    el.innerHTML = `<div class="lbl">Status</div>
+      <div class="big"><span class="sig"></span>Closed as a false alarm</div>
+      <div class="by">${esc(d.reason_label)} · by ${esc(d.by)} · ${esc(d.at.slice(11, 16))} UTC</div>
+      <div class="said">“${esc(d.comment)}”</div>
+      <div class="reopen"><button class="linkish" type="button" id="btn-reopen">Reopen incident</button></div>`;
+    $('btn-reopen').addEventListener('click', () => window.AtelicShell.reopenDialog(window.AtelicShell.INCIDENT_ID, () => location.reload()));
   }
 
   function applyReplay(f) {
@@ -177,10 +196,12 @@
         : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`)
         : loop ? video(`${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}`)
         : '<div class="no-feed"><b>No feed</b></div>';
-      const state = other && other.triggered
-        ? `ALARM · <a class="open-inc" href="detection.html?inc=${encodeURIComponent(other.incident_id)}">Open ${esc(other.incident_id)} →</a>`
+      const state = other && other.dismissal ? 'Closed · false alarm'
+        : other && other.triggered
+        ? `ALARM · <a class="open-inc" href="${window.AtelicShell.incHref('detection', other.incident_id)}">${esc(other.incident_id)} →</a>`
         : on ? 'Watching' : 'No feed';
-      return `<div class="cell${mine ? ' cam1' : ''}${other && other.triggered ? ' alert' : ''}" title="${esc(tip)}">
+      const otherOpen = other && other.triggered && !other.dismissal;
+      return `<div class="cell${mine ? ' cam1' : ''}${otherOpen ? ' alert' : ''}" title="${esc(otherOpen ? `${tip} · click to investigate ${other.incident_id}` : tip)}"${otherOpen ? ` data-href="${window.AtelicShell.incHref('detection', other.incident_id)}"` : ''}>
         <div class="cv">${screen}</div>
         <div class="cl"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
           <span class="st${on ? ' on' : ''}"><i></i><span class="sv">${state}</span></span>
@@ -200,12 +221,30 @@
   }
 
   // An alert raised with no annotated recording behind it says so instead of "Watching".
+  // ----- active alarms -----
+  // Open alarms (raised, not closed), oldest first. Listed when another incident's alarm is open, so you can see
+  // them side by side and pick which one to investigate.
+  const openAlarms = () => live.filter((l) => l.triggered && !l.dismissal)
+    .sort((a, b) => String(a.triggered_at).localeCompare(String(b.triggered_at)));
+  function renderAlarms() {
+    const box = $('alarms'), open = openAlarms(), me = window.AtelicShell.INCIDENT_ID;
+    if (!box) return;
+    box.hidden = !open.some((l) => l.incident_id !== me);
+    if (box.hidden) return;
+    box.innerHTML = `<span class="al-k">Alarms · ${open.length}</span>${open.map((l) => {
+      const w = window.AtelicShell.whereNow(l), mine = l.incident_id === me;
+      const body = `<i></i><b>${esc(l.incident_id)}</b><span title="${esc(w.text)}">${esc(l.camera_id)}${l.asset_id ? ` · near ${esc(l.asset_id)}` : ''}</span>`;
+      return mine ? `<span class="al" aria-current="true">${body}<span class="tag">Investigating</span></span>`
+        : `<a class="al" href="${window.AtelicShell.incHref('detection', l.incident_id)}" title="Investigate ${esc(l.incident_id)}">${body}<span class="go">Investigate →</span></a>`;
+    }).join('')}`;
+  }
+
   function setAlert(now) {
     const c = document.querySelector('.cell.cam1');
     if (!c) return;
     const bare = raised && !byFrame.size;
-    c.classList.toggle('alert', !!now || bare);
-    c.querySelector('.sv').textContent = now ? 'ALARM · Plume observed' : bare ? 'Alert raised · no recording' : 'Watching';
+    c.classList.toggle('alert', !dismissal && (!!now || bare));
+    c.querySelector('.sv').textContent = dismissal ? 'Closed · false alarm' : now ? 'ALARM · Plume observed' : bare ? 'ALERT · no recording' : 'Watching';
   }
 
   // ----- incident camera before/after: original infrared (left) vs Atelic detection output (right) -----
@@ -333,7 +372,9 @@
     if (idle.length > 1) {
       window.AtelicShell.dropdown($('trig-pick'), {
         label: 'Camera to trigger', value: pick,
-        options: idle.map((l) => ({ value: l.incident_id, label: l.camera_id, sub: l.incident_id })),
+        // Triggering another camera opens its incident; the option says so.
+        options: idle.map((l) => ({ value: l.incident_id, label: l.camera_id,
+          sub: l.incident_id === window.AtelicShell.INCIDENT_ID ? `${l.incident_id} · this screen` : `opens ${l.incident_id}` })),
         onChange: (v) => { pick = v; renderControls(mode); },
       });
     }
@@ -350,7 +391,7 @@
     if (pick !== window.AtelicShell.INCIDENT_ID) {
       try {
         await post(`/incidents/${pick}/trigger`);
-        location.href = `detection.html?inc=${encodeURIComponent(pick)}`;
+        location.href = window.AtelicShell.incHref('detection', pick);
       } catch (e) { console.error(e); triggering = false; }
       return;
     }
@@ -378,6 +419,9 @@
       renderStatus(observedNow);
       renderControls('event');
       window.AtelicShell.refresh();
+      // Fresh list (likely source, stage) for the alarm list and tiles.
+      live = (await window.AtelicShell.get('/incidents').catch(() => ({ live }))).live;
+      renderAlarms();
     } catch (e) {
       console.error(e);
       triggering = false;
@@ -395,6 +439,12 @@
     return r.json();
   }
 
+  document.addEventListener('click', (e) => {
+    const cell = e.target.closest('.cell[data-href]');
+    if (cell && !e.target.closest('a, button')) location.href = cell.dataset.href;
+    if (e.target.closest('#btn-dismiss')) window.AtelicShell.dismissDialog(window.AtelicShell.INCIDENT_ID, () => location.reload());
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 't' && e.key !== 'T') return;
     if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea|select/i.test(e.target.tagName)) return;
@@ -407,6 +457,7 @@
         window.AtelicShell.get('/incidents').catch(() => ({ live: [] }))]);
       CAM = d.camera_id || CAM;
       raised = d.triggered;
+      dismissal = d.dismissal || null;
       live = list.live || [];
       meta = d.metadata; ann = d.annotations; wall = d.camera_wall;
       prov = clipProv(meta);
@@ -422,6 +473,7 @@
       // Normal operations (no alert yet) show the camera's pre-leak view; without that clip, go straight to the event.
       const before = !d.triggered && d.before_available;
       renderWall(d.clip_available, origOk, before ? 'before' : 'event');
+      renderAlarms();
       renderMeta(d, frames);
       renderStatus(false);
       if (before) {

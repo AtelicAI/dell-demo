@@ -96,11 +96,6 @@ body[data-stage] #stepper{margin-bottom:10px}
 @keyframes isLive{70%{box-shadow:0 0 0 6px rgba(217,119,6,0)}100%{box-shadow:0 0 0 0 rgba(217,119,6,0)}}
 .incident-strip .is-seg{display:flex;align-items:center;gap:6px;padding:0 11px;border-left:1px solid var(--line)}
 .incident-strip .is-id + .is-seg{border-left:0}
-/* Incident switcher in the top bar (shell.js mountSwitcher): plain ID with one live incident, a dropdown with several. */
-.inc-sw b{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--ink)}
-.inc-sw .dd-btn{width:auto;height:26px;gap:7px;padding:0 8px 0 9px}
-.inc-sw .dd-v span{display:none}
-.inc-sw .dd-pop{left:0;right:auto;width:280px}
 .incident-strip .is-seg svg{color:var(--ink-dim);flex-shrink:0}
 .incident-strip .is-src.warn{color:var(--warn);font-weight:600;background:rgba(217,119,6,.07)}
 .incident-strip .is-src.warn svg{color:var(--warn)}
@@ -298,3 +293,53 @@ html.no-incident main > :not(.page-head):not(.lede):not(#stepper):not(#no-incide
 .dd-o[aria-selected=true]{background:var(--accent-glow);box-shadow:inset 2px 0 0 var(--accent)}
 .dd-o[aria-selected=true] b{color:var(--accent)}
 .dd-none{padding:10px 12px;font-size:12px;color:var(--ink-dim)}
+/* Stage not needed (incident closed as a false alarm). */
+.step.st-not_needed .n{border-style:dashed;color:var(--ink-faint)}
+.step.st-not_needed .t{color:var(--ink-dim)!important;text-decoration:line-through;text-decoration-color:var(--ink-faint)}
+/* Closed bar under the stepper (shell.js renderClosedBar). */
+.closed-bar{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line-strong);border-left:3px solid var(--good);border-radius:4px;background:var(--panel);font-size:12.5px;color:var(--ink-mute)}
+.closed-bar .ic{width:18px;height:18px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;background:var(--good);color:#fff;font-size:10px;font-weight:700}
+.closed-bar b{color:var(--ink)}
+.closed-bar a{margin-left:auto;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+.closed-bar a:hover{text-decoration:underline}
+/* Close / reopen dialog (shell.js dismissDialog, reopenDialog). */
+.modal .dm-lead{margin:0 0 14px;font-size:12.5px;color:var(--ink-mute);line-height:1.5}
+.modal input[type=text]{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line-strong);border-radius:4px;margin-bottom:14px}
+.modal input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.dm-reasons{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.modal .dm-r{margin:0;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;color:var(--ink);cursor:pointer}
+.dm-r input{margin:0;accent-color:var(--accent)}
+.dm-r:has(input:checked){border-color:var(--accent);background:var(--accent-glow)}
+/* Closed incident: workflow actions on incident screens are unavailable (Report can still export the closure record). */
+.incident-closed body:not([data-stage=report]):not([data-stage=detect]) main .btn.primary{opacity:.4;pointer-events:none}
+/* ----- Incident context (shell.js renderContext / renderSwitchBar) ----- */
+/* Rail: the incident the screens below show. Colour = state. */
+.inc-head{margin:12px 2px 0;padding:8px 10px;border:1px solid var(--line-strong);border-left:3px solid var(--ink-faint);border-radius:4px;background:var(--panel);display:grid;gap:1px}
+.inc-head .k{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+.inc-head .v{display:flex;align-items:center;gap:7px}
+.inc-head .v b{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
+.inc-head .v i{width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+.inc-head .st{font-size:11px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inc-head.open{border-left-color:var(--warn)} .inc-head.open .v i{background:var(--warn)}
+.inc-head.bad{border-left-color:var(--bad)} .inc-head.bad .v i{background:var(--bad)}
+.inc-head.closed{border-left-color:var(--good)} .inc-head.closed .v i{background:var(--good)}
+.rail-min .inc-head{margin:10px 6px 0;padding:6px 0;place-items:center;position:relative}
+.rail-min .inc-head .k,.rail-min .inc-head .st{display:none}
+.rail-min .inc-head .v b{font-size:0}
+/* Strip next to the page title on incident screens. */
+.page-head .incident-strip{margin-left:auto}
+.incident-strip .is-id.idle i,.incident-strip .is-id.closed i{animation:none}
+.incident-strip .is-id.idle i{background:var(--ink-faint)}
+.incident-strip .is-id.closed i{background:var(--good)}
+.incident-strip .is-id.bad i{background:var(--bad)}
+a.is-seg{text-decoration:none;color:inherit}
+a.is-seg:hover{text-decoration:underline}
+.incident-strip .is-src.open{color:var(--warn);font-weight:600;background:rgba(217,119,6,.07)}
+.incident-strip .is-src.bad{color:var(--bad);font-weight:600;background:var(--bad-glow)}
+.incident-strip .is-src.closed{color:var(--good);font-weight:600;background:var(--good-glow)}
+/* Arrived on another incident through a link. */
+.switch-bar{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--accent);border-radius:4px;background:var(--accent-glow);font-size:12.5px;color:var(--ink-mute);animation:rise var(--t-slow) both}
+.switch-bar b{font-family:var(--mono);color:var(--ink)}
+.switch-bar a{margin-left:auto;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+.switch-bar a:hover{text-decoration:underline}
+.switch-bar button{border:0;background:none;color:var(--ink-dim);font-size:15px;line-height:1;cursor:pointer;padding:0 2px}

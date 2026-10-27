@@ -1,6 +1,8 @@
 // Plant knowledge graph — site-level explorer. Reads GET /incidents/:id/graph (the same skid graph Locate uses).
 // ?asset=<id>&from=<page> preselects an asset and shows a back link (opened from Locate).
 // Opened for an asset, it shows only that asset and its direct links (Focus); ?view=site shows the whole site.
+// The Incident dropdown (top right, ?show=INC-xxx) shows one incident's related assets: its camera, the source
+// candidates and the records cited as their evidence (GET /incidents/:id/candidates).
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,7 +23,8 @@
   const on = { CONNECTED_TO: true, MONITORS: true, CAN_OBSERVE: true, HAS_WORK_ORDER: true, CONTAINS: false };
   const EQUIP = new Set(['Vessel', 'Valve', 'PipeSegment', 'Vent']);
 
-  let G = null, byId = new Map(), at = null, topRow = 0, selected = null, edgeSel = null, chart = null, picker = null, PAST = [];
+  let G = null, byId = new Map(), at = null, topRow = 0, selected = null, edgeSel = null, chart = null, picker = null, PAST = [], incStart = null;
+  let showInc = null, incSets = {}, incList = [];
   const params = new URLSearchParams(location.search);
   let focus = params.get('view') ? params.get('view') === 'focus' : params.has('asset');
   params.set('view', focus ? 'focus' : 'site');
@@ -84,6 +87,7 @@
   // ----- what is shown -----
   const shownEdges = () => G.edges.map((e, i) => ({ e, i })).filter(({ e }) => on[e.type]);
   function shownNodes() {
+    if (showInc && incSets[showInc]) return new Set(incSets[showInc].nodes);
     if (focus && selected) {
       const s = new Set([selected]);
       shownEdges().forEach(({ e }) => { if (e.from === selected) s.add(e.to); if (e.to === selected) s.add(e.from); });
@@ -112,6 +116,7 @@
 
   function setFocus(v) {
     focus = v;
+    setShow(null, true);
     params.set('view', focus ? 'focus' : 'site');
     try { history.replaceState(null, '', `?${params}`); } catch (e) { /* ignore */ }
     edgeSel = null;
@@ -121,12 +126,27 @@
     const b = ev.target.closest('[data-view]');
     if (b) setFocus(b.dataset.view === 'focus');
   });
+  // Incident view: null = off. quiet = called from another view change (that one re-renders).
+  function setShow(id, quiet) {
+    showInc = id && incSets[id] ? id : null;
+    if (showInc) params.set('show', showInc); else params.delete('show');
+    if (incPicker) incPicker.set(showInc || 'none');
+    try { history.replaceState(null, '', `?${params}`); } catch (e) { /* ignore */ }
+    if (quiet) return;
+    edgeSel = null;
+    if (showInc && incSets[showInc].source && byId.has(incSets[showInc].source)) select(incSets[showInc].source);
+    else { renderGraph(); renderEdgeInfo(); }
+  }
   // Focus | Whole site toggle, plus a line saying how much of the graph is on screen.
   function renderView(vis) {
-    if (picker) picker.set(focus ? selected : 'all');
-    $('view').innerHTML = `<button class="tg" data-view="focus" aria-pressed="${focus}">Focus · ${esc(selected)}</button><button class="tg" data-view="site" aria-pressed="${!focus}">Whole site</button>`;
-    $('kg-sub').innerHTML = focus
-      ? `Showing ${esc(selected)} and ${vis.size - 1} connected asset${vis.size === 2 ? '' : 's'}`
+    if (picker) picker.set(focus || showInc ? selected : 'all');
+    $('view').innerHTML = `<button class="tg" data-view="focus" aria-pressed="${focus && !showInc}">Focus · ${esc(selected)}</button><button class="tg" data-view="site" aria-pressed="${!focus && !showInc}">Whole site</button>`;
+    const I = showInc && incSets[showInc];
+    $('lg-cand').hidden = !I;
+    $('kg-sub').innerHTML = I
+      ? `<b>${esc(showInc)}</b> · ${esc(I.camera)} · ${vis.size} related assets${I.source ? ` · likely source ${esc(I.source)} (hypothesis)` : ''}`
+      : focus
+      ? `Showing ${esc(selected)} and ${vis.size - 1} connected asset${vis.size === 2 ? '' : 's'}${selected === incStart ? ` · likely source of ${esc(window.AtelicShell.INCIDENT_ID)}` : ''}`
       : `Whole site · ${vis.size} assets`;
   }
 
@@ -146,7 +166,9 @@
     renderView(vis);
     const near = new Set(selected ? [selected] : []);
     edges.forEach(({ e }) => { if (e.from === selected) near.add(e.to); if (e.to === selected) near.add(e.from); });
-    const dim = (id) => selected && !near.has(id);
+    // In the incident view every node shown is related, so nothing is dimmed; candidates get a dashed ring.
+    const dim = (id) => !showInc && selected && !near.has(id);
+    const cand = (id) => showInc && incSets[showInc].cands.has(id);
 
     // Same pixel fit as Locate: two invisible corner nodes pin ECharts' fit to scale 1, so circles stay round.
     const BW = el.clientWidth, BH = el.clientHeight, PX = 70, PT = 54, PB = 52;
@@ -205,7 +227,8 @@
         symbol: 'circle', symbolSize: size(id),
         itemStyle: {
           color: c, opacity: dim(id) ? 0.3 : 1,
-          borderColor: isSel ? css('--accent') : '#fff', borderWidth: isSel ? 4 : 2,
+          borderColor: isSel ? css('--accent') : cand(id) ? css('--warn') : '#fff', borderWidth: isSel ? 4 : cand(id) ? 2.5 : 2,
+          borderType: !isSel && cand(id) ? 'dashed' : 'solid',
           shadowBlur: isSel ? 16 : 0, shadowColor: css('--accent-glow'),
         },
         label: {
@@ -229,7 +252,7 @@
           color: i === edgeSel ? css('--accent') : css(EDGE_COLOR[e.type]),
           width: i === edgeSel ? 2.6 : mine ? 2 : e.type === 'CONNECTED_TO' ? 1.6 : 1.1,
           type: e.type === 'MONITORS' ? 'dashed' : e.type === 'CAN_OBSERVE' ? 'dotted' : 'solid',
-          opacity: selected && !mine ? 0.22 : 1, curveness: route(e.from, e.to),
+          opacity: !showInc && selected && !mine ? 0.22 : 1, curveness: route(e.from, e.to),
         },
       };
     });
@@ -303,6 +326,24 @@
   }
 
   // ----- wiring -----
+  // Incident dropdown at the top of the page: each option says what it shows.
+  let incPicker = null;
+  function renderIncPicker() {
+    const host = $('inc-pick');
+    if (!host) return;
+    const { whereNow } = window.AtelicShell;
+    incPicker = window.AtelicShell.dropdown(host, {
+      label: 'Show an incident', value: showInc || 'none',
+      options: [{ value: 'none', label: 'No incident', sub: incList.length ? 'whole site' : 'no alert raised yet' },
+        ...incList.map((l) => ({ value: l.incident_id, label: l.incident_id,
+          color: l.dismissal ? '--good' : '--warn', sub: `${l.camera_id} · ${incSets[l.incident_id].nodes.length} related · ${whereNow(l).text}` }))],
+      onChange: (v) => {
+        if (v === 'none') { setShow(null, true); setFocus(false); return; }
+        setShow(v);
+      },
+    });
+  }
+
   function renderTools() {
     const count = (t) => G.edges.filter((e) => e.type === t).length;
     $('rels').innerHTML = RELS.map(([t, label]) => `<button class="tg" data-rel="${t}" aria-pressed="${on[t]}">${label} <span class="n">${count(t)}</span></button>`).join('');
@@ -322,6 +363,7 @@
         .map((n) => ({ value: n.asset_id, label: n.asset_id, sub: n.display_name, group: TYPE_NAME[t] || t, color: TYPE_COLOR[t] || '--ink-dim' })))],
       onChange: (v) => {
         if (v === 'all') { setFocus(false); return; }
+        setShow(null, true);
         focus = true;
         params.set('view', 'focus');
         select(v);
@@ -335,7 +377,27 @@
     try {
       G = await get(`/incidents/${INCIDENT_ID}/graph`);
       // Closed incidents per asset for the asset panel; the page works without them.
-      PAST = await get('/incidents').then((d) => (d.history ? d.history.incidents : []), () => []);
+      const list = await get('/incidents').catch(() => ({ live: [], history: null }));
+      PAST = list.history ? list.history.incidents : [];
+      // Incidents that raised an alert, with what relates to each: camera, candidates, cited evidence.
+      incList = list.live.filter((l) => l.triggered);
+      const cands = await Promise.all(incList.map((l) => get(`/incidents/${l.incident_id}/candidates`).catch(() => null)));
+      const ids = new Set(G.nodes.map((n) => n.asset_id));
+      incList.forEach((l, i) => {
+        const c = cands[i] || { candidates: [] };
+        const rel = [l.camera_id, ...c.candidates.flatMap((x) => [x.asset_id, ...[...(x.supporting || []), ...(x.contradicting || [])].map((e) => e.source_id)])];
+        incSets[l.incident_id] = { camera: l.camera_id, nodes: [...new Set(rel)].filter((id) => ids.has(id)),
+          cands: new Set(c.candidates.map((x) => x.asset_id)),
+          source: c.assessment && c.assessment.result === 'likely_source' ? c.assessment.asset_id : null };
+      });
+      // ?show= picks the incident; opened from the menu while this tab's incident is open, start on it.
+      const asked = new URLSearchParams(location.search);
+      const want = asked.get('show') || (!asked.has('asset') && !asked.has('view') ? INCIDENT_ID : null);
+      if (incSets[want] && (asked.get('show') || incList.find((l) => l.incident_id === want && !l.dismissal))) {
+        showInc = want;
+        incStart = incSets[want].source;
+        params.set('show', want);
+      }
     } catch (e) {
       $('kg').innerHTML = '<div class="view-empty">Knowledge graph data not available.</div>';
       $('kg-badge').innerHTML = badge('pending');
@@ -346,7 +408,8 @@
     $('kg-badge').innerHTML = badge(G.nodes.some((n) => n.provenance !== 'synthetic') ? 'pending' : 'synthetic');
     $('store').textContent = `${G.nodes.length} assets · ${G.edges.length} relationships · ${G.store === 'json' ? 'read from JSON files (Neo4j not connected yet)' : G.store} · ${(G.nodes[0] || {}).mapping_version || ''}`;
     renderTools();
-    const start = params.get('asset');
+    renderIncPicker();
+    const start = (showInc ? incStart : null) || params.get('asset') || incStart;
     select(byId.has(start) ? start : (G.nodes.find((n) => n.asset_type === 'Vessel') || G.nodes[0]).asset_id);
     new ResizeObserver(() => { if (chart) { chart.resize(); renderGraph(); } }).observe($('kg'));
   }

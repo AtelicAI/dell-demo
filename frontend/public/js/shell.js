@@ -4,12 +4,13 @@
 // A page opts in with <body data-page="overview"> and empty #rail / #topbar / #incident-strip / #stepper.
 (function () {
   const API = `${location.protocol}//${location.hostname}:8000`;
-  // Live incident this browser is working on: ?inc= (remembered for the next pages), else the last one picked.
+  // Incident this tab is working on. The link decides (?inc=); without one, the last incident used in this
+  // tab (sessionStorage, so two booth screens never change each other); else INC-001.
   const INCIDENT_ID = (() => {
     const q = new URLSearchParams(location.search).get('inc'), ok = (v) => /^INC-\d{3}$/.test(v || '');
     try {
-      if (ok(q)) { localStorage.setItem('atelic.incident', q); return q; }
-      const v = localStorage.getItem('atelic.incident');
+      if (ok(q)) { sessionStorage.setItem('atelic.incident', q); return q; }
+      const v = sessionStorage.getItem('atelic.incident');
       return ok(v) ? v : 'INC-001';
     } catch (e) { return ok(q) ? q : 'INC-001'; }
   })();
@@ -23,7 +24,7 @@
   };
   const STATUS_LABELS = {
     not_started: 'Not started', in_progress: 'In progress',
-    ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked',
+    ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked', not_needed: 'Not needed',
   };
   // Stage → rail page, so stepper boxes can link to their screen.
   const STAGE_PAGE = { detect: 'detection', locate: 'locate', quantify: 'quantify', plan: 'plan', approve: 'review', report: 'report' };
@@ -66,23 +67,53 @@
     report: '<path d="M4 2h6l3 3v9H4z"/><path d="M6 7h5M6 10h3"/>',
     activity: '<rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/>',
   };
-  // href: null = screen not built yet (shown disabled).
+  // href: null = screen not built yet (shown disabled). inc: the screen shows one incident (its links carry ?inc=);
+  // the others are site pages. The incident block in the rail sits above the incident screens.
   const NAV = [
     { page: 'overview', label: 'Overview', href: 'index.html' },
     { page: 'incidents', label: 'Incidents', href: 'incidents.html' },
-    { sec: 'Investigation' },
-    { page: 'detection', label: 'Camera', href: 'detection.html' },
-    { page: 'locate', label: 'Locate', href: 'locate.html' },
-    { page: 'quantify', label: 'Quantify', href: 'quantify.html' },
-    { sec: 'Response' },
-    { page: 'plan', label: 'Plan', href: 'plan.html' },
-    { page: 'review', label: 'Approve', href: 'review.html' },
-    { page: 'report', label: 'Report', href: 'report.html' },
-    { sec: 'Plant' },
     { page: 'graph', label: 'Knowledge graph', href: 'graph.html' },
+    { incHead: true },
+    { sec: 'Investigation' },
+    { page: 'detection', label: 'Camera', href: 'detection.html', inc: true },
+    { page: 'locate', label: 'Locate', href: 'locate.html', inc: true },
+    { page: 'quantify', label: 'Quantify', href: 'quantify.html', inc: true },
+    { sec: 'Response' },
+    { page: 'plan', label: 'Plan', href: 'plan.html', inc: true },
+    { page: 'review', label: 'Approve', href: 'review.html', inc: true },
+    { page: 'report', label: 'Report', href: 'report.html', inc: true },
     { sec: 'Observability' },
-    { page: 'activity', label: 'Glass box', href: 'activity.html' },
+    { page: 'activity', label: 'Glass box', href: 'activity.html', inc: true },
   ];
+  const navOf = (page) => NAV.find((n) => n.page === page) || {};
+  const IS_INC_PAGE = Boolean(navOf(document.body.dataset.page).inc);
+
+  // Link to a screen. Incident screens carry the incident; a link to a different incident also carries where
+  // it came from (sw = incident, swp = page), so the arrival page can say "switched from …" and offer the way back.
+  function incHref(page, inc = INCIDENT_ID) {
+    const n = navOf(page);
+    if (!n.inc) return n.href;
+    const q = new URLSearchParams({ inc });
+    if (inc !== INCIDENT_ID) {
+      q.set('sw', INCIDENT_ID);
+      if (document.body.dataset.page) q.set('swp', document.body.dataset.page);
+    }
+    return `${n.href}?${q}`;
+  }
+
+  // Where an incident stands: closed -> its closure record; no alert -> Camera; else a blocked stage, or the
+  // furthest stage that has started (Detect and Locate stay "ready for review" until signed off). Report holds
+  // a draft from the first run on, so it only counts once Approve is done.
+  function whereNow(l) {
+    if (!l.triggered) return { page: 'detection', text: 'No alert · cameras watching', kind: 'idle' };
+    if (l.dismissal) return { page: 'report', text: 'Closed as a false alarm', kind: 'closed' };
+    if (l.stages.every((st) => st.status === 'completed')) return { page: 'report', text: 'Report filed', kind: 'closed' };
+    const st = l.stages.find((x) => x.status === 'blocked')
+      || l.stages.slice().reverse().find((x) => !['not_started', 'not_needed'].includes(x.status)
+        && (x.stage !== 'report' || l.stages.find((y) => y.stage === 'approve').status === 'completed')) || l.stages[0];
+    return { page: STAGE_PAGE[st.stage], stage: st.stage, status: st.status,
+      text: `${STAGE_LABELS[st.stage]} · ${STATUS_LABELS[st.status]}`, kind: st.status === 'blocked' ? 'bad' : 'open' };
+  }
 
   const $ = (id) => document.getElementById(id);
 
@@ -90,10 +121,14 @@
     const el = $('rail');
     if (!el) return;
     const links = NAV.map((n) => {
+      if (n.incHead) {
+        return `<div class="inc-head" id="rail-inc" data-label="Incident ${INCIDENT_ID}"><span class="k">Incident</span>
+          <span class="v"><i></i><b>${INCIDENT_ID}</b></span><span class="st" id="rail-inc-st"></span></div>`;
+      }
       if (n.sec) return `<span class="sec">${n.sec}</span>`;
       const icon = `<span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">${ICONS[n.page]}</svg></span>`;
       const attrs = n.href
-        ? `href="${n.href}"${n.page === current ? ' aria-current="page"' : ''}`
+        ? `href="${incHref(n.page)}"${n.page === current ? ' aria-current="page"' : ''}`
         : 'aria-disabled="true" title="Not built yet"';
       return `<a ${attrs} data-label="${n.label}${n.href ? '' : ' · not built yet'}">${icon}<span class="lb">${n.label}</span><span class="nd"></span></a>`;
     }).join('');
@@ -130,7 +165,7 @@
     const el = $('topbar');
     if (!el) return;
     el.innerHTML = `
-      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span><span class="sep">|</span><span class="inc-sw" id="inc-sw" title="Current incident"><b>${INCIDENT_ID}</b></span></div>
+      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span></div>
       <div class="right-controls">
         <button type="button" id="pill-dell" class="status-pill" data-partner="dell" title="About the Dell edge server" aria-expanded="false"><span class="dot"></span>Dell Edge · …</button>
         <button type="button" id="pill-nvidia" class="status-pill" data-partner="nvidia" title="About the NVIDIA AI stack" aria-expanded="false"><span class="dot"></span>NVIDIA inference · …</button>
@@ -162,11 +197,13 @@
     review_request_changes: { page: 'plan', kind: 'warn', title: (e) => `Changes requested on v${e.version}` },
     review_reject: { page: 'plan', kind: 'bad', title: (e) => `Work order v${e.version} rejected` },
     review_approve: { page: 'report', kind: 'good', title: (e) => `Work order v${e.version} approved` },
+    incident_dismissed: { page: 'incidents', kind: 'good', title: () => 'Closed as a false alarm' },
+    incident_reopened: { page: 'detection', kind: 'warn', title: () => 'Reopened after a false-alarm close' },
   };
   const SEVERITY = { good: 1, warn: 2, bad: 3 };
   const noteKey = (e) => `${e.incident_id}:${e.seq}@${e.at}`;
   // Notifications link to the incident they belong to.
-  const noteHref = (e) => `${navOf(NOTE[e.event].page).href}?inc=${encodeURIComponent(e.incident_id)}`;
+  const noteHref = (e) => incHref(NOTE[e.event].page, e.incident_id);
   let noteEvents = [], noteKnown = null, notePoll = null;
   function readSeen() {
     try { return new Set(JSON.parse(localStorage.getItem('atelic.notesSeen') || '[]')); } catch (e) { return new Set(); }
@@ -182,7 +219,6 @@
     const s = (Date.now() - Date.parse(at)) / 1000;
     return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : `${at.slice(11, 16)} UTC`;
   }
-  const navOf = (page) => NAV.find((n) => n.page === page) || {};
 
   async function loadNotes() {
     let events;
@@ -342,20 +378,8 @@
   function renderIncident(inc) {
     lastIncident = inc;
     renderNoIncident(inc);
-    const strip = $('incident-strip');
-    if (strip) {
-      // Same words as the PRD strip, laid out as parts. Status colour follows the backend wording.
-      const e = (v) => String(v ?? '—').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      const ic = (d) => `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-      const src = String(inc.source_status || '');
-      const srcKind = /unconfirmed|unresolved/i.test(src) ? 'warn' : /confirmed/i.test(src) ? 'ok' : '';
-      strip.setAttribute('aria-label', [inc.local_incident_id, inc.site, inc.camera_id, inc.source_status].join(' | '));
-      strip.innerHTML = `
-        <span class="is-id"><i></i>${e(inc.local_incident_id)}</span>
-        <span class="is-seg">${ic('<path d="M2 14V7l4 2V7l4 2V4h4v10z"/>')}${e(inc.site)}</span>
-        <span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>
-        <span class="is-seg is-src ${srcKind}">${ic('<circle cx="8" cy="8" r="6"/><path d="M8 5v3.5M8 11h.01"/>')}${e(inc.source_status)}</span>`;
-    }
+    renderClosedBar(inc);
+    renderContext(inc);
     const stepper = $('stepper');
     if (stepper) {
       // data-stage marks the stage this page shows; its status still comes from the backend.
@@ -363,7 +387,7 @@
       // A stage whose screen exists links to it (same href as the rail); the current one does not.
       stepper.innerHTML = inc.stages.map((st, i) => ({ ...st, status: replayStatus[st.stage] || st.status })).map((st, i) => {
         const cur = st.stage === viewing;
-        const href = !cur && (NAV.find((n) => n.page === STAGE_PAGE[st.stage]) || {}).href;
+        const href = !cur && navOf(STAGE_PAGE[st.stage]).href && incHref(STAGE_PAGE[st.stage]);
         const tag = href ? 'a' : 'div';
         return `
         <${tag} class="step st-${st.status}${cur ? ' current' : ''}"${cur ? ' aria-current="step"' : ''}${href ? ` href="${href}" title="Open ${STAGE_LABELS[st.stage]}"` : ''}>
@@ -375,22 +399,60 @@
     }
   }
 
-  // Live incidents (GET /incidents) feed the incident switcher in the top bar.
+  // Live incidents (GET /incidents) feed the incident switcher and the context strip.
   async function loadLive() {
     try { liveIncidents = (await get('/incidents')).live; } catch (e) { return; }
-    mountSwitcher();
+    if (lastIncident) renderContext(lastIncident);
   }
-  function mountSwitcher() {
-    const host = $('inc-sw');
-    if (!host || !liveIncidents || liveIncidents.length < 2 || host.classList.contains('dd')) return;
-    dropdown(host, {
-      label: 'Switch incident', value: INCIDENT_ID,
-      options: liveIncidents.map((l) => ({
-        value: l.incident_id, label: l.incident_id, color: l.triggered ? '--warn' : '--ink-faint',
-        sub: `${l.camera_id} · ${l.triggered ? (l.asset_id ? `near ${l.asset_id}` : 'alert open') : 'no alert'}`,
-      })),
-      onChange: (v) => { location.href = `${location.pathname}?inc=${encodeURIComponent(v)}`; },
-    });
+  // Which incident this screen shows, everywhere the same: the strip next to the page title on incident
+  // screens and the incident block in the rail. Colour = state (watching, open, blocked, closed).
+  function renderContext(inc) {
+    const live = (liveIncidents || []).find((l) => l.incident_id === inc.local_incident_id) || {};
+    const w = whereNow({ ...live, ...inc });
+    const asset = inc.triggered && !inc.dismissal ? live.asset_id : null;
+    const e = escAttr;
+    const st = $('rail-inc-st'), head = $('rail-inc');
+    if (head) {
+      head.className = `inc-head ${w.kind}`;
+      head.dataset.label = `Incident ${inc.local_incident_id} · ${w.text}`;
+    }
+    if (st) st.textContent = `${inc.camera_id} · ${w.text}`;
+    if (!IS_INC_PAGE) return;
+    let strip = $('incident-strip');
+    if (!strip) {
+      const ph = document.querySelector('main .page-head');
+      if (!ph) return;
+      strip = document.createElement('div');
+      strip.className = 'incident-strip';
+      strip.id = 'incident-strip';
+      ph.appendChild(strip);
+    }
+    const ic = (d) => `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+    strip.setAttribute('aria-label', `Showing ${inc.local_incident_id}: ${[inc.camera_id, asset && `near ${asset}`, w.text].filter(Boolean).join(', ')}`);
+    strip.innerHTML = `
+      <span class="is-id ${w.kind}"><i></i>${e(inc.local_incident_id)}</span>
+      <span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>
+      ${asset ? `<span class="is-seg" title="Likely source (hypothesis)">${ic('<circle cx="8" cy="8" r="4.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>')}near ${e(asset)}</span>` : ''}
+      <a class="is-seg is-src ${w.kind}" href="incidents.html?id=${encodeURIComponent(inc.local_incident_id)}" title="Where this incident stands (Incidents page)">${e(w.text)}</a>`;
+  }
+
+  // Arrived through a link that switched incident: say so, and offer the way back. Shown once; the URL is cleaned.
+  function renderSwitchBar() {
+    const q = new URLSearchParams(location.search), from = q.get('sw'), fromPage = q.get('swp');
+    if (!from || from === INCIDENT_ID) return;
+    q.delete('sw'); q.delete('swp');
+    try { history.replaceState(null, '', `${location.pathname}?${q}`); } catch (e) { /* ignore */ }
+    const back = navOf(fromPage);
+    const href = back.inc ? `${back.href}?inc=${encodeURIComponent(from)}` : back.href;
+    const bar = document.createElement('div');
+    bar.className = 'switch-bar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = `<span>Now showing <b>${escAttr(INCIDENT_ID)}</b> · switched from ${escAttr(from)}</span>
+      ${href ? `<a href="${href}">← Back to ${back.inc ? `${escAttr(from)} ${back.label}` : back.label}</a>` : ''}
+      <button type="button" aria-label="Hide">×</button>`;
+    bar.querySelector('button').addEventListener('click', () => bar.remove());
+    const after = $('stepper') || document.querySelector('main .lede') || document.querySelector('main .page-head');
+    if (after) after.after(bar);
   }
 
   function renderUnreachable() {
@@ -453,7 +515,7 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open')) closeModal(); });
     return m;
   }
-  function modal({ title, html = '', okLabel = 'OK', okClass = '', okHref, cancelLabel = 'Cancel', requireText, onOk }) {
+  function modal({ title, html = '', okLabel = 'OK', okClass = '', okHref, cancelLabel = 'Cancel', requireText, isValid, onOk }) {
     const m = modalEl();
     modalReturn = document.activeElement;
     modalOk = onOk || null;
@@ -467,8 +529,19 @@
       ok.disabled = true;
       ta.addEventListener('input', () => { ok.disabled = !ta.value.trim(); });
     }
+    // isValid(body): OK stays disabled until it returns true (re-checked on every input in the body).
+    if (isValid) {
+      const check = () => { ok.disabled = !isValid($('modal-body')); };
+      $('modal-body').oninput = check;
+      $('modal-body').onchange = check;
+      check();
+    } else {
+      $('modal-body').oninput = null;
+      $('modal-body').onchange = null;
+    }
     m.classList.add('open');
-    (ta || ok).focus();
+    const first = [...$('modal-body').querySelectorAll('input[type=text], textarea')].find((f) => !f.value.trim());
+    (first || ta || ok).focus();
   }
   function closeModal() {
     const m = $('modal');
@@ -479,11 +552,76 @@
     modalReturn = null;
   }
 
+  // Closing an alert as a false alarm, and reopening it: a named person and a reason, never automatic.
+  // Same dialog on the Camera screen and the Incidents page. done(incident) runs after the backend accepts it.
+  const DISMISS_REASONS = [['steam', 'Steam or water vapour'], ['exhaust', 'Hot exhaust or engine heat'],
+    ['reflection', 'Reflection or sun glint'], ['planned', 'Planned venting or maintenance'], ['other', 'Other']];
+  const readName = () => { try { return localStorage.getItem('atelic.reviewer') || ''; } catch (e) { return ''; } };
+  const saveName = (v) => { try { localStorage.setItem('atelic.reviewer', v); } catch (e) { /* storage blocked */ } };
+  async function postJson(path, body) {
+    const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(typeof j.detail === 'string' ? j.detail : `Request failed (${r.status})`);
+    return j;
+  }
+  const failed = (title, e) => modal({ title, html: `<p>${escAttr(e.message)}</p>`, okLabel: 'OK', cancelLabel: 'Close' });
+  function dismissDialog(id, done) {
+    modal({
+      title: `Close ${id} as a false alarm?`,
+      html: `<p class="dm-lead">Nothing more will be needed on this incident: no estimate review, work order or approval. The decision is recorded with your name, and the incident can be reopened.</p>
+        <label for="dm-by">Your name</label><input type="text" id="dm-by" autocomplete="name" value="${escAttr(readName())}">
+        <label>What caused it?</label>
+        <div class="dm-reasons" role="radiogroup">${DISMISS_REASONS.map(([v, l]) => `<label class="dm-r"><input type="radio" name="dm-reason" value="${v}"><span>${l}</span></label>`).join('')}</div>
+        <label for="dm-comment">What did you see?</label>
+        <textarea id="dm-comment" rows="3" placeholder="For example: steam from the separator drain; handheld detector read background."></textarea>`,
+      okLabel: 'Close as false alarm', okClass: 'go',
+      isValid: (b) => b.querySelector('#dm-by').value.trim() && b.querySelector('input[name=dm-reason]:checked') && b.querySelector('#dm-comment').value.trim(),
+      onOk: async () => {
+        const by = $('dm-by').value.trim();
+        saveName(by);
+        try {
+          done(await postJson(`/incidents/${id}/dismiss`, { by, reason: document.querySelector('input[name=dm-reason]:checked').value, comment: $('dm-comment').value.trim() }));
+        } catch (e) { failed('Could not close the incident', e); }
+      },
+    });
+  }
+  function reopenDialog(id, done) {
+    modal({
+      title: `Reopen ${id}?`,
+      html: `<p class="dm-lead">The false-alarm close is undone and the investigation continues where it was. Your name goes in the audit log.</p>
+        <label for="dm-by">Your name</label><input type="text" id="dm-by" autocomplete="name" value="${escAttr(readName())}">`,
+      okLabel: 'Reopen incident',
+      isValid: (b) => b.querySelector('#dm-by').value.trim(),
+      onOk: async () => {
+        const by = $('dm-by').value.trim();
+        saveName(by);
+        try { done(await postJson(`/incidents/${id}/reopen`, { by })); } catch (e) { failed('Could not reopen the incident', e); }
+      },
+    });
+  }
+  // Incident screens of a closed incident say so under the stepper (content stays visible, read-only).
+  function renderClosedBar(inc) {
+    let bar = $('closed-bar');
+    const d = inc.dismissal, stage = document.body.dataset.stage;
+    // Workflow buttons on a closed incident would only be refused by the backend, so they show as unavailable.
+    document.documentElement.classList.toggle('incident-closed', Boolean(d));
+    if (!d || !stage || stage === 'detect') { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'closed-bar';
+      bar.className = 'closed-bar';
+      const after = $('stepper') || document.querySelector('main .lede');
+      if (after) after.after(bar); else return;
+    }
+    bar.innerHTML = `<span class="ic" aria-hidden="true">✓</span><span><b>Closed as a false alarm</b> by ${escAttr(d.by)} · ${escAttr(d.reason_label)} · “${escAttr(d.comment)}”</span>
+      <a href="detection.html?inc=${encodeURIComponent(inc.local_incident_id)}">Reopen on Camera →</a>`;
+  }
+
   // Back bar: a page opened with ?from=<page> (e.g. from a "View in Glass box" link) links back to it.
   function cameFrom() {
     const from = new URLSearchParams(location.search).get('from');
     const n = NAV.find((x) => x.page === from && x.href);
-    return n ? { page: n.page, label: n.label, href: n.href } : null;
+    return n ? { page: n.page, label: n.label, href: incHref(n.page) } : null;
   }
   function backBar(detail) {
     const el = $('back-bar'), back = cameFrom();
@@ -566,7 +704,14 @@
   }
 
   async function init() {
+    // Incident screens always say which incident they show in the URL (copyable, and explicit after a menu click).
+    if (IS_INC_PAGE && new URLSearchParams(location.search).get('inc') !== INCIDENT_ID) {
+      const q = new URLSearchParams(location.search);
+      q.set('inc', INCIDENT_ID);
+      try { history.replaceState(null, '', `${location.pathname}?${q}`); } catch (e) { /* ignore */ }
+    }
     renderRail(document.body.dataset.page);
+    renderSwitchBar();
     fillTraceSlots();
     // Static labels that name the incident (<span data-inc>) show the current one.
     document.querySelectorAll('[data-inc]').forEach((el) => { el.textContent = INCIDENT_ID; });
@@ -612,7 +757,7 @@
 
   window.AtelicShell = {
     API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink,
-    BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown,
+    BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.

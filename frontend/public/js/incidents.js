@@ -5,8 +5,9 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const { badge } = window.AtelicShell;
 
-  const STAGE = { detect: ['Detect', 'detection.html'], locate: ['Locate', 'locate.html'], quantify: ['Quantify', 'quantify.html'],
-    plan: ['Plan', 'plan.html'], approve: ['Approve', 'review.html'], report: ['Report', 'report.html'] };
+  const { incHref, whereNow } = window.AtelicShell;
+  const STAGE = { detect: ['Detect', 'detection'], locate: ['Locate', 'locate'], quantify: ['Quantify', 'quantify'],
+    plan: ['Plan', 'plan'], approve: ['Approve', 'review'], report: ['Report', 'report'] };
   const STATUS = { not_started: 'Not started', in_progress: 'In progress', ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked' };
   const STATUS_KIND = { in_progress: 'good', ready_for_review: 'warn', completed: 'good', blocked: 'bad' };
   const OUTCOME_KIND = { repaired: 'good', no_leak_found: '', false_alarm: '' };
@@ -16,16 +17,12 @@
   const params = new URLSearchParams(location.search);
   const when = (iso) => (iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : '—');
   const chip = (text, kind, live) => `<span class="chip ${kind || ''}${live ? ' live' : ''}"><i></i>${esc(text)}</span>`;
-  const incLink = (l, page) => `${page}?inc=${encodeURIComponent(l.incident_id)}`;
+  const incLink = (l, page) => incHref(page, l.incident_id);
 
-  // Where an open incident stands: a blocked stage, else the furthest stage that has started.
-  // (Detect and Locate stay "ready for review" until a named reviewer signs them off, so the
-  // first unfinished stage would understate progress.)
+  // Where an open incident stands (same rule as the top-bar switcher and the context strip).
   function current(l) {
-    if (l.stages.every((s) => s.status === 'completed')) return { text: 'Report filed', kind: 'good', page: 'report.html' };
-    const st = l.stages.find((s) => s.status === 'blocked')
-      || l.stages.slice().reverse().find((s) => s.status !== 'not_started') || l.stages[0];
-    return { text: `${STAGE[st.stage][0]} · ${STATUS[st.status]}`, kind: STATUS_KIND[st.status] || '', page: STAGE[st.stage][1], stage: st.stage };
+    const w = whereNow(l);
+    return { text: w.text, kind: { open: STATUS_KIND[w.status] || 'warn', bad: 'bad', closed: 'good' }[w.kind] || '', page: w.page, stage: w.stage };
   }
 
   function rowAttrs(id) {
@@ -78,7 +75,7 @@
             ['Opened', `<span class="mono">${when(l.triggered_at)}</span>`],
             ['Likely source', l.asset_id ? `<a href="graph.html?asset=${encodeURIComponent(l.asset_id)}&from=incidents">${esc(l.asset_id)}</a> ${badge('hypothesis')}` : 'Not located yet'],
             ['Emission rate', l.rate_kg_ch4_h != null ? `${l.rate_kg_ch4_h} kg CH₄/h ${badge('model_estimated')}` : 'Not estimated'],
-            ['Review', rv ? `${DECISION[rv.decision]} by ${esc(rv.reviewer)}` : 'Not decided'],
+            ['Review', rv ? `${DECISION[rv.decision]} by ${esc(rv.reviewer)}${rv.reason ? `<br><span style="color:var(--ink-mute)">“${esc(rv.reason)}”</span>` : ''}` : 'Not decided'],
           ])}
           <h4>Stages</h4>
           ${kv(l.stages.map((s) => [`<a href="${incLink(l, STAGE[s.stage][1])}" style="font-family:var(--mono);color:var(--accent);text-decoration:none">${STAGE[s.stage][0]}</a>`,
@@ -101,13 +98,19 @@
             ['Closed', `<span class="mono">${when(h.closed_utc)}</span>`],
             ['Decision', `${DECISION[d.decision] || esc(d.decision)} by ${esc(d.reviewer)}${d.role ? `, ${esc(d.role)}` : ''}`],
             ...(d.reason ? [['Reason', esc(d.reason)]] : []),
+            ...(h.comment ? [['What was seen', esc(h.comment)]] : []),
             ['Work order', h.work_order ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : 'None'],
-            ['Emission rate', 'Not recorded'],
+            ['Emission rate', h.rate != null ? `${h.rate} kg CH₄/h ${badge('model_estimated')}` : 'Not recorded'],
           ])}
           <h4>Timeline</h4>
           <ul class="tl">${(h.timeline || []).map((t) => `<li>${esc(t.event)}<small>${when(t.at_utc)}</small></li>`).join('')}</ul>
         </div>
-        <div class="d-foot">Closed record. Read-only.</div>`;
+        ${h.live
+          ? `<div class="d-acts"><a class="btn" href="${incHref('report', h.incident_id)}">Closure record →</a><button class="btn" type="button" id="btn-reopen">Reopen</button></div>
+             <div class="d-foot">Closed in this run. Reopen it if it was closed by mistake.</div>`
+          : '<div class="d-foot">Closed record. Read-only.</div>'}`;
+      const ro = $('btn-reopen');
+      if (ro) ro.addEventListener('click', () => window.AtelicShell.reopenDialog(h.incident_id, () => { location.href = `incidents.html?id=${encodeURIComponent(h.incident_id)}`; }));
       return;
     }
     box.innerHTML = '<div class="d-empty">Select an incident to see what happened.</div>';
@@ -134,8 +137,18 @@
     try {
       const d = await window.AtelicShell.get('/incidents');
       // An incident is open once its camera raised the alert; a camera with no alert is just watching.
-      open = d.live.filter((l) => l.triggered);
-      closed = d.history ? d.history.incidents.slice().sort((a, b) => b.opened_utc.localeCompare(a.opened_utc)) : [];
+      open = d.live.filter((l) => l.triggered && !l.dismissal);
+      // A live incident closed as a false alarm in this run sits with the closed records (it can be reopened).
+      const closedLive = d.live.filter((l) => l.triggered && l.dismissal).map((l) => ({
+        incident_id: l.incident_id, camera_id: l.camera_id, asset_id: null, live: true,
+        opened_utc: l.triggered_at, closed_utc: l.dismissal.at, outcome: 'false_alarm', outcome_label: 'False alarm',
+        summary: `${l.dismissal.reason_label}. “${l.dismissal.comment}”`,
+        decision: { decision: 'dismissed', reviewer: l.dismissal.by, role: null, reason: l.dismissal.reason_label },
+        comment: l.dismissal.comment, work_order: null, rate: l.rate_kg_ch4_h,
+        timeline: [{ at_utc: l.triggered_at, event: `${l.camera_id} alert raised` },
+          { at_utc: l.dismissal.at, event: `Closed as a false alarm by ${l.dismissal.by}` }],
+      }));
+      closed = [...closedLive, ...(d.history ? d.history.incidents : [])].sort((a, b) => b.opened_utc.localeCompare(a.opened_utc));
     } catch (e) {
       console.error(e);
       $('open').innerHTML = '<div class="empty-row">Incidents are unavailable: backend is not reachable.</div>';

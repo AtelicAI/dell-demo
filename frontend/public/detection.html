@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=45">
-<script src="js/shell.js?v=43" defer></script>
+<link rel="stylesheet" href="css/shell.css?v=50">
+<script src="js/shell.js?v=49" defer></script>
 <script src="js/plumeheat.js?v=1" defer></script>
-<script src="js/detection.js?v=48" defer></script>
+<script src="js/detection.js?v=54" defer></script>
 <style>
 
   /* PRD Screen 2: 65% video / 35% detection metadata */
@@ -58,7 +58,23 @@
   .no-feed span{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
   .no-feed.wide{grid-column:1/-1;grid-row:1/-1;place-self:center;color:var(--ink-mute)}
   .cl{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--line);min-width:0}
-  .cl b{font-family:var(--mono);font-size:11.5px;font-weight:600}
+  .cl b{font-family:var(--mono);font-size:11.5px;font-weight:600;white-space:nowrap;flex-shrink:0}
+  .cl .st{flex-shrink:0}
+  /* Active alarms: every open alarm, the one being investigated, and a way to switch (also by clicking its tile). */
+  .alarms{display:flex;align-items:stretch;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .alarms .al-k{align-self:center;margin-right:4px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .al{flex:1 1 0;display:flex;align-items:center;gap:8px;padding:5px 10px;white-space:nowrap;border:1px solid var(--line-strong);border-left:3px solid var(--bad);border-radius:4px;background:var(--panel);font-size:12px;color:var(--ink-mute);text-decoration:none;min-width:0}
+  .al i{width:7px;height:7px;flex-shrink:0;border-radius:50%;background:var(--bad);animation:camPulse 1.6s ease-in-out infinite}
+  .al b{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .al > span:not(.go):not(.tag){min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .al .go,.al .tag{margin-left:auto!important}
+  .al em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--warn);white-space:nowrap}
+  .al .go{margin-left:4px;font-weight:600;color:var(--accent);white-space:nowrap}
+  a.al:hover{border-color:var(--accent)}
+  .al[aria-current=true]{border-color:var(--accent);border-left-color:var(--bad);box-shadow:0 0 0 2px var(--accent-glow)}
+  .al .tag{margin-left:4px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .cell[data-href]{cursor:pointer}
+  @media (prefers-reduced-motion:reduce){.al i{animation:none}}
   .cl .ar{font-size:11.5px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cl .st{margin-left:auto;display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);white-space:nowrap}
   .cl .st i{width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
@@ -125,6 +141,11 @@
   .status .big .sig{width:8px;height:8px;border-radius:1px;background:var(--ink-faint);flex-shrink:0}
   .status.observed .big .sig{background:var(--bad)}
   .status.unconfirmed .big{color:var(--ink-mute)}
+  .status.closed .big{color:var(--ink)}
+  .status.closed .big .sig{background:var(--good);border-radius:50%}
+  .status .said{margin:8px 0 0;padding:7px 10px;border-left:2px solid var(--good);background:var(--panel-2);font-size:12.5px;color:var(--ink);line-height:1.45}
+  .status .reopen{margin-top:8px;font-size:12px}
+  .btn.dismiss{width:100%;justify-content:center;margin-top:8px;font-weight:500;color:var(--ink-mute)}
   .status .by{margin-top:5px;line-height:1.4;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-mute)}
   .status .drawn{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.04em;color:var(--ink-mute)}
 
@@ -187,6 +208,7 @@
         <span id="clip-badge"></span>
         <span class="event-ctl" id="event-ctl"></span>
       </div>
+      <div class="alarms" id="alarms" hidden></div>
       <div class="wall" id="wall"><div class="no-feed wide"><b>Loading cameras…</b></div></div>
       <div class="wall-foot" id="wall-foot"></div>
     </section>
@@ -201,6 +223,7 @@
       <div class="meta-actions">
         <div class="caveat">The plume image alone does not identify a particular component or quantify emissions.</div>
         <a class="btn primary" id="btn-investigate" href="locate.html">Investigate possible source →</a>
+        <button class="btn dismiss" id="btn-dismiss" type="button" hidden>Close as false alarm</button>
       </div>
     </section>
   </div>

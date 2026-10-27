@@ -8,12 +8,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=45">
+<link rel="stylesheet" href="css/shell.css?v=50">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=43" defer></script>
-<script src="js/graph.js?v=10" defer></script>
+<script src="js/shell.js?v=49" defer></script>
+<script src="js/graph.js?v=14" defer></script>
 <style>
   main.fit .lede{margin-bottom:12px}
+  /* Incident dropdown, top right: shows one incident's related assets on the graph. */
+  .page-head{align-items:center}
+  .kg-inc{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .kg-inc .dd-btn{width:300px}
 
   /* Site knowledge graph (hero) | selected asset */
   .kg-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;min-height:0}
@@ -77,6 +81,7 @@
 <main class="wide fit">
   <div class="page-head">
     <h1>Plant knowledge graph</h1>
+    <div class="kg-inc"><span class="lbl">Incident</span><div id="inc-pick"></div></div>
   </div>
   <p class="lede">How the site's equipment, sensors, camera and records connect. Select an asset to see its relationships.</p>
   <div class="back-bar" id="back-bar" hidden></div>
@@ -107,6 +112,7 @@
         <span><i></i>Flows to</span>
         <span><i class="mon"></i>Monitors</span>
         <span><i class="obs"></i>Can observe</span>
+        <span id="lg-cand" hidden><i class="sw" style="border:1.5px dashed var(--warn);background:none"></i>Source candidate</span>
       </div>
       <div class="edge-info" id="edge-info"><span class="note">Click a connection to see where it comes from.</span></div>
     </section>

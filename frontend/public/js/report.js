@@ -54,7 +54,7 @@
     const final = R.status === 'final';
     doc.classList.toggle('draft', !final);
     $('stamp').hidden = false;
-    $('stamp').textContent = final ? 'Final' : 'Draft';
+    $('stamp').textContent = R.closure ? 'Closed' : final ? 'Final' : 'Draft';
     $('stamp').className = `stamp${final ? ' ok' : ''}`;
     $('doc-meta').innerHTML = `<span><b>${esc(R.local_incident_id)}</b></span><span>hash ${esc(R.report_hash)}</span><span>generated ${when(R.generated_at)} UTC</span>`;
     $('doc-body').innerHTML = `<p class="pending-note${final ? ' ok' : ''}">${esc(R.status_text)}</p>
@@ -69,7 +69,7 @@
     if (!R) { $('st-body').innerHTML = '<p class="xp-msg err">Backend not reachable.</p>'; return; }
     const final = R.status === 'final', dec = R.sections.find((s) => s.id === 'decision').rows;
     const who = dec.find((r) => r.label === 'Reviewer'), at = dec.find((r) => r.label === 'Decided at');
-    $('st-meta').textContent = final ? 'Final' : 'Draft';
+    $('st-meta').textContent = R.closure ? 'Closed' : final ? 'Final' : 'Draft';
     $('st-body').innerHTML = `<p class="big">${final && who ? `Approved by ${esc(who.value)} at ${when(at.value)} UTC` : esc(R.status_text)}</p>
       <div class="kv"><span>Report hash</span><span>${esc(R.report_hash)}</span>
         <span>Sources</span><span>${R.evidence.length}</span><span>Audit events</span><span>${R.audit.length}</span>

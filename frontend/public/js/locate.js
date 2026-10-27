@@ -32,6 +32,8 @@
     selected = id;
     edgeSel = null;
     $('kg-link').href = `graph.html?${new URLSearchParams({ asset: id, from: 'locate' })}`;
+    // Remembered per incident in this tab, so coming back (from the graph, Plan, …) keeps the same asset.
+    try { sessionStorage.setItem(`atelic.locate.${window.AtelicShell.INCIDENT_ID}`, id); } catch (e) { /* ignore */ }
     renderLayout();
     renderCands();
     renderDetail();
@@ -385,7 +387,9 @@
       camP = Promise.reject(new Error('Camera data not available'));
     }
 
-    const start = assessment() || (C && C.candidates && C.candidates[0] && C.candidates[0].asset_id);
+    let kept = new URLSearchParams(location.search).get('asset');
+    try { kept = kept || sessionStorage.getItem(`atelic.locate.${INCIDENT_ID}`); } catch (e) { /* ignore */ }
+    const start = (kept && byId.has(kept) && kept) || assessment() || (C && C.candidates && C.candidates[0] && C.candidates[0].asset_id);
     if (G && start && byId.has(start)) select(start);
     else { renderLayout(); renderCands(); renderDetail(); renderCam(); }
 

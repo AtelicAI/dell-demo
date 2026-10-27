@@ -91,6 +91,11 @@ def build_report(incident, src, now):
         row("Source status", incident["source_status"], "hypothesis", [E_LOC]),
         row("Assessment", assessment, "hypothesis", [E_LOC]),
     ]
+    if incident.get("dismissal"):
+        d = incident["dismissal"]
+        summary[-2:] = [row("Source status", "False alarm (dismissed)", "human_decision"),
+                        row("Assessment", f"No release. Closed as a false alarm by {d['by']}: {d['reason_label']}.", "human_decision",
+                            note=f"Before closing, Locate ranked {assessment.split('near ')[-1].split('.')[0]} first." if assessment else None)]
 
     # ----- 2 Camera observation -----
     seg = meta.get("source_segment") or {}
@@ -187,6 +192,19 @@ def build_report(incident, src, now):
     else:
         decision = [row("Decision", gap("Engineer review is not complete."), None)]
 
+    dis = incident.get("dismissal")
+    if dis:
+        # Closed as a false alarm: this record replaces the engineer decision.
+        gaps[:] = [g for g in gaps if not any(k in g for k in ("review is not complete", "draft was returned", "priority not set", "not been confirmed in the field"))]
+        decision = [
+            row("Decision", "Closed as a false alarm", "human_decision"),
+            row("Closed by", dis["by"], "human_decision", note="Name entered when closing. No sign-in in this demo."),
+            row("Closed at", dis["at"], "human_decision"),
+            row("Reason", dis["reason_label"], "human_decision"),
+            row("What was seen", dis["comment"], "human_decision"),
+            row("Work order", "Not needed", "human_decision"),
+        ]
+
     # ----- 8 Data provenance and limitations -----
     datasets = [
         row("satellite_observation_id", plume.get("satellite_observation_id"), E_PLUME and evidence[E_PLUME]["provenance"],
@@ -220,9 +238,11 @@ def build_report(incident, src, now):
                 order.setdefault(c, len(order))
     body = {
         "local_incident_id": incident["local_incident_id"],
-        "status": "final" if approved else "draft",
-        "status_text": "Final report. Work order approved by a named engineer." if approved
-                       else "Draft report. Engineer review is not complete.",
+        "status": "final" if approved or dis else "draft",
+        "closure": bool(dis),  # closed as a false alarm: a short closure record, not an approved investigation
+        "status_text": (f"Closure record. Closed as a false alarm by {dis['by']}." if dis
+                        else "Final report. Work order approved by a named engineer." if approved
+                        else "Draft report. Engineer review is not complete."),
         "sections": sections,
         "audit": audit,
         "evidence": sorted(evidence.values(), key=lambda e: order.get(e["id"], len(order))),
