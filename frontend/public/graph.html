@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=50">
+<link rel="stylesheet" href="css/shell.css?v=54">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=49" defer></script>
-<script src="js/graph.js?v=14" defer></script>
+<script src="js/shell.js?v=54" defer></script>
+<script src="js/graph.js?v=15" defer></script>
 <style>
   main.fit .lede{margin-bottom:12px}
   /* Incident dropdown, top right: shows one incident's related assets on the graph. */
@@ -64,6 +64,7 @@
   .detail li{padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--ink);line-height:1.45}
   .detail li:last-child{border-bottom:0}
   .detail li .src{display:block;margin-top:1px;font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .detail .src-note{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.45;color:var(--ink-mute)}
   .detail li .dir{display:inline-block;min-width:78px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim)}
   .kv{display:grid;grid-template-columns:auto 1fr;font-size:12px}
   .kv .k{padding:4px 12px 4px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px dashed var(--line)}
@@ -80,10 +81,9 @@
 
 <main class="wide fit">
   <div class="page-head">
-    <h1>Plant knowledge graph</h1>
+    <h1 title="How the site's equipment, sensors, camera and records connect. Select an asset to see its relationships.">Plant knowledge graph</h1>
     <div class="kg-inc"><span class="lbl">Incident</span><div id="inc-pick"></div></div>
   </div>
-  <p class="lede">How the site's equipment, sensors, camera and records connect. Select an asset to see its relationships.</p>
   <div class="back-bar" id="back-bar" hidden></div>
 
   <div class="kg-grid fill">

@@ -68,12 +68,11 @@
     activity: '<rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/>',
   };
   // href: null = screen not built yet (shown disabled). inc: the screen shows one incident (its links carry ?inc=);
-  // the others are site pages. The incident block in the rail sits above the incident screens.
+  // the others are site pages.
   const NAV = [
     { page: 'overview', label: 'Overview', href: 'index.html' },
     { page: 'incidents', label: 'Incidents', href: 'incidents.html' },
     { page: 'graph', label: 'Knowledge graph', href: 'graph.html' },
-    { incHead: true },
     { sec: 'Investigation' },
     { page: 'detection', label: 'Camera', href: 'detection.html', inc: true },
     { page: 'locate', label: 'Locate', href: 'locate.html', inc: true },
@@ -121,11 +120,7 @@
     const el = $('rail');
     if (!el) return;
     const links = NAV.map((n) => {
-      if (n.incHead) {
-        return `<div class="inc-head" id="rail-inc" data-label="Incident ${INCIDENT_ID}"><span class="k">Incident</span>
-          <span class="v"><i></i><b>${INCIDENT_ID}</b></span><span class="st" id="rail-inc-st"></span></div>`;
-      }
-      if (n.sec) return `<span class="sec">${n.sec}</span>`;
+      if ('sec' in n) return `<span class="sec">${n.sec}</span>`;
       const icon = `<span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">${ICONS[n.page]}</svg></span>`;
       const attrs = n.href
         ? `href="${incHref(n.page)}"${n.page === current ? ' aria-current="page"' : ''}`
@@ -136,7 +131,6 @@
       <button type="button" class="rail-tg" id="rail-tg" aria-label="Collapse menu" title="Collapse menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
-      <div class="hw"><span class="k">Built for</span><b>Dell PowerEdge XR7620</b><b>NVIDIA NIM · NeMo</b></div>
       <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator</span></div></div>`;
     $('rail-tg').addEventListener('click', () => setRailMin(!document.documentElement.classList.contains('rail-min')));
     setRailMin(readRailMin(), true);
@@ -167,9 +161,7 @@
     el.innerHTML = `
       <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span></div>
       <div class="right-controls">
-        <button type="button" id="pill-dell" class="status-pill" data-partner="dell" title="About the Dell edge server" aria-expanded="false"><span class="dot"></span>Dell Edge · …</button>
-        <button type="button" id="pill-nvidia" class="status-pill" data-partner="nvidia" title="About the NVIDIA AI stack" aria-expanded="false"><span class="dot"></span>NVIDIA inference · …</button>
-        <span id="pill-replay" class="status-pill" title="Replay clock (UTC)"><span class="dot"></span>Replay · …</span>
+        <button type="button" id="pill-sys" class="status-pill" data-partner="system" title="Dell edge server, NVIDIA inference and replay clock" aria-expanded="false"><span class="dot"></span>System · …</button>
         <button type="button" id="nt-btn" class="nt-btn" aria-label="Notifications" title="Notifications" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg><span class="nt-n" hidden></span></button>
       </div>
       <div class="hw-pop" id="hw-pop" role="dialog" hidden></div>
@@ -254,7 +246,7 @@
     // Rail: a coloured dot on each screen with unread items for it.
     document.querySelectorAll('#rail .nv a').forEach((a) => {
       a.classList.remove('note-good', 'note-warn', 'note-bad');
-      const page = (NAV.find((n) => n.href && a.getAttribute('href') === n.href) || {}).page;
+      const page = (NAV.find((n) => n.href && a.getAttribute('href').split('?')[0] === n.href) || {}).page;
       // The rail shows the current incident's screens, so only its items get a dot.
       const mine = unread.filter((e) => NOTE[e.event].page === page && e.incident_id === INCIDENT_ID);
       if (mine.length) a.classList.add(`note-${worst(mine)}`);
@@ -312,11 +304,16 @@
   function togglePartner(btn) {
     const pop = $('hw-pop'), key = btn.dataset.partner;
     if (!pop.hidden && pop.dataset.for === key) { closePartner(); return; }
-    const p = PARTNERS[key];
-    const [kind, line] = lastStatus ? p.status(lastStatus) : ['err', 'Unknown: the backend is not reachable.'];
-    pop.innerHTML = `<b class="t">${p.title}</b><p>${p.role}</p>${p.parts
-      ? `<ul>${p.parts.map(([n, d]) => `<li><b>${n}</b>${d}</li>`).join('')}</ul>` : ''}
-      <div class="st ${kind}"><span class="dot"></span>${line}</div>`;
+    const sec = (p) => {
+      const [kind, line] = lastStatus ? p.status(lastStatus) : ['err', 'Unknown: the backend is not reachable.'];
+      return `<div class="hw-sec"><b class="t">${p.title}</b><p>${p.role}</p>${p.parts
+        ? `<ul>${p.parts.map(([n, d]) => `<li><b>${n}</b>${d}</li>`).join('')}</ul>` : ''}
+        <div class="hw-st ${kind}"><span class="dot"></span>${line}</div></div>`;
+    };
+    const now = replayNow();
+    pop.innerHTML = `${sec(PARTNERS.dell)}${sec(PARTNERS.nvidia)}
+      <div class="hw-sec"><b class="t">Replay clock</b><div class="hw-st ${now ? 'ok' : 'off'}"><span class="dot"></span>${now
+        ? `Recorded data is replayed from ${fmtUtc(now, true)}.` : 'No replay running.'}</div></div>`;
     pop.dataset.for = key;
     pop.hidden = false;
     document.querySelectorAll('[data-partner]').forEach((b) => b.setAttribute('aria-expanded', String(b === btn)));
@@ -330,12 +327,18 @@
     el.innerHTML = `<span class="dot"></span>${text}`;
   }
 
+  // One chip for the system: green only when the edge server runs and NVIDIA inference is connected;
+  // the details (and the honest "target deployment / not connected") are one click away.
+  function sysPill() {
+    const s = lastStatus, now = replayNow(), el = $('pill-sys');
+    if (!el) return;
+    const live = s && s.dell_edge === 'running' && s.nvidia_inference !== 'not_connected';
+    pill(el, `System${now ? ` · <span class="mono">${fmtUtc(now)}</span>` : ''}`, live ? 'ok' : 'off');
+    if (s) el.title = `Dell Edge: ${DELL_LABELS[s.dell_edge] || 'Unknown'} · NVIDIA inference: ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}${now ? ` · Replay ${fmtUtc(now, true)}` : ''}`;
+  }
+
   function renderStatus(s) {
     lastStatus = s;
-    pill($('pill-dell'), `Dell Edge · ${DELL_LABELS[s.dell_edge] || 'Unknown'}`,
-      s.dell_edge === 'running' ? 'ok' : 'off');
-    pill($('pill-nvidia'), `NVIDIA inference · ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}`,
-      s.nvidia_inference === 'not_connected' ? 'off' : 'ok');
     replayStart = s.replay_start_utc ? Date.parse(s.replay_start_utc) : null;
     tickReplay();
   }
@@ -357,11 +360,8 @@
   }
   const fmtUtc = (d, withDate) => `${withDate ? `${d.toISOString().slice(0, 10)} ` : ''}${d.toISOString().slice(11, 19)} UTC`;
   function tickReplay() {
-    const now = replayNow(), el = $('pill-replay');
-    if (el) {
-      pill(el, `Replay · ${now ? fmtUtc(now) : '—'}`, now ? 'ok' : 'off');
-      if (now) el.title = `Replay clock: ${fmtUtc(now, true)}`;
-    }
+    const now = replayNow();
+    sysPill();
     if (now && !replayTimer) replayTimer = setInterval(tickReplay, 1000);
   }
 
@@ -404,19 +404,13 @@
     try { liveIncidents = (await get('/incidents')).live; } catch (e) { return; }
     if (lastIncident) renderContext(lastIncident);
   }
-  // Which incident this screen shows, everywhere the same: the strip next to the page title on incident
-  // screens and the incident block in the rail. Colour = state (watching, open, blocked, closed).
+  // Which incident this screen shows: the strip next to the page title on incident screens.
+  // Colour = state (watching, open, blocked, closed).
   function renderContext(inc) {
     const live = (liveIncidents || []).find((l) => l.incident_id === inc.local_incident_id) || {};
     const w = whereNow({ ...live, ...inc });
     const asset = inc.triggered && !inc.dismissal ? live.asset_id : null;
     const e = escAttr;
-    const st = $('rail-inc-st'), head = $('rail-inc');
-    if (head) {
-      head.className = `inc-head ${w.kind}`;
-      head.dataset.label = `Incident ${inc.local_incident_id} · ${w.text}`;
-    }
-    if (st) st.textContent = `${inc.camera_id} · ${w.text}`;
     if (!IS_INC_PAGE) return;
     let strip = $('incident-strip');
     if (!strip) {
@@ -435,6 +429,30 @@
       ${asset ? `<span class="is-seg" title="Likely source (hypothesis)">${ic('<circle cx="8" cy="8" r="4.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>')}near ${e(asset)}</span>` : ''}
       <a class="is-seg is-src ${w.kind}" href="incidents.html?id=${encodeURIComponent(inc.local_incident_id)}" title="Where this incident stands (Incidents page)">${e(w.text)}</a>`;
   }
+
+  // A link to another incident (incHref marks it with sw=) asks first, so the user knows the incident changes.
+  function confirmSwitch(href) {
+    const to = new URL(href, location.href).searchParams.get('inc');
+    const l = (liveIncidents || []).find((x) => x.incident_id === to);
+    const w = l ? whereNow(l) : null;
+    const target = NAV.find((n) => n.href && href.split('?')[0].endsWith(n.href)) || {};
+    modal({
+      title: `Switch to ${to}?`,
+      html: `<p>You are on <b>${escAttr(INCIDENT_ID)}</b>. This opens <b>${escAttr(to)}</b>${target.label ? ` · ${escAttr(target.label)}` : ''}.</p>
+        ${l ? `<p class="sw-to"><span class="mono">${escAttr(l.camera_id)}</span>${l.asset_id && !l.dismissal ? ` · near <span class="mono">${escAttr(l.asset_id)}</span>` : ''} · ${escAttr(w.text)}</p>` : ''}
+        <p style="color:var(--ink-mute)">Every incident screen will then show ${escAttr(to)} until you switch back.</p>`,
+      okLabel: `Open ${to}`,
+      okHref: href,
+      cancelLabel: `Stay on ${INCIDENT_ID}`,
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.closest('#modal') || !/[?&]sw=/.test(a.getAttribute('href'))) return;
+    e.preventDefault();
+    confirmSwitch(a.href);
+  });
 
   // Arrived through a link that switched incident: say so, and offer the way back. Shown once; the URL is cleaned.
   function renderSwitchBar() {
@@ -456,9 +474,7 @@
   }
 
   function renderUnreachable() {
-    pill($('pill-dell'), 'Dell Edge · Backend unreachable', 'err');
-    pill($('pill-nvidia'), 'NVIDIA inference · Unknown', 'off');
-    pill($('pill-replay'), 'Replay · —', 'off');
+    pill($('pill-sys'), 'System · Backend unreachable', 'err');
     const stepper = $('stepper');
     if (stepper) stepper.innerHTML = '<div class="step-empty">Stage status unavailable: backend is not reachable.</div>';
   }
@@ -757,7 +773,7 @@
 
   window.AtelicShell = {
     API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink,
-    BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow,
+    BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow, confirmSwitch,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
   // page transition from flashing an empty rail.

@@ -394,12 +394,10 @@
     else { renderLayout(); renderCands(); renderDetail(); renderCam(); }
 
     await Promise.allSettled([step('cam', camP, (v) => v)]);
-    // Short hold so the finished list is readable, then reveal the panels.
-    setTimeout(() => {
-      $('loc-grid').classList.add('ready');
-      $('loader').classList.add('done');
-      renderLayout();
-    }, 450);
+    // Reveal the panels as soon as the data is in (no extra hold).
+    $('loc-grid').classList.add('ready');
+    $('loader').classList.add('done');
+    renderLayout();
   }
 
   // Loader row: spinner until the real request settles, then what it returned (or why it failed).

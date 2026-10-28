@@ -114,8 +114,8 @@ def build_report(incident, src, now):
         rs = ann.get("ranges") or []
         frames = f"frames {rs[0]['start_frame']}–{rs[-1]['end_frame']}, {len(rs)} range{'s' if len(rs) != 1 else ''}" if rs else f"{len(ann['frames'])} frames"
         camera.append(row("Plume region", f"Marked on {frames}", "manual_annotation", [E_DET],
-                          f"Drawn by {ann.get('annotator') or 'unknown'}; "
-                          + (f"reviewed by {ann['reviewed_by']}" if ann.get("reviewed_by") else "not yet reviewed")))
+                          (f"Drawn by {ann.get('annotator') or 'unknown'}; reviewed by {ann['reviewed_by']}"
+                           if ann.get("reviewed_by") else "Draft region; not yet reviewed by an engineer")))
     else:
         camera.append(row("Plume region", gap(f"No plume region is marked on the {cam} recording."), None, [E_META]))
     sp = meta.get("experimental_setpoint") or {}

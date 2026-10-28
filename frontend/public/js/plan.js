@@ -71,7 +71,7 @@
       const a = d.fields.asset;
       const big = a ? esc(d.assessment).replace(esc(a), `<em>${esc(a)}</em>`) : esc(d.assessment);
       $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">${big}</p>
-        <p class="sub">Assembled by <b>${esc(W.generator.id)} ${esc(W.generator.version)}</b> from ${d.evidence.length} sources. No language model was used.</p>
+        <p class="sub" title="${esc(W.generator.id)} ${esc(W.generator.version)}">Assembled by a fixed template from ${d.evidence.length} sources. No language model was used.</p>
         <div class="gb-row">${window.AtelicShell.traceLink('work_order', 'See how this draft was made')}</div>`;
     } else {
       $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">No response drafted yet</p>
@@ -151,7 +151,7 @@
     $('stamp').className = `stamp${approved ? ' ok' : sub ? ' sub' : onThis ? (rej ? ' rej' : ' chg') : ''}`;
     $('tools').hidden = approved;
     const latest = W.versions[W.versions.length - 1];
-    $('doc-meta').innerHTML = `<span><b>v${d.version}</b></span><span>${esc(d.hash)}</span><span>${esc(latest.author)}</span><span>${hhmmss(latest.created_at)}</span>`;
+    $('doc-meta').innerHTML = `<span title="sha256 ${esc(d.hash)}"><b>v${d.version}</b></span><span title="${esc(latest.author)}">${esc(latest.author === `${W.generator.id} ${W.generator.version}` ? 'Fixed template' : latest.author)}</span><span>${hhmmss(latest.created_at)}</span>`;
     $('btn-edit').textContent = editing ? 'Save as new version' : 'Edit fields';
     $('btn-edit').classList.toggle('primary', editing);
     $('btn-edit').classList.toggle('ghost', !editing);
@@ -203,8 +203,7 @@
       const e0 = g.items[0];
       const provs = [...new Set(g.items.map((e) => e.provenance))];
       return `<div class="grp">
-        <div class="grp-h"><span class="lbl k">${KIND[e0.kind] || 'Source'}</span><b>${esc(g.name)}</b>${provs.length === 1 ? badge(provs[0]) : ''}
-          <span class="path">${esc((e0.uri || e0.source).split('#')[0])}</span></div>
+        <div class="grp-h" title="${esc((e0.uri || e0.source).split('#')[0])}"><span class="lbl k">${KIND[e0.kind] || 'Source'}</span><b>${esc(g.name)}</b>${provs.length === 1 ? badge(provs[0]) : ''}</div>
         ${g.items.map((e) => {
           const [text, sub] = e.kind === 'candidate_evidence' ? [e.label, e.excerpt] : [e.excerpt || e.label, e.kind === 'procedure' ? e.label.split(' · ')[1] : e.label];
           return `<button class="it" data-item="${esc(e.id)}" id="it-${esc(e.id)}">

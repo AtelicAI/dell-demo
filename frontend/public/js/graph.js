@@ -291,14 +291,16 @@
   }
 
   // ----- selected asset -----
-  const src = (e) => `<span class="src">${esc(e.source)} · ${esc(METHOD[e.method] || e.method)} ${badge(e.provenance)}</span>`;
+  // Where a relationship comes from: on hover per row, once per panel as a footnote (not under every row).
+  const srcText = (e) => `${e.source} · ${METHOD[e.method] || e.method}`;
+  const src = (e) => { const b = badge(e.provenance); return b ? `<span class="src">${b}</span>` : ''; };
   const group = (title, items, empty) => `<h4>${title}<span class="n">${items.length || ''}</span></h4>${items.length ? `<ul>${items.join('')}</ul>` : `<div class="empty">${empty}</div>`}`;
 
   function renderAsset() {
     if (!selected) return;
     const n = byId.get(selected), es = G.edges.filter((e) => e.from === selected || e.to === selected);
     const other = (e) => (e.from === selected ? e.to : e.from);
-    const row = (dir, e, extra) => `<li><span class="dir">${dir}</span>${assetLink(other(e))} ${esc(name(other(e)))}${extra || ''}${src(e)}</li>`;
+    const row = (dir, e, extra) => `<li title="${esc(srcText(e))}"><span class="dir">${dir}</span>${assetLink(other(e))} ${esc(name(other(e)))}${extra || ''}${src(e)}</li>`;
     const of = (t) => es.filter((e) => e.type === t);
 
     $('asset-head').innerHTML = `<div class="a-id">${esc(n.asset_id)}</div><div class="a-nm">${esc(n.display_name)}</div>
@@ -316,13 +318,14 @@
       ${group('Maintenance', of('HAS_WORK_ORDER').map((e) => {
         const w = byId.get(e.to);
         return e.from === selected
-          ? `<li><span class="dir">${esc(w.date)}</span>${assetLink(w.asset_id)} · ${esc(w.work_type)} · ${esc(w.work_status)}<br><span style="color:var(--ink-mute)">${esc(w.display_name)}</span>${src(e)}</li>`
+          ? `<li title="${esc(srcText(e))}"><span class="dir">${esc(w.date)}</span>${assetLink(w.asset_id)} · ${esc(w.work_type)} · ${esc(w.work_status)}<br><span style="color:var(--ink-mute)">${esc(w.display_name)}</span>${src(e)}</li>`
           : row('Record for', e);
       }), 'No maintenance records.')}
       ${group('Incidents', PAST.filter((h) => h.asset_id === selected).map((h) =>
         `<li><span class="dir">${esc(h.opened_utc.slice(0, 10))}</span><a class="linkish" href="incidents.html?id=${encodeURIComponent(h.incident_id)}">${esc(h.incident_id)}</a> · ${esc(h.outcome_label)}<br><span style="color:var(--ink-mute)">${esc(h.summary)}</span></li>`), 'No earlier incidents on this asset.')}
       ${group('Area', of('CONTAINS').map((e) => row(e.from === selected ? 'Contains' : 'Part of', e)), 'Not linked to an area.')}
-      <h4>Asset details</h4><div class="kv">${facts.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v == null ? '<span style="color:var(--ink-dim)">Not available</span>' : esc(v)}</div>`).join('')}</div>`;
+      <h4>Asset details</h4><div class="kv">${facts.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v == null ? '<span style="color:var(--ink-dim)">Not available</span>' : esc(v)}</div>`).join('')}</div>
+      ${es.length ? `<p class="src-note">Relationships from ${[...new Set(es.map(srcText))].map(esc).join('; ')}. Hover a row for its source.</p>` : ''}`;
   }
 
   // ----- wiring -----

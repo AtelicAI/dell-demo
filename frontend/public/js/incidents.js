@@ -5,7 +5,9 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const { badge } = window.AtelicShell;
 
-  const { incHref, whereNow } = window.AtelicShell;
+  const { incHref, whereNow, INCIDENT_ID } = window.AtelicShell;
+  // The incident this tab is working on (the one the incident screens show).
+  const activeTag = (id) => (id === INCIDENT_ID ? '<span class="cur-tag" title="The incident screens in this tab show this incident">Active</span>' : '');
   const STAGE = { detect: ['Detect', 'detection'], locate: ['Locate', 'locate'], quantify: ['Quantify', 'quantify'],
     plan: ['Plan', 'plan'], approve: ['Approve', 'review'], report: ['Report', 'report'] };
   const STATUS = { not_started: 'Not started', in_progress: 'In progress', ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked' };
@@ -35,7 +37,7 @@
       ${open.map((l) => {
         const c = current(l);
         return `<tr ${rowAttrs(l.incident_id)}>
-          <td class="id">${esc(l.incident_id)}</td>
+          <td class="id">${esc(l.incident_id)}${activeTag(l.incident_id)}</td>
           <td class="mono">${esc(l.camera_id)}</td>
           <td>${l.asset_id ? `<span class="mono">${esc(l.asset_id)}</span>${badge('hypothesis')}` : '<span class="dim">Not located yet</span>'}</td>
           <td>${l.rate_kg_ch4_h != null ? `<span class="mono">${l.rate_kg_ch4_h} kg/h</span>${badge('model_estimated')}` : '<span class="dim">Not estimated</span>'}</td>
@@ -50,7 +52,7 @@
     $('closed-meta').textContent = `${closed.length} closed`;
     $('closed').innerHTML = closed.length ? `<table class="inc"><thead><tr><th>Incident</th><th>Camera</th><th>Asset</th><th>Outcome</th><th>Decided by</th><th>Closed</th></tr></thead><tbody>
       ${closed.map((h) => `<tr ${rowAttrs(h.incident_id)}>
-          <td class="id">${esc(h.incident_id)}</td>
+          <td class="id">${esc(h.incident_id)}${activeTag(h.incident_id)}</td>
           <td class="mono">${esc(h.camera_id)}</td>
           <td>${h.asset_id ? `<span class="mono">${esc(h.asset_id)}</span>` : '<span class="dim">None</span>'}</td>
           <td>${chip(h.outcome_label, OUTCOME_KIND[h.outcome])}</td>
@@ -68,7 +70,7 @@
     if (l) {
       const c = current(l), rv = l.review;
       box.innerHTML = `
-        <div class="d-head"><div class="d-id">${esc(l.incident_id)}</div><div class="d-sub">${chip(c.text, c.kind, c.kind === 'warn')}</div></div>
+        <div class="d-head"><div class="d-id">${esc(l.incident_id)}${activeTag(l.incident_id)}</div><div class="d-sub">${chip(c.text, c.kind, c.kind === 'warn')}</div></div>
         <div class="d-body">
           ${kv([
             ['Camera', `<span class="mono">${esc(l.camera_id)}</span>`],
@@ -87,7 +89,7 @@
     if (h) {
       const d = h.decision;
       box.innerHTML = `
-        <div class="d-head"><div class="d-id">${esc(h.incident_id)}</div><div class="d-sub">${chip(h.outcome_label, OUTCOME_KIND[h.outcome])}</div></div>
+        <div class="d-head"><div class="d-id">${esc(h.incident_id)}${activeTag(h.incident_id)}</div><div class="d-sub">${chip(h.outcome_label, OUTCOME_KIND[h.outcome])}</div></div>
         <div class="d-body">
           <p>${esc(h.summary)}</p>
           <h4>Record</h4>
@@ -157,7 +159,7 @@
     }
     $('counts').textContent = `${open.length} open · ${closed.length} closed`;
     const want = params.get('id');
-    selected = [...open, ...closed].some((x) => x.incident_id === want) ? want : (open[0] || closed[0] || {}).incident_id || null;
+    selected = [...open, ...closed].some((x) => x.incident_id === want) ? want : (open.find((x) => x.incident_id === INCIDENT_ID) || open[0] || closed[0] || {}).incident_id || null;
     renderOpen();
     renderClosed();
     renderDetail();

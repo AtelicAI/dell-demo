@@ -357,7 +357,7 @@
   }
 
   // Presenter controls in the camera panel header: pick a camera with no alert yet and trigger it (or
-  // press T), reset this incident for the next run.
+  // press T), reset every live incident for the next run.
   let pick = null;
   function renderControls(mode) {
     const box = $('event-ctl');
@@ -367,8 +367,8 @@
       pick = (idle.find((l) => l.incident_id === window.AtelicShell.INCIDENT_ID) || idle[0] || {}).incident_id || null;
     }
     box.innerHTML = `${idle.length > 1 ? '<span class="ctl-pick" id="trig-pick"></span>' : ''}${pick
-      ? `<button class="ctl" id="btn-trigger" type="button" title="Shortcut: T">Trigger ${esc(live.find((l) => l.incident_id === pick).camera_id)} event <kbd>T</kbd></button>` : ''}${mode === 'event'
-      ? '<button class="ctl" id="btn-reset" type="button" title="Back to normal operations">Reset</button>' : ''}`;
+      ? `<button class="ctl" id="btn-trigger" type="button" title="Shortcut: T">Trigger ${esc(live.find((l) => l.incident_id === pick).camera_id)} event <kbd>T</kbd></button>` : ''}${mode === 'event' || live.some((l) => l.triggered)
+      ? '<button class="ctl" id="btn-reset" type="button" title="Back to normal operations: clears every incident\'s alert and results">Reset</button>' : ''}`;
     if (idle.length > 1) {
       window.AtelicShell.dropdown($('trig-pick'), {
         label: 'Camera to trigger', value: pick,
@@ -429,7 +429,8 @@
   }
 
   async function reset() {
-    try { await post(`/incidents/${window.AtelicShell.INCIDENT_ID}/reset`); } catch (e) { console.error(e); }
+    // All live incidents together, so the next run starts from a quiet site.
+    await Promise.all(live.map((l) => post(`/incidents/${l.incident_id}/reset`).catch((e) => console.error(e))));
     location.reload();
   }
 
@@ -441,7 +442,7 @@
 
   document.addEventListener('click', (e) => {
     const cell = e.target.closest('.cell[data-href]');
-    if (cell && !e.target.closest('a, button')) location.href = cell.dataset.href;
+    if (cell && !e.target.closest('a, button')) window.AtelicShell.confirmSwitch(cell.dataset.href);
     if (e.target.closest('#btn-dismiss')) window.AtelicShell.dismissDialog(window.AtelicShell.INCIDENT_ID, () => location.reload());
   });
 
