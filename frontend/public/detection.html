@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="css/shell.css?v=101">
 <script src="js/shell.js?v=106" defer></script>
 <script src="js/plumeheat.js?v=101" defer></script>
-<script src="js/detection.js?v=128" defer></script>
+<script src="js/detection.js?v=129" defer></script>
 <style>
 
   /* PRD Screen 2: 65% video / 35% detection metadata */
@@ -54,10 +54,9 @@
   .cmp-on.pre #video{clip-path:inset(0 0 0 100%)}
   .cmp-on.pre .cmp-line,.cmp-on.pre .cmp-grip,.cmp-on.pre .cmp-tag{visibility:hidden}
   .cmp-on.pre.live-det #video{clip-path:inset(0 0 0 0)}
-  .cmp-on.reveal #video{transition:clip-path .9s ease}
   .cmp-on.reveal .cmp-line,.cmp-on.reveal .cmp-grip,.cmp-on.reveal .cmp-tag{animation:cmpin .9s ease}
   @keyframes cmpin{from{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.cmp-on.reveal #video{transition:none}.cmp-on.reveal .cmp-line,.cmp-on.reveal .cmp-grip,.cmp-on.reveal .cmp-tag{animation:none}}
+  @media (prefers-reduced-motion:reduce){.cmp-on.reveal .cmp-line,.cmp-on.reveal .cmp-grip,.cmp-on.reveal .cmp-tag{animation:none}}
   .cmp-line{position:absolute;top:0;bottom:0;left:var(--cut);width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,.35);pointer-events:none}
   .cmp-grip{position:absolute;top:50%;left:var(--cut);width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.45);display:grid;place-items:center;cursor:ew-resize}
   .cmp-grip::before{content:"\2039\00a0\203A";font:600 15px/1 var(--sans);color:var(--ink);margin-top:-2px}

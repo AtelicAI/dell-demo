@@ -286,13 +286,26 @@
     });
   }
 
-  // At the alarm: the Atelic view slides in over the original, leaving the slider at the middle.
+  // At the alarm: the slider sweeps in from the left edge to the middle, the line, handle and cut moving together,
+  // uncovering the original infrared on the left.
   function revealCompare() {
-    const fr = $('frame');
+    const fr = $('frame'), grip = $('cmp-grip');
     if (!fr || !fr.classList.contains('pre')) return;
+    const set = (pct) => {
+      fr.style.setProperty('--cut', `${pct}%`);
+      if (grip) { grip.setAttribute('aria-valuenow', String(Math.round(pct))); grip.setAttribute('aria-valuetext', `${Math.round(pct)}% original`); }
+    };
+    fr.classList.remove('pre', 'live-det');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { set(50); return; }
+    set(0);
     fr.classList.add('reveal');
-    fr.classList.remove('pre');
-    setTimeout(() => fr.classList.remove('reveal'), 1000);
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / 900);
+      set(50 * (1 - (1 - k) ** 3));
+      if (k < 1) requestAnimationFrame(step); else fr.classList.remove('reveal');
+    };
+    requestAnimationFrame(step);
   }
 
   // The Atelic output drives the timeline; the original follows it. Small drift is pulled in by nudging
@@ -481,7 +494,7 @@
       const recent = m.samples.slice(Math.max(0, i - m.policy.window_samples + 1), i + 1).filter((x) => x.positive).length;
       const past = m.alert_t != null && t >= m.alert_t;
       if (past) revealCompare();
-      const text = past || raised ? '' : recent ? `Model: possible plume · ${recent} of ${m.policy.window_samples} recent samples` : '';  // idle: the tile's "Watching" says it
+      const text = past || raised ? '' : recent ? `Plume seen in ${recent} of the last ${m.policy.window_samples} checks · alert at ${m.policy.min_positive_samples}` : '';  // idle: the tile's "Watching" says it
       if (tag && !tag.classList.contains('ff') && text !== shown) {
         shown = text;
         tag.textContent = text;
