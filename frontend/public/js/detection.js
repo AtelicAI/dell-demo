@@ -204,7 +204,7 @@
         : '<div class="no-feed"><b>No feed</b></div>';
       const state = other && other.dismissal ? 'Closed · false alarm'
         : other && other.triggered
-        ? `ALARM · <a class="open-inc" href="${window.AtelicShell.incHref('detection', other.incident_id)}">${esc(other.incident_id)} →</a>`
+        ? `ALERT · <a class="open-inc" href="${window.AtelicShell.incHref('detection', other.incident_id)}">${esc(other.incident_id)} →</a>`
         : on ? 'Watching' : 'No feed';
       const otherOpen = other && other.triggered && !other.dismissal;
       return `<div class="cell${mine ? ' cam1' : ''}${otherOpen ? ' alert' : ''}" title="${esc(otherOpen ? `${tip} · click to investigate ${other.incident_id}` : tip)}"${otherOpen ? ` data-href="${window.AtelicShell.incHref('detection', other.incident_id)}"` : ''}>
@@ -237,7 +237,7 @@
     if (!box) return;
     box.hidden = !open.some((l) => l.incident_id !== me);
     if (box.hidden) return;
-    box.innerHTML = `<span class="al-k">Alarms · ${open.length}</span>${open.map((l) => {
+    box.innerHTML = `<span class="al-k">Alerts · ${open.length}</span>${open.map((l) => {
       const w = window.AtelicShell.whereNow(l), mine = l.incident_id === me;
       const body = `<i></i><b>${esc(l.incident_id)}</b><span title="${esc(w.text)}">${esc(l.camera_id)}${l.asset_id ? ` · near ${esc(l.asset_id)}` : ''}</span>`;
       return mine ? `<span class="al" aria-current="true">${body}<span class="tag">Investigating</span></span>`
@@ -250,7 +250,7 @@
     if (!c) return;
     const bare = raised && !byFrame.size;
     c.classList.toggle('alert', !dismissal && (!!now || bare));
-    c.querySelector('.sv').textContent = dismissal ? 'Closed · false alarm' : now ? 'ALARM · Plume observed' : bare ? 'ALERT · no recording' : 'Watching';
+    c.querySelector('.sv').textContent = dismissal ? 'Closed · false alarm' : now ? 'ALERT · Plume observed' : bare ? 'ALERT · no recording' : 'Watching';
   }
 
   // ----- incident camera before/after: original infrared (left) vs Atelic detection output (right) -----
@@ -413,7 +413,7 @@
     const q = $('video-quiet');
     if (q) q.remove();
     const tag = $('mon-tag');
-    if (tag) { tag.textContent = 'Model alarm'; tag.className = 'mon-tag ff'; setTimeout(() => tag.classList.remove('ff'), 2500); }
+    if (tag) { tag.textContent = 'Model alert'; tag.className = 'mon-tag ff'; setTimeout(() => tag.classList.remove('ff'), 2500); }
     return true;
   }
 

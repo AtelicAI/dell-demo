@@ -12,7 +12,7 @@
     detection: 'Camera', quantification: 'Estimate', field_report: 'Field report', commitment: 'Commitment', history: 'Plant history',
     operations: 'Operations log', sensor: 'Telemetry', source: 'Source',
   };
-  const SCREEN = { 'locate.html': 'Locate', 'quantify.html': 'Quantify', 'detection.html': 'Camera' };
+  const SCREEN = { 'locate.html': 'Locate', 'quantify.html': 'Quantify', 'detection.html': 'Detect' };
   // Footnotes are numbered in reading order: summary first, then the document.
   const ORDER = ['observed', 'uncertain', 'inspection', 'isolation', 'safety'];
   const PRIORITIES = ['Low', 'Medium', 'High'];

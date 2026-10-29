@@ -135,7 +135,7 @@
           <span class="seal chip ${DECISION[rv.decision].chip}">${esc(DECISION[rv.decision].label)}</span>
           ${ok ? '' : `<div class="why">${esc(rv.reason)}</div>`}
         </div>
-        <p class="rd-note">${ok ? 'Recorded in the audit log. The draft is now locked. The name was typed at review; this demo has no sign-in.'
+        <p class="rd-note">${ok ? 'Recorded in the audit log. The draft is now locked. The name is as typed at review; it is not tied to the sign-in.'
           : 'Returned to Plan. A rejected or returned draft cannot close the incident until it is edited and submitted again.'}</p>
         <a class="btn" href="${ok ? 'report.html' : 'plan.html'}">${ok ? 'Open Report →' : 'Open Plan →'}</a>
         ${history}${safety}`;
@@ -157,7 +157,7 @@
       ${W.stale ? '<p class="rd-note err">The emission estimate changed after this draft was made. It cannot be approved; request changes instead.</p>' : ''}
       <div class="field"><label for="rv-name">Your name</label>
         <input id="rv-name" autocomplete="name" maxlength="80" value="${esc(readName())}" placeholder="Full name">
-        <div class="hint">Recorded with the decision. No sign-in in this demo.</div></div>
+        <div class="hint">Recorded with the decision. Not tied to the sign-in.</div></div>
       <div class="acts">
         <button class="btn go" data-decide="approve"${W.stale ? ' disabled title="Evidence changed after drafting"' : ''}>Approve draft</button>
         <button class="btn" data-decide="request_changes">Request changes</button>

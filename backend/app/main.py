@@ -421,7 +421,7 @@ def post_trigger(incident_id: str):
                                                      "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")}, human=True)
             s.update(engine_id=res["incident_id"], triggered_at=now_utc())
             ev = res["event"]
-            audit(s, "alert_triggered", f"{s['camera_id']} model alarm (OWLv2 + SAM2, 3 of 5 samples)",
+            audit(s, "alert_triggered", f"{s['camera_id']} model alert (OWLv2 + SAM2, 3 of 5 samples)",
                   f"{s['camera_id']} alert raised; engine incident {res['incident_id']} opened. Model alert on recorded "
                   f"GasVid footage at clip {ev.get('clip_time_seconds') or 0:.1f} s; agents started")
             save()
@@ -1199,7 +1199,7 @@ def work_order_view(s):
     sync(s)
     rec = record(s)
     rv = latest_review(s)
-    base = {"generator": generator(rec), "can_draft": False, "missing": [] if s["engine_id"] else ["No alert raised yet (Camera screen)"],
+    base = {"generator": generator(rec), "can_draft": False, "missing": [] if s["engine_id"] else ["No alert raised yet (Detect screen)"],
             "inputs": draft_inputs(s, rec), "nvidia_inference": nvidia_status(), "agent": agent_status(s),
             "investigation": investigation_view(rec), "questions": questions_view(s, rec),
             "can_ask": bool(rec) and rec["state"] in ("pending_review", "verification_ready"),
@@ -1219,7 +1219,7 @@ def wo_or_409(s):
     if not s["engine_id"]:
         raise HTTPException(status_code=409, detail=f"No active incident: {s['camera_id']} has not raised an alert")
     if s["dismissal"]:
-        raise HTTPException(status_code=409, detail=f"Closed as a false alarm by {s['dismissal']['by']}. Reopen it on the Camera screen first.")
+        raise HTTPException(status_code=409, detail=f"Closed as a false alarm by {s['dismissal']['by']}. Reopen it on the Detect screen first.")
     sync(s)
     if not s["versions"]:
         raise HTTPException(status_code=409, detail="No draft yet: the agents are still working")
@@ -1590,7 +1590,7 @@ STEP_LABELS = [("camera_event", "Camera event received"), ("equipment_mapping", 
                ("investigation", "Investigation agent"), ("procedure_passages", "Procedure passages retrieved"),
                ("work_order", "Work order drafted"), ("approval", "Human approval required"),
                ("answer", "Engineer questions answered"), ("verification", "Repair verified"), ("closure", "Human closure")]
-STEP_REASON = {"camera_event": "No alert yet. Trigger the event on the Camera screen.", "equipment_mapping": "Runs after the camera alert.",
+STEP_REASON = {"camera_event": "No alert yet. Trigger the event on the Detect screen.", "equipment_mapping": "Runs after the camera alert.",
                "graph": "Runs after the camera alert.", "emission_estimate": "Runs after Locate.",
                "investigation": "Runs after the estimate is frozen.", "procedure_passages": "Retrieved by the agents through retrieve_procedure.",
                "work_order": "Runs after the investigation.", "answer": "No question asked yet. Ask one on Approve.",

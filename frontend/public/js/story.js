@@ -29,7 +29,7 @@
     return `<div class="inv">
       <div class="inv-h"><span class="lbl">Investigation agent</span>
         <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
-        <span class="inv-n">${n('contradiction')} contradictions · ${n('gap')} gaps · ${n('supporting')} supporting</span></div>
+        <span class="inv-n">${n('contradiction')} contradiction${n('contradiction') === 1 ? '' : 's'} · ${n('gap')} gap${n('gap') === 1 ? '' : 's'} · ${n('supporting')} supporting</span></div>
       <p class="inv-sum">${esc(inv.summary)}</p>
       <ul class="inv-f">${fs.map((f) => {
         const [cls, label] = KIND[f.kind] || ['ctx', f.kind];

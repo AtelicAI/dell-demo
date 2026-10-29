@@ -87,7 +87,7 @@
     { page: 'incidents', label: 'Incidents', href: 'incidents.html' },
     { page: 'graph', label: 'Knowledge graph', href: 'graph.html' },
     { sec: 'Investigation' },
-    { page: 'detection', label: 'Camera', href: 'detection.html', inc: true },
+    { page: 'detection', label: 'Detect', href: 'detection.html', inc: true },
     { page: 'locate', label: 'Locate', href: 'locate.html', inc: true },
     { page: 'quantify', label: 'Quantify', href: 'quantify.html', inc: true },
     { sec: 'Response' },
@@ -172,7 +172,7 @@
     const el = $('topbar');
     if (!el) return;
     el.innerHTML = `
-      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span></div>
+      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane incident intelligence</span></div>
       <div class="right-controls">
         <button type="button" id="pill-sys" class="status-pill" data-partner="system" title="Dell edge server, NVIDIA inference and replay clock" aria-expanded="false"><span class="dot"></span>System · …</button>
         <button type="button" id="nt-btn" class="nt-btn" aria-label="Notifications" title="Notifications" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg><span class="nt-n" hidden></span></button>
@@ -444,9 +444,26 @@
     strip.setAttribute('aria-label', `Showing ${inc.local_incident_id}: ${[inc.camera_id, asset && `near ${asset}`, w.text].filter(Boolean).join(', ')}`);
     strip.innerHTML = `
       <span class="is-id ${w.kind}"><i></i>${e(inc.local_incident_id)}</span>
-      <span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>
+      ${(liveIncidents || []).length > 1
+        ? `<button type="button" class="is-seg is-cam" id="is-cam" title="Switch camera" aria-haspopup="dialog">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}${CHEVRON}</button>`
+        : `<span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>`}
       ${asset ? `<span class="is-seg" title="Likely source (hypothesis)">${ic('<circle cx="8" cy="8" r="4.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>')}near ${e(asset)}</span>` : ''}
       <a class="is-seg is-src ${w.kind}" href="incidents.html?id=${encodeURIComponent(inc.local_incident_id)}" title="Where this incident stands (Incidents page)">${e(w.text)}</a>`;
+    const cam = $('is-cam');
+    if (cam) cam.addEventListener('click', switchCamera);
+  }
+
+  // Camera picker from the strip: one row per camera with its incident. Same screen for an incident that has an
+  // alert; Camera for one that has none yet (that is where it can be triggered).
+  function switchCamera() {
+    const page = document.body.dataset.page;
+    const rows = (liveIncidents || []).map((l) => {
+      const w = whereNow(l), me = l.incident_id === INCIDENT_ID;
+      const body = `<b class="mono">${escAttr(l.camera_id)}</b><span class="mono">${escAttr(l.incident_id)}</span><span class="sw-st ${w.kind}">${escAttr(w.text)}</span>`;
+      return me ? `<div class="sw-opt" aria-current="true">${body}<em>Showing</em></div>`
+        : `<a class="sw-opt" href="${escAttr(incHref(l.triggered ? page : 'detection', l.incident_id))}">${body}<em>Open →</em></a>`;
+    }).join('');
+    modal({ title: 'Switch camera', html: `<div class="sw-list">${rows}</div>`, okLabel: null, cancelLabel: 'Close' });
   }
 
   // A link to another incident (incHref marks it with sw=) asks first, so the user knows the incident changes.
@@ -564,7 +581,7 @@
     modalOk = onOk || null;
     $('modal-title').textContent = title;
     $('modal-body').innerHTML = html;
-    m.querySelector('.actions').innerHTML = `<button type="button" class="btn" data-modal-cancel>${cancelLabel}</button>${okHref
+    m.querySelector('.actions').innerHTML = `<button type="button" class="btn" data-modal-cancel>${cancelLabel}</button>${okLabel === null ? '' : okHref
       ? `<a class="btn primary ${okClass}" data-modal-ok href="${escAttr(okHref)}">${okLabel}</a>`
       : `<button type="button" class="btn primary ${okClass}" data-modal-ok>${okLabel}</button>`}`;
     const ok = m.querySelector('[data-modal-ok]'), ta = $('modal-body').querySelector('textarea');
@@ -631,7 +648,7 @@
   function reopenDialog(id, done) {
     modal({
       title: `Reopen ${id}?`,
-      html: `<p class="dm-lead">The false-alarm close is undone and the investigation continues where it was. Your name goes in the audit log.</p>
+      html: `<p class="dm-lead">The false-alarm close is undone and the investigation continues where it left off. Your name goes in the audit log.</p>
         <label for="dm-by">Your name</label><input type="text" id="dm-by" autocomplete="name" value="${escAttr(readName())}">`,
       okLabel: 'Reopen incident',
       isValid: (b) => b.querySelector('#dm-by').value.trim(),
@@ -657,7 +674,7 @@
       if (after) after.after(bar); else return;
     }
     bar.innerHTML = `<span class="ic" aria-hidden="true">✓</span><span><b>Closed as a false alarm</b> by ${escAttr(d.by)} · ${escAttr(d.reason_label)} · “${escAttr(d.comment)}”</span>
-      <a href="detection.html?inc=${encodeURIComponent(inc.local_incident_id)}">Reopen on Camera →</a>`;
+      <a href="detection.html?inc=${encodeURIComponent(inc.local_incident_id)}">Reopen on Detect →</a>`;
   }
 
   // Back bar: a page opened with ?from=<page> (e.g. from a "View in Glass box" link) links back to it.

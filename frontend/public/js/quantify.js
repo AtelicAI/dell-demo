@@ -361,7 +361,7 @@
     $('hist-meta').textContent = `${a.period_start_utc.slice(0, 10)} → ${a.period_end_utc.slice(0, 10)} · 5-minute averages`;
     $('hist-facts').innerHTML = [
       [a.episode_count, 'methane episodes above background'],
-      [`${lc.episodes_starting_after_load_change}/${lc.episodes}`, `start within ${lc.window_minutes} min of a K-201 load change (${Math.round((lc.share_expected_by_chance || 0) * 100)}% by chance)`],
+      [`${lc.episodes_starting_after_load_change}/${lc.episodes}`, `start within ${lc.window_minutes} min of a K-201 load change (${Math.round((lc.share_expected_by_chance || 0) * 100)}% expected by chance)`],
       [quiet ? `${quiet.days} d` : '—', quiet ? `longest quiet stretch, ${quiet.start_utc.slice(5, 10)} → ${quiet.end_utc.slice(5, 10)}` : 'no quiet stretch'],
       [obs.length ? `${Math.round(Math.max(...obs.map((o) => o.observable_fraction)) * 100)}%` : '—', 'of the time a 50 g/h leak here would reach a sensor (wind)'],
     ].map(([v, t]) => `<div><b>${esc(v)}</b><span>${esc(t)}</span></div>`).join('');
@@ -386,7 +386,7 @@
   async function run() {
     const btn = $('btn-run'), msg = $('run-msg');
     btn.disabled = true;
-    msg.className = 'run-msg'; msg.textContent = 'Running on backend…';
+    msg.className = 'run-msg'; msg.textContent = 'Running on the backend…';
     try {
       const r = await fetch(`${API}/incidents/${INCIDENT_ID}/quantify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method }),
