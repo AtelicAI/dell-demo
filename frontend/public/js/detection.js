@@ -175,9 +175,10 @@
 
   // Incident camera screen: one continuous recording of the event. The Atelic view (the plume as the model
   // captured it, rendered into the video) with the untouched original infrared on the slider, from the start of the
-  // monitored window; the alarm latches from the executed detector samples while it plays.
+  // monitored window; the alarm latches from the executed detector samples while it plays. Until the alarm only the
+  // original infrared shows (no slider, no Atelic view); the alarm reveals the comparison (revealCompare).
   function cam1Screen(mode, clipOk, origOk) {
-    return clipOk ? `<div class="frame${origOk ? ' cmp-on' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
+    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
       : `<div class="no-feed"><b>${esc(CAM)} leak recording not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
   }
 
@@ -267,6 +268,7 @@
     const fromX = (x) => { const r = fr.getBoundingClientRect(); set((x - r.left) / r.width * 100); };
     // Drag anywhere on the frame, not just the grip, so it is easy to hit at booth distance.
     fr.addEventListener('pointerdown', (e) => {
+      if (fr.classList.contains('pre')) return;
       fr.setPointerCapture(e.pointerId); fr.classList.add('dragging'); fromX(e.clientX);
       const move = (ev) => fromX(ev.clientX);
       const up = () => { fr.classList.remove('dragging'); fr.removeEventListener('pointermove', move); };
@@ -280,6 +282,15 @@
       if (to == null) return;
       e.preventDefault(); set(to);
     });
+  }
+
+  // At the alarm: the Atelic view slides in over the original, leaving the slider at the middle.
+  function revealCompare() {
+    const fr = $('frame');
+    if (!fr || !fr.classList.contains('pre')) return;
+    fr.classList.add('reveal');
+    fr.classList.remove('pre');
+    setTimeout(() => fr.classList.remove('reveal'), 1000);
   }
 
   // The Atelic output drives the timeline; the original follows it. Small drift is pulled in by nudging
@@ -408,6 +419,7 @@
     const seg = (t) => (m.segments || []).find((x) => x.start <= t && t < x.end);
     // After the alarm the recording keeps looping its post-alarm part, never back to quiet footage.
     v.addEventListener('ended', () => { v.currentTime = m.alert_t != null ? m.alert_t : 0; v.play().catch(() => {}); });
+    if (!liveRun) revealCompare();
     if (!liveRun && m.alert_t != null) {
       const seek = () => { v.currentTime = m.alert_t; };
       if (v.readyState >= 1) seek(); else v.addEventListener('loadedmetadata', seek, { once: true });
@@ -419,6 +431,7 @@
       for (let k = 0; k < m.samples.length && m.samples[k].t <= t + 1e-3; k++) i = k;
       const recent = m.samples.slice(Math.max(0, i - m.policy.window_samples + 1), i + 1).filter((x) => x.positive).length;
       const past = m.alert_t != null && t >= m.alert_t;
+      if (past) revealCompare();
       const text = past || raised ? '' : recent ? `Model: possible plume · ${recent} of ${m.policy.window_samples} recent samples` : 'Model watching';
       if (tag && !tag.classList.contains('ff') && text !== shown) {
         shown = text;

@@ -502,9 +502,14 @@ def overview_plume_image():
 # it, frame by frame) with the untouched original of the same frames for the slider. It plays from the start of
 # the monitored window; the alarm latches from the executed detector samples (3 of the last 5 positive).
 EVENTS = {
-    "INC-001": {"atelic": "ogi/inc001_mov1237_atelic.mp4", "original": "ogi/inc001_mov1237_original.mp4"},
-    "INC-002": {"atelic": "ogi/inc002_mov1239_atelic.mp4", "original": "ogi/inc002_mov1239_original.mp4"},
+    "INC-001": {"atelic": "ogi/inc001_mov1237_atelic.mp4", "original": "ogi/inc001_mov1237_original.mp4",
+                "quiet": "ogi/inc001_mov1237_quiet.mp4"},
+    "INC-002": {"atelic": "ogi/inc002_mov1239_atelic.mp4", "original": "ogi/inc002_mov1239_original.mp4",
+                "quiet": "ogi/inc002_mov1239_quiet.mp4"},
 }
+# "quiet": 60 s of the same camera's original infrared from the class-0 interval (5.3 g/h, below camera detection)
+# with no positive detector sample (MOV_1237 40-100 s, MOV_1239 20-80 s). The wall loops it until that incident's
+# alarm, so a camera never shows a detection before it has one.
 FPS = 15.0
 
 
@@ -620,7 +625,7 @@ def incident_clip(incident_id: str, request: Request):
 @app.get("/incidents/{incident_id}/clip/before")
 def incident_clip_before(incident_id: str, request: Request):
     slot_or_404(incident_id)
-    return serve_mp4(DATA_DIR / EVENTS[incident_id]["atelic"], request)  # one continuous recording per event
+    return serve_mp4(DATA_DIR / EVENTS[incident_id]["quiet"], request)
 
 
 @app.get("/incidents/{incident_id}/clip/original")
