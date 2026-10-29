@@ -543,7 +543,7 @@ def get_detections(incident_id: str):
     meta = {
         "status": "verified", "ogi_clip_id": mon["clip_id"], "origin": "METEC (GasVid)",
         "source_url": "https://purl.stanford.edu/gn716hm8958",
-        "recording_date": f.get("recorded_date") or "2017-07-13", "camera_type": "FLIR GF-320 (OGI)",
+        "recording_date": f.get("recorded_date") or "2017-07-13", "camera_type": "FLIR GF-320",
         "resolution": "640x480 (Atelic view, 2x) · 320x240 original", "frame_rate": FPS, "variable_frame_rate": False,
         "duration_s": EVENT_SECONDS, "license_status": "verified", "provenance": "model_estimated", "plume_rendering": "burned_in",
         "source_segment": {"start_seconds": round(EVENT_START, 3), "end_seconds": round(EVENT_START + EVENT_SECONDS, 3), "frames": [3207, 3281]},

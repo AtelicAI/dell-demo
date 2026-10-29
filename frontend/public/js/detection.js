@@ -67,12 +67,12 @@
 
     $('meta-body').innerHTML = `
       <div id="status-block"></div>
-      <div class="origin-line"><b>OGI footage: ${esc(window.AtelicShell.FACILITY.name)}</b>${origin}</div>
+      <div class="origin-line"><b>OGI camera: ${esc(meta.camera_type || 'Not recorded')}</b>${origin}</div>
       <div class="kv">
         <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
         ${heat ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
         ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
-        ${row('Source', `${CAM} · ${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
+        ${row('Source', `${CAM} · ${meta.camera_type ? `${meta.camera_type} · ` : ''}${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
         ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint') : ''}
         ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · 3 of 5 one-second samples positive`, 'model_estimated') : ''}

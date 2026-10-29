@@ -28,7 +28,7 @@
   })();
   let liveIncidents = null;
   // Fictional facility the local investigation is set at (no real operator or site).
-  const FACILITY = { name: 'Al Nakheel Gas Gathering Station', short: 'Al Nakheel GGS', location: 'Bahrain' };
+  const FACILITY = { name: 'XXX Gas Gathering Station', short: 'XXX GGS', location: 'Bahrain' };
 
   const STAGE_LABELS = {
     detect: 'Detect', locate: 'Locate', quantify: 'Quantify',
