@@ -2,61 +2,49 @@
   "_comment": "Fetched from the public Carbon Mapper API by scripts/fetch_carbon_mapper.py. Do not edit by hand; re-run the script.",
   "status": "verified",
   "provenance": "provider_reported",
-  "satellite_observation_id": "tan20260512t084612c49s4001-A",
+  "satellite_observation_id": "tan20251104t082038c10s4001-A",
   "provider": "Carbon Mapper",
   "gas": "CH4",
   "sector": "1B2",
   "sector_label": "Oil and gas",
-  "observed_at": "2026-05-12T08:46:12.490Z",
+  "observed_at": "2025-11-04T08:20:38.100Z",
   "coordinates": {
-    "lat": 26.061931582060396,
-    "lon": 50.53508453253613
+    "lat": 25.217947721179357,
+    "lon": 49.264037036495694
   },
   "instrument": "Tanager-1",
   "platform": "Planet Tanager 1",
-  "gsd_m": 40.22042616874805,
-  "scene_id": "075a1f42-25fd-49de-8950-7c64261bfc4d",
-  "rate_kg_h": 4257.8144881935505,
-  "uncertainty_kg_h": 818.1345998929861,
+  "gsd_m": 35.54883069867635,
+  "scene_id": "5b371eb2-773a-462a-ad1f-a183978bc30c",
+  "rate_kg_h": 1039.6929973595672,
+  "uncertainty_kg_h": 64.90006134465519,
   "plume_bounds": [
-    50.51658921498914,
-    26.040244382504582,
-    50.55087125845546,
-    26.07104226915858
+    49.24742428326557,
+    25.199791675685482,
+    49.281753340214394,
+    25.2308496250218
   ],
   "plume_image": "plume.png",
   "source": {
-    "name": "CH4_1B2_100m_50.53498_26.06190",
-    "rate_kg_h": 1416.092374801799,
-    "uncertainty_kg_h": 313.0164521675588,
-    "persistence": 0.21428571428571427,
-    "overpasses": 14,
-    "detections": 3,
-    "plumes": 3,
+    "name": "CH4_1B2_100m_49.26404_25.21795",
+    "rate_kg_h": 69.31286649063782,
+    "uncertainty_kg_h": 4.326670756310346,
+    "persistence": 0.06666666666666667,
+    "overpasses": 15,
+    "detections": 1,
+    "plumes": 1,
     "history": [
       {
-        "plume_id": "emi20230429t064505p04025-D",
-        "observed_at": "2023-04-29T06:45:05Z",
-        "rate_kg_h": 11409.872963108668,
-        "uncertainty_kg_h": 3339.182154939031
-      },
-      {
-        "plume_id": "tan20260315t083914c55s4001-A",
-        "observed_at": "2026-03-15T08:39:14.550000Z",
-        "rate_kg_h": 4157.605795922967,
-        "uncertainty_kg_h": 224.91357551380588
-      },
-      {
-        "plume_id": "tan20260512t084612c49s4001-A",
-        "observed_at": "2026-05-12T08:46:12.490000Z",
-        "rate_kg_h": 4257.8144881935505,
-        "uncertainty_kg_h": 818.1345998929861
+        "plume_id": "tan20251104t082038c10s4001-A",
+        "observed_at": "2025-11-04T08:20:38.100000Z",
+        "rate_kg_h": 1039.6929973595672,
+        "uncertainty_kg_h": 64.90006134465519
       }
     ]
   },
-  "source_url": "https://data.carbonmapper.org/?plume_id=tan20260512t084612c49s4001-A#13.64/26.06193/50.53508",
-  "api_url": "https://api.carbonmapper.org/api/v1/catalog/plume/tan20260512t084612c49s4001-A",
-  "fetched_at": "2026-10-29T08:53:37Z",
+  "source_url": "https://data.carbonmapper.org/?plume_id=tan20251104t082038c10s4001-A#13.64/25.21795/49.26404",
+  "api_url": "https://api.carbonmapper.org/api/v1/catalog/plume/tan20251104t082038c10s4001-A",
+  "fetched_at": "2026-10-29T15:35:14Z",
   "license": null,
   "license_status": "pending"
 }
