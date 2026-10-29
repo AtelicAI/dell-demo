@@ -216,16 +216,18 @@
           ${badge(mine ? prov : wallP)}</div>
       </div>`;
     }).join('');
-    // Same replay clock on every feed (the shell's incident clock), not each clip's own position,
-    // so the four cameras show one moment and the time keeps running across loops.
-    const tick = () => {
-      const now = window.AtelicShell.replayNow();
-      const txt = now ? window.AtelicShell.fmtUtc(now, true) : '--:--:--';
-      $('wall').querySelectorAll('.frame .tcx span').forEach((s) => { s.textContent = txt; });
-    };
-    tick();
-    setInterval(tick, 1000);
+    tickWall();
+    if (!wallTimer) wallTimer = setInterval(tickWall, 1000);
     $('wall-foot').textContent = `Recorded replays, looped · ${window.AtelicShell.FACILITY.name}, ${window.AtelicShell.FACILITY.location}`;
+  }
+
+  // Same replay clock on every feed (the shell's incident clock), not each clip's own position,
+  // so the four cameras show one moment and the time keeps running across loops.
+  let wallTimer = null;
+  function tickWall() {
+    const now = window.AtelicShell.replayNow();
+    const txt = now ? window.AtelicShell.fmtUtc(now, true) : '--:--:--';
+    $('wall').querySelectorAll('.frame .tcx span').forEach((s) => { s.textContent = txt; });
   }
 
   // An alert raised with no annotated recording behind it says so instead of "Watching".
@@ -303,9 +305,9 @@
   function syncRaw(t) {
     const raw = $('video-raw');
     if (!raw || raw.readyState < 2) return;
-    const diff = t - raw.currentTime;
-    if (Math.abs(diff) > 0.25) { raw.currentTime = t; raw.playbackRate = 1; return; }
-    raw.playbackRate = Math.max(0.9, Math.min(1.1, 1 + diff * 2));
+    const diff = t - raw.currentTime, base = video ? video.playbackRate : 1;
+    if (Math.abs(diff) > 0.25 * base) { raw.currentTime = t; raw.playbackRate = base; return; }
+    raw.playbackRate = base * Math.max(0.9, Math.min(1.1, 1 + diff * 2));
   }
 
   // ----- incident camera replay -----
@@ -359,7 +361,8 @@
       else if (fps) total = Math.max(1, Math.round(video.duration * fps));
       firstFrame = frames.length && fps ? Math.min(...frames.map((a) => a.frame)) : null;
       if (meta.plume_rendering !== 'burned_in') heatStep = window.PlumeHeat.create(video, $('heat'));
-      window.PlumeHeat.eachFrame(video, update);
+      const g = gen;
+      window.PlumeHeat.eachFrame(video, (t) => { if (g === gen) update(t); });
       update(video.currentTime);
     }, { once: true });
     video.addEventListener('error', () => {
@@ -384,15 +387,17 @@
     if (!idle.some((l) => l.incident_id === pick)) {
       pick = (idle.find((l) => l.incident_id === window.AtelicShell.INCIDENT_ID) || idle[0] || {}).incident_id || null;
     }
+    if (ffOn) { box.innerHTML = '<span class="ctl-note">Fast-forwarding to the alert…</span>'; return; }
+    const open = live.filter((l) => l.triggered && l.incident_id !== pick).map((l) => l.incident_id);
     box.innerHTML = `${idle.length > 1 ? '<span class="ctl-pick" id="trig-pick"></span>' : ''}${pick
-      ? `<button class="ctl" id="btn-trigger" type="button" title="Shortcut: T">Trigger ${esc(live.find((l) => l.incident_id === pick).camera_id)} event <kbd>T</kbd></button>` : ''}${mode === 'event' || live.some((l) => l.triggered)
+      ? `<button class="ctl" id="btn-trigger" type="button" title="${esc(open.length ? `Resets ${open.join(', ')} first (one incident at a time) · ` : '')}Shortcut: T">Trigger ${esc(live.find((l) => l.incident_id === pick).camera_id)} event <kbd>T</kbd></button>` : ''}${mode === 'event' || live.some((l) => l.triggered)
       ? '<button class="ctl" id="btn-reset" type="button" title="Back to normal operations: clears every incident\'s alert and results">Reset</button>' : ''}`;
     if (idle.length > 1) {
       window.AtelicShell.dropdown($('trig-pick'), {
         label: 'Camera to trigger', value: pick,
-        // Triggering another camera opens its incident; the option says so.
+        // Triggering another camera switches this screen to its incident; the option says so.
         options: idle.map((l) => ({ value: l.incident_id, label: l.camera_id,
-          sub: l.incident_id === window.AtelicShell.INCIDENT_ID ? `${l.incident_id} · this screen` : `opens ${l.incident_id}` })),
+          sub: l.incident_id === window.AtelicShell.INCIDENT_ID ? `${l.incident_id} · this screen` : `switches to ${l.incident_id}` })),
         onChange: (v) => { pick = v; renderControls(mode); },
       });
     }
@@ -401,22 +406,57 @@
     if (r) r.addEventListener('click', reset);
   }
 
-  // Trigger while the camera is quiet: cut from the quiet loop straight to the model alarm in the event recording, so
-  // the plume and the detection appear together; the alarm latches from the model's own samples and raises the
-  // incident (raise below). Otherwise raise directly.
-  let monitor = null, alerted = false;
-  function fastForward() {
-    const v = $('video');
-    if (!monitor || monitor.alert_t == null || !v || v.readyState < 1) return false;
-    if (v.currentTime < monitor.alert_t) v.currentTime = monitor.alert_t;
+  // Trigger plays the event to its alarm on this screen: fast-forward (recording and every clock running fast) up to
+  // shortly before the release shows on camera, then near real time while the fumes come out and the model's samples
+  // turn positive. The alarm latches from those samples (wireMonitor) and raises the incident; the mask slides in.
+  const FF_RATE = 8, CLOCK_WARP = 40;
+  let monitor = null, alerted = false, ffOn = false;
+  const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  const ready = (el) => new Promise((ok) => (el.readyState >= 1 ? ok() : el.addEventListener('loadedmetadata', ok, { once: true })));
+  const until = (cond, g) => new Promise((ok) => { const f = () => (g !== gen || cond() ? ok() : requestAnimationFrame(f)); f(); });
+
+  async function playToAlert() {
+    const g = gen, m = monitor, v = $('video'), raw = $('video-raw'), q = $('video-quiet'), tag = $('mon-tag');
+    if (!v || !m || m.alert_t == null) { raise(); return; }
+    ffOn = true;
+    renderControls('before');
+    const say = (text, cls) => { if (tag) { tag.textContent = text; tag.className = `mon-tag${cls ? ` ${cls}` : ''}`; } };
+    // First metered segment the camera can see (GasVid class 1+); slow down 2 s before it.
+    const seen = (m.segments || []).find((x) => x.rate_g_h >= 100 && x.end > 0);
+    const slowFrom = Math.max(0, (seen ? seen.start : 0) - 2);
+    const slowRate = Math.min(2, Math.max(1, (m.alert_t - slowFrom) / 7));
+    let warp = CLOCK_WARP, last = performance.now();
+    const clock = (now) => {
+      if (g !== gen || !ffOn) return;
+      window.AtelicShell.advanceReplay((now - last) * (warp - 1));
+      last = now;
+      tickWall();
+      requestAnimationFrame(clock);
+    };
+    requestAnimationFrame(clock);
+    say(`▶▶ Fast-forward ${FF_RATE}×`, 'ff');
+    await Promise.all([ready(v), raw ? ready(raw) : null]);
+    // Release already running when the window opens: let time pass on the quiet view first.
+    if (slowFrom === 0 && q) { q.playbackRate = FF_RATE; await wait(2500); }
+    if (g !== gen) return;
+    v.currentTime = 0;
+    if (raw) raw.currentTime = 0;
+    v.playbackRate = slowFrom > 0 ? FF_RATE : slowRate;
     v.play().catch(() => {});
-    const raw = $('video-raw');
-    if (raw) { raw.currentTime = monitor.alert_t; raw.play().catch(() => {}); }
-    const q = $('video-quiet');
+    if (raw) { raw.playbackRate = v.playbackRate; raw.play().catch(() => {}); }
     if (q) q.remove();
-    const tag = $('mon-tag');
-    if (tag) { tag.textContent = 'Model alert'; tag.className = 'mon-tag ff'; setTimeout(() => tag.classList.remove('ff'), 2500); }
-    return true;
+    if (slowFrom > 0) await until(() => v.currentTime >= slowFrom, g);
+    if (g !== gen) return;
+    warp = slowRate;
+    v.playbackRate = slowRate;
+    say('', '');  // the model's own sample count takes over (wireMonitor)
+    await until(() => v.currentTime >= m.alert_t || raised, g);
+    if (g !== gen) return;
+    v.playbackRate = 1;
+    ffOn = false;
+    say('Model alert', 'ff');
+    setTimeout(() => { if (tag) tag.classList.remove('ff'); }, 2500);
+    renderControls('event');
   }
 
   // Follows the recording: model status from the executed samples (causal: at or before the playhead), the metered
@@ -434,7 +474,9 @@
       if (v.readyState >= 1) seek(); else v.addEventListener('loadedmetadata', seek, { once: true });
     }
     let shown = '';
+    const run = gen;
     const step = () => {
+      if (run !== gen) return;
       const t = v.currentTime;
       let i = -1;
       for (let k = 0; k < m.samples.length && m.samples[k].t <= t + 1e-3; k++) i = k;
@@ -455,26 +497,35 @@
     requestAnimationFrame(step);
   }
 
+  // One incident at a time: any other raised incident is reset first. Another camera switches this screen to its
+  // incident in place (no page load), then its event plays to the alarm here.
   let triggering = false;
   async function trigger() {
-    if (triggering || !$('btn-trigger') || !pick) return;
-    if (pick === window.AtelicShell.INCIDENT_ID && !raised && fastForward()) return;
-    // Another camera: open its screen and fast-forward there, so its own model alarm raises its incident.
-    if (pick !== window.AtelicShell.INCIDENT_ID) { location.href = `${window.AtelicShell.incHref('detection', pick)}&ff=1`; return; }
-    raise();
+    if (ffOn || triggering || !$('btn-trigger') || !pick) return;
+    const target = pick, others = live.filter((l) => l.incident_id !== target && l.triggered);
+    ffOn = true;
+    renderControls('before');
+    try {
+      await Promise.all(others.map((l) => post(`/incidents/${l.incident_id}/reset`)));
+      const switching = target !== window.AtelicShell.INCIDENT_ID;
+      if (switching) await window.AtelicShell.setIncident(target);
+      else if (others.length) window.AtelicShell.refresh();
+      if (target !== window.AtelicShell.INCIDENT_ID) throw new Error('incident switch failed');
+      if (switching || others.length) await load();
+    } catch (e) {
+      console.error(e);
+      ffOn = false;
+      renderControls(raised ? 'event' : 'before');
+      return;
+    }
+    ffOn = false;
+    if (raised) return;
+    playToAlert();
   }
 
   async function raise() {
-    if (triggering || !pick) return;
+    if (triggering) return;
     triggering = true;
-    // Another camera's alert opens its own incident.
-    if (pick !== window.AtelicShell.INCIDENT_ID) {
-      try {
-        await post(`/incidents/${pick}/trigger`);
-        location.href = window.AtelicShell.incHref('detection', pick);
-      } catch (e) { console.error(e); triggering = false; }
-      return;
-    }
     try {
       await post(`/incidents/${window.AtelicShell.INCIDENT_ID}/trigger`);
       live = live.map((l) => (l.incident_id === window.AtelicShell.INCIDENT_ID ? { ...l, triggered: true } : l));
@@ -513,8 +564,10 @@
 
   async function reset() {
     // All live incidents together, so the next run starts from a quiet site.
+    if (ffOn) return;
     await Promise.all(live.map((l) => post(`/incidents/${l.incident_id}/reset`).catch((e) => console.error(e))));
-    location.reload();
+    await load();
+    window.AtelicShell.refresh();
   }
 
   async function post(path) {
@@ -535,10 +588,16 @@
     trigger();
   });
 
-  async function init() {
+  // Loads (or reloads, after a switch or reset) the current incident's camera screen from scratch.
+  let gen = 0;
+  async function load() {
+    const g = ++gen;
+    byFrame = new Map(); frame = -1; firstFrame = null; observedNow = null; total = 0; video = null;
+    heatStep = null; monitor = null; alerted = false; triggering = false; noDetectionNote = '';
     try {
       const [d, list] = await Promise.all([window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/detections`),
         window.AtelicShell.get('/incidents').catch(() => ({ live: [] }))]);
+      if (g !== gen) return;
       CAM = d.camera_id || CAM;
       raised = d.triggered;
       dismissal = d.dismissal || null;
@@ -564,12 +623,6 @@
       startEvent(d, frames, origOk);
       wireMonitor(d.monitor, before);
       renderControls(before ? 'before' : 'event');
-      // Arrived from another camera's Trigger: fast-forward this recording to its alarm.
-      if (before && new URLSearchParams(location.search).get('ff') === '1') {
-        history.replaceState(null, '', location.pathname + location.search.replace(/[?&]ff=1/, ''));
-        const v = $('video');
-        if (v && v.readyState >= 1) fastForward(); else if (v) v.addEventListener('loadedmetadata', fastForward, { once: true });
-      }
     } catch (e) {
       console.error(e);
       $('meta-badge').innerHTML = badge('pending');
@@ -578,5 +631,5 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', load);
 })();

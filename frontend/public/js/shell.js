@@ -18,7 +18,7 @@
   })();
   // Incident this tab is working on. The link decides (?inc=); without one, the last incident used in this
   // tab (sessionStorage, so two booth screens never change each other); else INC-001.
-  const INCIDENT_ID = (() => {
+  let INCIDENT_ID = (() => {
     const q = new URLSearchParams(location.search).get('inc'), ok = (v) => /^INC-\d{3}$/.test(v || '');
     try {
       if (ok(q)) { sessionStorage.setItem('atelic.incident', q); return q; }
@@ -373,9 +373,15 @@
     } catch (e) { /* storage blocked: clock restarts per page */ }
     return T0;
   }
-  const T0 = Date.now();
+  let T0 = Date.now();
   function replayNow() {
     return replayStart == null ? null : new Date(replayStart + (Date.now() - replayT0()));
+  }
+  // Move the replay clock forward (Camera's fast-forward): every clock on screen jumps with it.
+  function advanceReplay(ms) {
+    if (!(ms > 0)) return;
+    try { sessionStorage.setItem('atelic.replayT0', String(replayT0() - ms)); } catch (e) { T0 -= ms; }
+    sysPill();
   }
   const fmtUtc = (d, withDate) => `${withDate ? `${d.toISOString().slice(0, 10)} ` : ''}${d.toISOString().slice(11, 19)} UTC`;
   function tickReplay() {
@@ -815,8 +821,25 @@
     loadLive();
   }
 
+  // Switch this tab to another incident without reloading (Camera's Trigger): URL, rail links, labels, stepper, strip.
+  function setIncident(id) {
+    if (!/^INC-\d{3}$/.test(id) || id === INCIDENT_ID) return Promise.resolve();
+    INCIDENT_ID = id;
+    window.AtelicShell.INCIDENT_ID = id;
+    try { sessionStorage.setItem('atelic.incident', id); } catch (e) { /* ignore */ }
+    const q = new URLSearchParams(location.search);
+    q.set('inc', id); q.delete('sw'); q.delete('swp');
+    try { history.replaceState(null, '', `${location.pathname}?${q}`); } catch (e) { /* ignore */ }
+    Object.keys(replayStatus).forEach((k) => { delete replayStatus[k]; });
+    const bar = document.querySelector('.switch-bar');
+    if (bar) bar.remove();
+    renderRail(document.body.dataset.page);
+    document.querySelectorAll('[data-inc]').forEach((el) => { el.textContent = id; });
+    return refresh();
+  }
+
   window.AtelicShell = {
-    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink,
+    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, advanceReplay, setIncident, fmtUtc, traceLink,
     BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow, confirmSwitch,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the

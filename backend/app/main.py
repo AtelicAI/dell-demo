@@ -425,6 +425,11 @@ def post_trigger(incident_id: str):
     s = slot_or_404(incident_id)
     with _lock:
         if not s["engine_id"]:
+            # One incident at a time: raising this camera resets any other raised incident.
+            for other_id, o in list(SLOTS.items()):
+                if other_id != incident_id and o["engine_id"]:
+                    forget(o)
+                    SLOTS[other_id] = _blank(other_id)
             res = engine.post("/monitor/incidents", {"profile": s["profile"], "plan_mode": "model",
                                                      "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")}, human=True)
             s.update(engine_id=res["incident_id"], triggered_at=now_utc())
