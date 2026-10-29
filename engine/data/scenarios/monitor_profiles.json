@@ -16,7 +16,7 @@
     "scenario_id": "SCN-003",
     "incident_prefix": "INC-003-M",
     "origin_region_reference": "scenarios/detections.json#DET-003",
-    "mapping_basis": "Illustrative demonstration alignment: MOV_1239 from 525 s (GasVid class 2 by the 3-minute protocol, metered 713.1 g/h; class 3, 958.8 g/h, from 545 s) on the synthetic SCN-003 clock, wind readings missing from 600 s. The footage release is larger than the synthetic plant's 277.7 g/h; rates are not matched for this event. Different physical scene; not a shared capture time, calibration or source attribution.",
+    "mapping_basis": "Illustrative demonstration alignment: MOV_1239 from 525 s on the synthetic SCN-003 clock (clip 525 s = scenario 591 s). The plant releases what the footage shows: GasVid class 2 (713.1 g/h) from 600 s and class 3 (958.8 g/h) from 611 s (clip 545 s). The weather mast, sonic included, stops reporting at 600 s. Different physical scene; not a shared capture time, calibration or source attribution.",
     "camera_id": "CAM-02",
     "monitor_id": "MON-CAM-02",
     "clip_id": "MOV_1239",

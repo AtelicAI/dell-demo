@@ -14,14 +14,16 @@
     { q: 'wind_speed_m_s', name: 'Wind speed', unit: 'm/s', color: '--n-equip', digits: 2, h: 104 },
     { q: 'wind_dir_deg_from_north', name: 'Wind direction', unit: '° from north', color: '--n-wt', digits: 1, h: 104 },
     { q: 'pressure_bara', name: 'Process pressure', unit: 'bar absolute', color: '--n-station', digits: 3, h: 104 },
+    { q: 'obukhov_m', name: 'Stability (Obukhov length)', unit: 'm, sonic', color: '--violet', digits: 1, h: 104 },
   ];
+  const ROLE = { primary: 'Selected', cross_check: 'Cross-check', waiting: 'Waiting', not_needed: 'Not needed here', blocked: 'Cannot run', recommended: 'Would fit', pending: 'Pending' };
   const AXIS_H = 28;
   const MONO = 'IBM Plex Mono, monospace';
   const METHOD_LABEL = {};
   const hhmm = (t) => (t ? t.slice(11, 16) : '—');
   const hhmmss = (t) => (t ? t.slice(11, 19) : '—');
 
-  let S = null, Q = null, method = null, traces = null, qcChart = null, H = null, histChart = null, mChart = null, aChart = null;
+  let S = null, Q = null, traces = null, qcChart = null, H = null, histChart = null, aChart = null;
 
   // ----- result card -----
   function renderHero() {
@@ -36,13 +38,13 @@
     if (!r && Q.progress) {
       title.textContent = 'Quantify agent working';
       body.innerHTML = rateBlock('<div class="num none">…</div>', '') +
-        `<div class="hero-empty"><span class="ag-spin"></span> ${esc(Q.progress.text)}. The agent re-runs the fit every 10 s of replay until the plume is steady and the sensors can tell the candidate locations apart. No number is shown before that.</div>`;
+        `<div class="hero-empty"><span class="ag-spin"></span> ${esc(Q.progress.text)}. Every 10 s of replay the agent reads the case (wind, stability, sensors, camera), picks the tool built for it and tries again until that tool has a steady window. No number is shown before that.</div>`;
       return;
     }
     if (!r) {
       title.textContent = 'Emission rate not estimated yet';
       body.innerHTML = rateBlock('<div class="num none">—</div>', '') +
-        '<div class="hero-empty">No estimate has run for this incident. Choose an available method on the right and select <b>Run estimate</b>.</div>';
+        '<div class="hero-empty">No estimate yet. The quantify agent starts after Locate and picks its tool from the case.</div>';
       return;
     }
     if (r.rate_kg_ch4_h == null) {
@@ -53,9 +55,10 @@
     }
     title.textContent = 'Emission-rate estimate';
     $('res-badges').innerHTML = badge(r.provenance, `Produced by ${r.model_version}`);
-    const qc = r.qc || {};
+    const qc = r.qc || {}, cc = r.cross_check, cam = r.primary_tool === 'qogi';
+    const ccLine = cc ? `<div class="sub cc ${cc.agrees ? 'ok' : 'no'}">${esc(METHOD_LABEL.bls || 'bLs')} cross-check: ${cc.rate_kg_h.toFixed(2)} kg/h (${cc.ratio.toFixed(2)}× the plume model) · ${cc.agrees ? 'agrees' : 'disagrees'}</div>` : '';
     body.innerHTML = rateBlock(`<div class="num">≈ ${r.rate_kg_ch4_h.toFixed(2)}</div>`,
-      `<div class="unit">kg CH₄/h</div><div class="sub">${r.attempts ? `Frozen at replay ${r.as_of_seconds} s after ${r.attempts.length} agent attempts · ${qc.samples_used} readings` : `Median of ${qc.samples_used} per-sample estimates`}</div>`) + gauge(r);
+      `<div class="unit">kg CH₄/h · ${esc(METHOD_LABEL[r.primary_tool] || r.primary_tool)}</div><div class="sub">${r.attempts ? `Frozen at replay ${r.as_of_seconds} s after ${r.attempts.length} agent attempts · ${qc.samples_used} ${cam ? 'camera frames' : 'readings'}` : `Median of ${qc.samples_used} per-sample estimates`}</div>${ccLine}`) + gauge(r);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const b = body.querySelector('.band');
       if (b) b.classList.remove('pre');
@@ -63,15 +66,19 @@
 
     const w = r.data_window || {}, iv = r.interval;
     const f = (k, v, sub) => `<div class="f"><span class="lbl">${k}</span><div class="v">${v}${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+    const case_ = r.case || {};
     fields.innerHTML =
       f('Uncertainty interval', iv ? `${iv.low.toFixed(2)} – ${iv.high.toFixed(2)}` : 'Not computed', iv ? `kg/h · ${esc(iv.basis)}` : '') +
-      f('Method', esc(METHOD_LABEL[r.method] || r.method), `Source: ${esc(r.source_asset_id)} (hypothesis)`) +
-      f('Data window', `${hhmm(w.start_utc)}–${hhmm(w.end_utc)}`, `UTC · ${qc.samples_in_window} samples`) +
+      f('Tool chosen by the agent', esc(METHOD_LABEL[r.primary_tool] || r.primary_tool), `Source: ${esc(r.source_asset_id)} (hypothesis)`) +
+      f('Data window', `${hhmmss(w.start_utc)}–${hhmmss(w.end_utc)}`, cam ? `UTC · ${r.camera ? `clip ${r.camera.window_clip_seconds.join('–')} s` : ''}` : 'UTC · 60 s of sensor readings') +
       f('Model version', esc(r.model_version), esc(r.model_note || '')) +
-      f('Input quality', `${qc.samples_used} / ${qc.samples_in_window} used`, `${qc.samples_off_axis} off plume axis`) +
+      f('Case read by the agent', cam ? 'Weather mast down' : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} sensors`,
+        cam ? 'Camera sees the plume' : `${case_.camera_candidates} camera candidates · wind ${case_.wind_speed_m_s} m/s`) +
       f('Assumptions', `<a href="#assumptions-panel">${(r.assumptions || []).length} listed</a>`, 'Geometry is draft');
     fields.hidden = false;
   }
+
+  const bandName = (iv) => (/frame/.test(iv.basis) ? 'Frame-to-frame spread' : /sensitivity/.test(iv.basis) ? 'Assumption sensitivity' : 'P10–P90 interval');
 
   function gauge(r) {
     const rates = (r.samples || []).filter((s) => s.used).map((s) => s.rate_kg_ch4_h);
@@ -91,7 +98,7 @@
         <div class="med" style="left:${pct(r.rate_kg_ch4_h)}" title="Median ${r.rate_kg_ch4_h} kg/h"></div></div>
       <div class="g-legend">
         <span><i class="lm"></i>Median</span>
-        ${iv ? `<span><i class="lb"></i>${/sensitivity/.test(iv.basis) ? 'Assumption sensitivity' : 'P10–P90 interval'}</span>` : ''}
+        ${iv ? `<span><i class="lb"></i>${bandName(iv)}</span>` : ''}
         <span><i class="ld"></i>Per-sample estimate</span>
         ${ref ? `<span><i class="lr"></i>Reference release rate · ${ref.rate_kg_ch4_h} kg/h</span>` : ''}
       </div></div>`;
@@ -197,14 +204,8 @@
     const qc = r.qc;
     const row = (k, v) => `<div class="k">${esc(k)}</div><div class="v">${v}</div>`;
     $('qc').innerHTML = `<div class="qc-body">
-      <div class="kv">
-        ${row('Background', `${qc.background_ppm} ppm`)}
-        ${row('Background basis', esc(qc.background_basis))}
-        ${row('Window start rule', esc(qc.onset_rule))}
-        ${row('Exclusion rule', esc(qc.off_axis_rule || ''))}
-        ${row('Samples used / excluded', `${qc.samples_used} / ${qc.samples_off_axis}`)}
-      </div>
-      ${r.interval ? `<div class="qc-chart-h"><b>${r.attempts ? 'Agent attempts' : 'Per-sample estimates'}</b><span>kg CH₄/h · band = ${/sensitivity/.test(r.interval.basis) ? 'assumption sensitivity' : 'P10–P90'} · line = frozen estimate</span></div><div id="qc-chart"></div>` : ''}
+      <div class="kv">${(qc.rows || []).map(([k, v]) => row(k, esc(v))).join('')}</div>
+      ${r.interval ? `<div class="qc-chart-h"><b>${r.attempts ? 'Agent attempts' : 'Per-sample estimates'}</b><span>kg CH₄/h · band = ${bandName(r.interval).toLowerCase()} · line = frozen estimate</span></div><div id="qc-chart"></div>` : ''}
     </div>`;
     if (!r.interval) return;
     qcChart = echarts.init($('qc-chart'), null, { renderer: 'canvas' });
@@ -225,26 +226,32 @@
     });
   }
 
-  // ----- method + inputs -----
+  // ----- agent tools + inputs -----
+  // Every rate tool with the agent's decision for this incident; the button re-runs that choice at the frozen clock.
   function renderMethods() {
     const ms = (Q && Q.methods) || [];
     ms.forEach((m) => { METHOD_LABEL[m.id] = m.label; });
-    if (!method || !ms.some((m) => m.id === method && !m.missing.length)) {
-      method = (ms.find((m) => !m.missing.length) || {}).id || null;
-    }
-    $('methods').innerHTML = ms.map((m) => {
-      const off = m.missing.length > 0;
-      return `<label class="meth${off ? ' off' : ''}${m.id === method ? ' sel' : ''}">
-        <input type="radio" name="method" value="${esc(m.id)}"${m.id === method ? ' checked' : ''}${off ? ' disabled' : ''}>
-        <b>${esc(m.label)}</b><span class="nt">${esc(m.note)}</span>
-        ${off ? `<span class="why">Unavailable: ${m.missing.map(esc).join('; ')}</span>` : ''}
-      </label>`;
-    }).join('') || '<div class="note">No methods reported by the backend.</div>';
-    $('btn-run').disabled = !method;
-    $('btn-run').textContent = Q && Q.result ? 'Re-run estimate' : 'Run estimate';
+    const out = (m) => (m.output && m.output.rate_kg_h != null ? `<span class="t-out">${m.output.rate_kg_h.toFixed(3)} kg/h</span>` : '');
+    $('methods').innerHTML = ms.map((m) => `<div class="tool r-${esc(m.role)}">
+        <div class="t-head"><b>${esc(m.label)}</b><span class="t-role">${esc(ROLE[m.role] || m.role)}</span></div>
+        <span class="t-why">${esc(m.reason)}</span>${out(m)}
+      </div>`).join('') || '<div class="note">No tools reported by the backend.</div>';
+    const ran = Q && Q.result && Q.result.tools && Q.result.tools.length;
+    $('btn-run').disabled = !ran;
+    $('btn-run').textContent = "Re-run the agent's choice";
     const ready = Q && Q.result && Q.result.rate_kg_ch4_h != null;
-    $('next-note').textContent = ready ? 'Estimate ready for engineer review.' : 'Run an estimate first.';
-    $('btn-plan').setAttribute('aria-disabled', String(!ready));
+    $('next-note').textContent = ready ? 'Estimate ready for engineer review.' : Q && Q.progress ? 'The quantify agent is still working.' : 'No rate: the plan proceeds without one.';
+    $('btn-plan').setAttribute('aria-disabled', String(!ready && !(Q && Q.result)));
+    renderLog();
+  }
+
+  // What the agent did on each 10 s step of the replay clock: so the wait is visible, not a static refusal.
+  function renderLog() {
+    const r = Q && Q.result, att = (r && r.attempts) || [];
+    $('agent-log').innerHTML = att.length
+      ? `<ol class="alog">${att.map((a) => `<li class="${a.status === 'estimated' ? 'ok' : ''}"><span class="at">${hhmmss(a.t)}</span><span>${esc(a.text || a.status)}</span></li>`).join('')}</ol>`
+      : `<div class="pending-box">${Q && Q.progress ? esc(Q.progress.text) : 'Starts after Locate.'}</div>`;
+    $('log-meta').textContent = att.length ? `${att.length} steps` : '';
   }
 
   function renderInputs() {
@@ -254,6 +261,8 @@
     const items = [];
     if (so.methane_ppm) items.push(li(so.methane_ppm, 'Methane concentration', badge(prov)));
     if (so.wind_speed_m_s) items.push(li(so.wind_speed_m_s, 'Wind speed + direction', badge(prov)));
+    if (so.obukhov_m) items.push(li('MET-01 sonic', 'Turbulence u* + stability L', badge(prov)));
+    if (r && r.primary_tool === 'qogi') items.push(li(r.camera ? r.camera.camera_id : 'Camera', 'Radiometric frames + plume mask', badge(prov)));
     if (so.pressure_bara) items.push(li(so.pressure_bara, 'Pressure (context only)', badge(prov)));
     items.push(li('Geometry', 'Facility positions + heights', badge('synthetic', 'engine facility model (Neo4j)')));
     if (r && r.source_asset_id) items.push(li(r.source_asset_id, 'Assumed source', badge('hypothesis', 'Top Locate candidate, unconfirmed')));
@@ -292,7 +301,7 @@
     }, true);
   }
 
-  // Checks behind the number: the gates the pre-registered METEC tests showed are needed.
+  // Checks behind the number: the conditions the chosen tool needs.
   function renderConditions() {
     const c = Q && Q.conditions;
     $('cond-panel').hidden = !c;
@@ -300,42 +309,27 @@
     $('cond-meta').textContent = c.all_ok ? 'All checks pass' : `${c.rows.filter((x) => !x.ok).length} check(s) fail`;
     const r = Q.result;
     $('cond').innerHTML = `<p class="cond-sum">${r && r.rate_kg_ch4_h != null
-      ? (c.all_ok ? '<b>Rough estimate.</b> Every condition the real-data tests needed holds for this window.' : '<b>Treat with care.</b> Some conditions fail; the number is shown with them.')
+      ? (c.all_ok ? '<b>Within its conditions.</b> Every condition the chosen tool needs holds for this window.' : '<b>Treat with care.</b> Some conditions fail; the number is shown with them.')
       : '<b>Rate not estimated.</b> The checks below say why; no number is better than a wrong one.'}</p>
       <div class="cond">${c.rows.map((x) => `<div class="${x.ok ? 'ok' : 'no'}"><b>${esc(x.label)}</b><span>${esc(x.detail)}</span></div>`).join('')}</div>
       <p class="hist-note">${esc(c.note)}</p>`;
   }
 
-  // Which method produced the number, which ones were tested offline, and how they did on real METEC data.
+  // Which tool fits which case, and what the agent decided for this one.
   function renderCatalog() {
     const C = Q && Q.catalog;
     $('meth-panel').hidden = !C;
     if (!C) return;
-    $('meth-meta').textContent = 'Real METEC 2024 data · pre-registered tests';
-    const label = Object.fromEntries(C.methods.map((m) => [m.id, m.label]));
+    const mine = Object.fromEntries(((Q && Q.methods) || []).map((m) => [m.id, m]));
+    $('meth-meta').textContent = `${C.methods.length} tools · ${C.methods.filter((m) => m.connected).length} run on this edge box`;
     $('meth').innerHTML = `<p class="mhead"><b>${esc(C.headline)}</b></p>
-      <div class="mcards">${C.methods.map((m) => `<div class="mcard${m.in_demo ? ' live' : ''}">
-        <span class="st ${m.status}">${esc(m.status_label)}</span><h4>${esc(m.label)}</h4><p>${esc(m.how)}</p>
-        <ul>${m.needs.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></div>`).join('')}</div>
-      <details class="how"><summary>How the demo estimate works</summary>${HOW_SVG}</details>
-      <div class="mchart" id="m-chart"></div>
-      <p class="hist-note">${esc(C.metric)}. Hatched: development set, not locked in advance. ${C.tests.filter((t) => t.preregistered).map((t) => `${esc(t.label)}: ${esc(t.note)}.`).join(' ')}</p>
-      <ul class="mlessons">${C.lessons.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
-      <p class="hist-note">Source: ${esc(C.source)}</p>`;
-    const methods = ['gaussian_candidate_fit', 'gaussian_multisource', 'bls', 'mdlq'];
-    const colors = { gaussian_candidate_fit: css('--accent'), gaussian_multisource: css('--n-equip'), bls: css('--warn'), mdlq: css('--good') };
-    mChart = echarts.init($('m-chart'), null, { renderer: 'canvas' });
-    mChart.setOption({
-      animation: false, grid: { left: 40, right: 12, top: 34, bottom: 46 },
-      legend: { top: 0, textStyle: { fontSize: 10.5, color: css('--ink-mute') }, itemWidth: 12, itemHeight: 8 },
-      tooltip: { trigger: 'item', formatter: (p) => `${p.seriesName}<br>${p.name}: <b>${Math.round(p.value * 100)}%</b> within 2×` },
-      xAxis: { type: 'category', data: C.tests.map((t) => `${t.label}\n${t.units}`), axisLabel: { color: css('--ink-mute'), fontSize: 9.5, interval: 0, lineHeight: 13 }, axisTick: { show: false } },
-      yAxis: { type: 'value', min: 0, max: 1, axisLabel: { formatter: (v) => `${v * 100}%`, color: css('--ink-dim'), fontFamily: MONO, fontSize: 9.5 }, splitLine: { lineStyle: { color: css('--line') } } },
-      series: methods.map((m) => ({ name: label[m], type: 'bar', barMaxWidth: 16,
-        data: C.tests.map((t) => (t.results[m] ? { value: t.results[m].fac2, itemStyle: t.preregistered ? {} : { decal: { symbol: 'rect', dashArrayX: [1, 0], dashArrayY: [2, 3], rotation: -0.8, color: 'rgba(255,255,255,.55)' } } } : null)),
-        itemStyle: { color: colors[m] }, markLine: m === 'gaussian_candidate_fit' ? { silent: true, symbol: 'none', label: { formatter: 'pass bar', fontSize: 9.5, color: css('--ink-dim') }, lineStyle: { type: 'dashed', color: css('--ink-dim') }, data: [{ yAxis: 0.5 }] } : undefined })),
-      aria: { enabled: true, decal: { show: false } },
-    }, true);
+      <table class="tmatrix"><tr><th>Tool</th><th>Built for</th><th>Needs</th><th>This incident</th></tr>
+      ${C.methods.map((m) => { const d = mine[m.id] || {}; return `<tr class="r-${esc(d.role || 'pending')}">
+        <td><b>${esc(m.label)}</b><small>${esc(m.family)}</small></td><td>${esc(m.best_when)}</td>
+        <td>${m.needs.map(esc).join(' · ')}</td>
+        <td><span class="t-role">${esc(ROLE[d.role] || 'Pending')}</span> ${esc(d.reason || '')}</td></tr>`; }).join('')}</table>
+      <details class="how"><summary>How each connected tool works</summary>
+        ${C.methods.filter((m) => m.connected).map((m) => `<p><b>${esc(m.label)}.</b> ${esc(m.how)}</p>`).join('')}${HOW_SVG}</details>`;
   }
 
   // Sensors + wind -> one plume model per assumed location -> best fit gives the rate (static explainer).
@@ -389,12 +383,12 @@
     msg.className = 'run-msg'; msg.textContent = 'Running on the backend…';
     try {
       const r = await fetch(`${API}/incidents/${INCIDENT_ID}/quantify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'agent' }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error((body.detail && body.detail.failure) || body.detail || r.status);
       Q = body;
-      msg.textContent = `Estimate run at ${Q.result.run_at_utc.slice(11, 19)} UTC`;
+      msg.textContent = 'Re-ran the same tools at the frozen clock: same inputs, same result';
       renderAll();
       window.AtelicShell.refresh();
     } catch (e) {
@@ -403,10 +397,9 @@
     }
   }
 
-  $('methods').addEventListener('change', (e) => { method = e.target.value; renderMethods(); });
   $('btn-run').addEventListener('click', run);
   $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
-  window.addEventListener('resize', () => { [traces, qcChart, histChart, mChart, aChart].forEach((c) => c && c.resize()); });
+  window.addEventListener('resize', () => { [traces, qcChart, histChart, aChart].forEach((c) => c && c.resize()); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.
   new ResizeObserver(() => { if (qcChart) qcChart.resize(); }).observe($('qc'));
 

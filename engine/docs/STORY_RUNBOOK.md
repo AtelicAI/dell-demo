@@ -5,7 +5,8 @@ One incident, start to finish: a quiet camera, a leak whose real metered rate we
 ## Say this up front (keep it on screen)
 - The footage is recorded GasVid MOV_1242, a different physical scene from the plant. The camera-to-equipment mapping is illustrative.
 - The footage is a real METEC controlled release (13 July 2017, FLIR GF-320 at 4.6 m) with a published metered rate; the synthetic plant releases that same rate at XV-2104. Only the rate is matched, not the scene.
-- The plant, its sensors, its maintenance history, its 47-day sensor history and the "repair" are synthetic. The history's wind and background variability come from measured METEC 2024 data.
+- The site is an anonymous gas gathering station in open desert in Saudi Arabia's Eastern Province. The incident runs at night (20:00 UTC = 23:00 local); the footage was shot by day, which a thermal camera images the same way.
+- The plant, its sensors (including a sonic anemometer on the weather mast), its maintenance history, its 47-day sensor history and the "repair" are synthetic. The history's wind and background variability come from measured METEC 2024 data.
 - The agents run on hosted NVIDIA Nemotron (`nvidia/nemotron-3-ultra-550b-a55b`), not on Dell hardware.
 - Agents never approve, close, issue reports or touch equipment. Every one of those is an authenticated engineer.
 
@@ -17,9 +18,9 @@ One incident, start to finish: a quiet camera, a leak whose real metered rate we
 | 0 | Control | `no_leak` feed: a real 5.3 g/h metered release the camera cannot see; no alert, nothing can be opened | `GET /monitor/status?profile=no_leak` (`metered_release`) | – | as long as you like |
 | 1 | Calm | UI Camera: CAM-01 plays event 1 (GasVid MOV_1237, 6.9 m) as the Atelic render with the original-IR slider, from clip 175 s while the metered release is still below detection (5.3 g/h). CAM-03/04 loop class-0 footage. Press Trigger (T) to fast-forward to 6 s before the alarm | `GET /monitor/status` | – | up to 30 s |
 | 2 | Alert | The release steps to 277.7 g/h at 199 s; the detector alarm latches at 204.1 s (3 of the last 5 samples, scenario 606 s) and the UI raises INC-001 in place: the same recording keeps playing | `POST /monitor/incidents` | – | instant |
-| 2b | Event 2 (optional) | Trigger CAM-02: event 2 (MOV_1239, 12.6 m, release at 713 g/h) alarms at 538.6 s on the weather-station-outage scenario (SCN-003): Quantify ends rate unavailable, the plan proceeds without a rate. Footage rate is not matched to the plant for this event | `profile=wind_outage` | – | instant |
+| 2b | Event 2 (optional) | Trigger CAM-02: event 2 (MOV_1239, 12.6 m) alarms at 538.6 s on the weather-mast-outage scenario (SCN-003). The plant releases what the footage shows (713.1 g/h, then 958.8 g/h from clip 545 s). The mast stops reporting, so the quantify agent switches to camera quantification (QOGI), waits 80 s for a steady 90 s plume window and estimates ≈1.06 kg/h (answer key 958.8 g/h, +11%) | `profile=wind_outage` | – | instant |
 | 3 | Locate | XV-2104 and F-205 both mapped; neither confirmed | trace `locate` | deterministic | <1 s |
-| 4 | Quantify | `non_steady_plume`, then ≈0.26 kg/h at 670 s with pipe P-202 still possible; by 850 s only XV-2104 fits, 0.279 kg/h | trace `quantify` | physics | <1 s |
+| 4 | Quantify | The agent reads the case (5 sensors, 2 camera candidates, steady wind, stable night air from the sonic) and picks the Gaussian plume: `non_steady_plume`, then ≈0.25 kg/h with F-205 still possible; by 846 s only XV-2104 fits, 0.279 kg/h. One source left and stability measured, so it runs bLs as a cross-check: 0.314 kg/h (1.12×, agrees). The Quantify page lists all 7 tools with the agent's decision and reason for each | trace `quantify` (`primary_tool`, `tool_roles`, `cross_check`) | physics | ~6 s (bLs) |
 | 4b | History | 47 days of plant history: faint episodes at the load changes from 15 Sept, quiet for 10 days after the WO-009 re-torque, back from 6 Oct and growing | `GET /incidents/{id}/plant-history?include_series=true` | deterministic | 2 s |
 | 5 | Investigate | Findings: WO-009 "verified" but the WO-008 OGI re-survey never happened, and the history shows the episodes returned 10 days later; WO-012 hissing between the two candidates; F-205 torque record missing | trace `investigate` | Nemotron | see below |
 | 6 | Plan | Draft v1 with cited checks; waits for the engineer | trace `plan`, `submit` | Nemotron | see below |
@@ -30,7 +31,7 @@ One incident, start to finish: a quiet camera, a leak whose real metered rate we
 | 10 | Repair | Engineer records the field work done by the crew | `POST /incidents/{id}/repair` | engineer | instant |
 | 11 | Verify | Physics check: readings back to the pre-incident baseline; agent recommends closing | trace `verify` | physics + Nemotron | see below |
 | 12 | Close | Engineer closes; audit chain valid; the incident is written to the graph as memory for XV-2104 and F-205 | `POST /incidents/{id}/close` (`graph_memory`), `GET /assets/XV-2104/incident-memory` | engineer | instant |
-| 13 | Contrast | `wind_outage` feed: same footage, weather station down; no rate, and the plan says so | `POST /monitor/incidents` `profile=wind_outage` | – | one more investigate + plan |
+| 13 | Contrast | `wind_outage` feed: weather mast down; sensor tools cannot run, the agent switches to the camera and still gets a rate (≈1.06 kg/h) | `POST /monitor/incidents` `profile=wind_outage` | – | one more investigate + plan |
 
 Throughout, show `GET /incidents/{id}/orchestration` events as the Agent Activity drawer: every Nemotron turn and tool call appears as it happens, so the agent wait is something to watch, not dead air.
 

@@ -1,0 +1,9 @@
+{
+  "provenance": "simulated: the demo cameras are fixed GF-320-class OGI cameras streaming radiometric frames; GasVid MP4 grey levels stand in for apparent temperature",
+  "cameras": {
+    "CAM-01": {"radiometric_stream": true, "background_apparent_c": 9.5, "atmospheric_c": 24.5,
+               "reference_release": "Commissioning release, 277.7 g/h metered"},
+    "CAM-02": {"radiometric_stream": true, "background_apparent_c": 9.0, "atmospheric_c": 24.5,
+               "reference_release": "Commissioning release, 277.7 g/h metered, recorded by this camera"}
+  }
+}

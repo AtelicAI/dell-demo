@@ -864,7 +864,7 @@ def get_candidates(incident_id: str):
 # ----- Quantify -----
 
 def quant_result(s):
-    """The frozen estimate, or the last attempt while the agent waits for a steady plume."""
+    """The frozen estimate, or the last attempt while the agent waits for a usable window."""
     if not s["engine_id"]:
         return None
     rec, orch = record(s), orchestration(s)
@@ -873,36 +873,78 @@ def quant_result(s):
     if not q and not done:
         return None
     src = q or done["detail"]
+    tool = (q or {}).get("primary_tool") or src.get("primary_tool") or "gaussian_candidate_fit"
+    camera = next((t["output"] for t in (q or {}).get("tools", []) if t["id"] == "qogi" and t.get("output")), None)
     attempts = [e["detail"] for e in (orch or {}).get("events", []) if e["step"] == "quantify" and e["kind"] == "attempt"]
-    base = {"method": "gaussian_candidate_fit",
+    base = {"method": tool, "primary_tool": tool,
             "model_version": f"{(q or {}).get('method', 'nonnegative-gaussian-candidate-fit')} v{(q or {}).get('version', '1.0')}",
-            "model_note": "Engine: one Gaussian fit per assumed source location over all methane sensors and wind",
+            "model_note": TOOL_NOTE.get(tool, ""),
             "provenance": "model_estimated", "input_provenance": "synthetic",
             "source_asset_id": (q or {}).get("candidate_asset_id") or selected_asset(s),
             "run_at_utc": utc(done["recorded_at"]) if done else now_utc(),
             "attribution": src.get("telemetry_attribution"), "candidate_fits": (q or {}).get("candidate_fits", []),
+            "tools": (q or {}).get("tools", []), "case": (q or {}).get("case"), "cross_check": (q or {}).get("cross_check"),
+            "camera": camera,
             "attempts": [{"t": at_seconds(a["as_of_seconds"]), "as_of_seconds": a["as_of_seconds"], "status": a["status"],
-                          "reason": a.get("reason"), "rate_kg_ch4_h": a.get("rate_kg_h"), "attribution": a.get("attribution")} for a in attempts]}
+                          "reason": a.get("reason"), "rate_kg_ch4_h": a.get("rate_kg_h"), "attribution": a.get("attribution"),
+                          "tool": a.get("primary_tool"), "text": attempt_text(a)} for a in attempts]}
     rate = src.get("rate_kg_h")
     if rate is None:
         reason = src.get("reason")
-        return {**base, "rate_kg_ch4_h": None, "failure": "Emission rate unavailable: the agent did not get a usable window.",
-                "missing": [{"missing_wind_or_methane": "Wind or methane readings missing in the window (weather station outage)",
-                             "non_steady_plume": "Plume never became steady within the wait limit"}.get(reason, reason or "No usable window")]}
+        return {**base, "rate_kg_ch4_h": None, "failure": "Emission rate unavailable: no tool had a usable window.",
+                "missing": [RATE_REASON.get(reason, (reason or "No usable window").replace("_", " "))]}
     as_of = ((q or {}).get("clock") or {}).get("scenario_seconds") or src.get("as_of_seconds")
     sens = src.get("sensitivity_kg_h") or {}
     samples = [{"t": a["t"], "used": a["status"] == "estimated", "rate_kg_ch4_h": a["rate_kg_ch4_h"]} for a in base["attempts"] if a["t"] and a["rate_kg_ch4_h"] is not None]
     n_inputs = len((q or {}).get("input_ids", []))
+    basis = ("frame-to-frame spread over the camera window (25th–75th percentile), not a confidence interval" if tool == "qogi" else
+             f"assumption sensitivity (wind speed ±{sens.get('wind_speed_fraction', .2):.0%}, direction ±{sens.get('wind_direction_degrees', 10)}°), not a confidence interval")
+    steady = (q or {}).get("steady_state_check")
+    if tool == "qogi" and camera:
+        window = {"start_utc": at_seconds(as_of - 90), "end_utc": at_seconds(as_of)}
+        qc_rows = [("Frames used", f"{camera['frames_used']} of {camera['frames_in_window']} in the 90 s window"),
+                   ("Thermal contrast", f"{abs(camera['thermal_contrast_k']):.1f} K (background {camera['background_apparent_c']} °C, air {camera['atmospheric_c']} °C)"),
+                   ("Plume area · speed", f"{camera['median_plume_area_m2']} m² · {camera['median_plume_speed_m_s']} m/s (median)"),
+                   ("Distance · pixel", f"{camera['distance_m']} m · {camera['pixel_size_mm']} mm per pixel"),
+                   ("Calibration", camera["reference_release"])]
+    else:
+        window = {"start_utc": at_seconds(as_of - 60), "end_utc": at_seconds(as_of)} if as_of else None
+        qc_rows = [("Background", f"{round((q or {}).get('background_ppm') or 0, 2)} ppm, fitted with the rate"),
+                   ("Readings used", f"{n_inputs} in the 60 s window"),
+                   ("Fit residual", f"{(q or {}).get('residual_rms_ppm') or 0:.3f} ppm RMS"),
+                   ("Window rule", "Agent re-ran every 10 s of replay until the plume was steady and the location comparison decisive")]
+    if steady:
+        qc_rows.append(("Steady plume", f"early {steady['early_half_rate_kg_h']:.3f} vs late {steady['late_half_rate_kg_h']:.3f} kg/h (within 30%)"))
     return {**base, "rate_kg_ch4_h": round(rate, 3), "as_of_seconds": as_of,
-            "interval": {"low": round(sens["min"], 2), "high": round(sens["max"], 2),
-                         "basis": f"assumption sensitivity (wind speed ±{sens.get('wind_speed_fraction', .2):.0%}, direction ±{sens.get('wind_direction_degrees', 10)}°), not a confidence interval"} if sens else None,
-            "data_window": {"start_utc": at_seconds(as_of - 300), "end_utc": at_seconds(as_of)} if as_of else None,
-            "assumptions": (q or {}).get("assumptions", []), "samples": samples,
-            "qc": {"background_ppm": round((q or {}).get("background_ppm") or 0, 2), "background_basis": "Fitted with the rate (shared background)",
-                   "samples_in_window": n_inputs, "samples_used": n_inputs, "samples_off_axis": 0,
-                   "onset_rule": "Agent re-ran every 10 s of replay until the plume was steady and the location comparison decisive",
-                   "off_axis_rule": "Every assumed source location fitted; poor fits get no rate",
-                   "residual_rms_ppm": (q or {}).get("residual_rms_ppm"), "steady_state": (q or {}).get("steady_state_check")}}
+            "interval": {"low": round(sens["min"], 2), "high": round(sens["max"], 2), "basis": basis} if sens else None,
+            "data_window": window, "assumptions": (q or {}).get("assumptions", []), "samples": samples,
+            "qc": {"rows": qc_rows, "samples_used": camera["frames_used"] if tool == "qogi" and camera else n_inputs,
+                   "steady_state": steady}}
+
+
+TOOL_NOTE = {"gaussian_candidate_fit": "Plume model: one Gaussian fit per candidate location over every methane sensor and the measured wind",
+             "bls": "Particle model through the measured turbulence and stability",
+             "qogi": "Camera: plume mass from the radiometric frame × plume speed from the footage; no anemometer"}
+RATE_REASON = {"missing_wind_or_methane": "Weather mast down and no camera plume to measure",
+               "waiting_for_camera_window": "Weather mast down; the camera plume never held steady within the wait limit",
+               "non_steady_plume": "Plume never became steady within the wait limit"}
+
+
+def attempt_text(a):
+    """One line per agent attempt for the activity log."""
+    t, r = a.get("primary_tool"), a.get("reason")
+    label = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera (QOGI)", "bls": "bLs"}.get(t, t or "Gaussian plume")
+    if a["status"] == "estimated":
+        extra = ""
+        if a.get("cross_check"):
+            c = a["cross_check"]
+            extra = f"; bLs cross-check {c['rate_kg_h']:.3f} kg/h ({c['ratio']:.2f}×)"
+        att = a.get("attribution")
+        decided = "" if att in (None, "agrees_single", "not_assessed") else f", candidates {att.replace('_', ' ')}: keep going"
+        return f"{label}: {a['rate_kg_h']:.3f} kg/h{decided}{extra}"
+    if r == "waiting_for_camera_window":
+        return f"Weather mast not reporting: switched to {label}; waiting for 90 s of steady plume footage"
+    return f"{label}: {(r or a['status']).replace('_', ' ')}"
 
 
 def reveal(s):
@@ -926,50 +968,73 @@ def release_check(s):
 
 
 def quant_methods(s):
-    return [{"id": "gaussian_candidate_fit", "label": "Gaussian candidate fit", "note": "Engine · all methane sensors, every assumed location",
-             "missing": [] if record(s) else ["Waiting for the quantify agent" if s["engine_id"] else "No alert yet"]},
-            {"id": "pyelq", "label": "pyELQ source inversion", "note": "Backend service", "missing": ["pyELQ service not connected"]},
-            {"id": "experimental_setpoint", "label": "Metered release on camera (answer key)", "note": "GasVid metered rate for the footage",
-             "missing": [] if reveal(s) else ["Revealed only after the report is issued, so it cannot anchor the review"]}]
+    """Every rate tool with the agent's decision for this incident (or the catalog before it has run)."""
+    q = quant_result(s)
+    if q and q["tools"]:
+        return q["tools"]
+    catalog = quantification_methods()["methods"]
+    last = (q or {}).get("attempts") or []
+    roles = {}
+    if s["engine_id"]:
+        att = [e["detail"] for e in (orchestration(s) or {}).get("events", []) if e["step"] == "quantify" and e["kind"] == "attempt"]
+        roles = (att[-1].get("tool_roles") or {}) if att else {}
+    return [{"id": m["id"], "label": m["label"], "connected": m["connected"], "role": roles.get(m["id"], "pending"),
+             "reason": "Agent is reading the case" if last or roles else ("Waiting for the quantify agent" if s["engine_id"] else "No alert yet"),
+             "output": None} for m in catalog]
 
 
 def conditions(s, q):
     """When the rate can be trusted at all: the checks behind the estimate (or the refusal), from the frozen window."""
     if not q:
         return None
+    case = q.get("case") or {}
+    if q.get("primary_tool") == "qogi":
+        cam = q.get("camera") or {}
+        steady = cam.get("steady_state_check") or {}
+        rows = [
+            {"id": "mast", "label": "Weather mast", "ok": False, "detail": "Not reporting: wind and sonic readings missing, so sensor-based tools cannot run"},
+            {"id": "tracked", "label": "Plume tracked by the camera", "ok": cam.get("frames_used", 0) >= .5 * (cam.get("frames_in_window") or 1),
+             "detail": f"{cam.get('frames_used', 0)} of {cam.get('frames_in_window', 0)} frames carry the detector's plume mask"},
+            {"id": "contrast", "label": "Thermal contrast", "ok": abs(cam.get("thermal_contrast_k") or 0) >= 2,
+             "detail": f"{abs(cam.get('thermal_contrast_k') or 0):.1f} K between the background and the air (needs at least 2 K)"},
+            {"id": "steady", "label": "Plume steady", "ok": cam.get("status") == "estimated",
+             "detail": (f"Early and late halves agree: {steady['early_half_rate_kg_h']:.3f} vs {steady['late_half_rate_kg_h']:.3f} kg/h" if steady else "Not assessed")},
+            {"id": "geometry", "label": "Distance to the source", "ok": bool(cam.get("distance_m")),
+             "detail": f"{cam.get('distance_m', '—')} m from CAM-02 to XV-2104 (camera geometry)"},
+        ]
+        return {"rows": rows, "all_ok": all(r["ok"] for r in rows if r["id"] != "mast"),
+                "note": "With the mast down the agent quantifies from the camera alone; the sensors return when the mast does"}
     w = q.get("data_window") or {}
-    series = get_sensor_series(s["incident_id"]) if w else None
-    in_win = lambda pts: [v for t, v in pts if w.get("start_utc") and w["start_utc"] <= t <= w["end_utc"]]
-    speeds = in_win(series["series"]["wind_speed_m_s"]) if series else []
-    dirs = in_win(series["series"]["wind_dir_deg_from_north"]) if series else []
-    import math
-    spread = None
-    if dirs:
-        c, sn = sum(math.cos(math.radians(d)) for d in dirs) / len(dirs), sum(math.sin(math.radians(d)) for d in dirs) / len(dirs)
-        spread = math.degrees(math.sqrt(max(0.0, -2 * math.log(max(1e-9, math.hypot(c, sn))))))
     fits = q.get("candidate_fits") or []
     detected = max([f.get("detected_locations") or 0 for f in fits] or [0])
     steady = (q.get("qc") or {}).get("steady_state") or {}
     att = q.get("attribution") or {}
     end = w.get("end_utc")
-    local_hour = (int(end[11:13]) + 3) % 24 if end else None  # Bahrain, UTC+3
+    local = f"{(int(end[11:13]) + 3) % 24:02d}:{end[14:16]}" if end else None  # Saudi Arabia, UTC+3
+    sonic = case.get("sonic") or {}
+    cc = q.get("cross_check")
+    spread = case.get("wind_direction_spread_deg")
     rows = [
-        {"id": "wind", "label": "Steady wind", "ok": bool(speeds) and min(speeds) >= 1.0 and (spread or 0) <= 30,
-         "detail": (f"{sum(speeds) / len(speeds):.1f} m/s, direction spread {spread:.0f}° (needs at least 1 m/s, at most 30°)" if speeds
-                    else "No wind readings in the window: the weather station is down")},
+        {"id": "wind", "label": "Steady wind", "ok": bool(case.get("wind_steady")),
+         "detail": (f"{case.get('wind_speed_m_s')} m/s, direction spread {spread}° (needs at least 1 m/s, at most 30°)" if spread is not None
+                    else "No wind readings in the window: the weather mast is down")},
         {"id": "sensors", "label": "Sensors downwind with signal", "ok": detected >= 2,
          "detail": f"{detected} methane sensors above their detection limit" if fits else "Not assessed"},
         {"id": "steady", "label": "Plume steady", "ok": bool(steady) and abs((steady.get("late_half_rate_kg_h") or 0) - (steady.get("early_half_rate_kg_h") or 0))
                 <= (steady.get("max_relative_change") or 0.3) * max(steady.get("early_half_rate_kg_h") or 1e-9, 1e-9),
          "detail": (f"Early and late halves of the window agree: {steady['early_half_rate_kg_h']:.3f} vs {steady['late_half_rate_kg_h']:.3f} kg/h" if steady
                     else "Not assessed")},
-        {"id": "daytime", "label": "Daytime", "ok": local_hour is not None and 7 <= local_hour < 18,
-         "detail": f"{local_hour:02d}:{end[14:16]} local time (UTC+3)" if local_hour is not None else "Not assessed"},
+        {"id": "stability", "label": "Stability measured", "ok": bool(sonic.get("obukhov_m")),
+         "detail": (f"Sonic anemometer: {case.get('stability', '').replace('_', ' ')} air, L = {sonic['obukhov_m']:+.0f} m, u* = {sonic.get('ustar_m_s', 0):.2f} m/s"
+                    + (f" at {local} local time" if local else "") if sonic.get("obukhov_m") else "No sonic readings")},
         {"id": "attribution", "label": "Candidates told apart", "ok": att.get("status") == "agrees_single",
          "detail": (att.get("status") or "not assessed").replace("_", " ")},
     ]
+    if cc:
+        rows.append({"id": "cross_check", "label": "Second tool agrees", "ok": bool(cc.get("agrees")),
+                     "detail": f"bLs {cc['rate_kg_h']:.3f} kg/h vs Gaussian {cc['primary_rate_kg_h']:.3f} kg/h ({cc['ratio']:.2f}×; agreement means within 0.67–1.5×)"})
     return {"rows": rows, "all_ok": all(r["ok"] for r in rows),
-            "note": "Gates from the pre-registered METEC tests: estimates outside them were unreliable"}
+            "note": "Each tool runs only inside the conditions it was built for; outside them the agent changes tool or gives no number"}
 
 
 @app.get("/quantification/methods")
@@ -998,12 +1063,10 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
     s = slot_or_404(incident_id)
     if not s["engine_id"] or s["dismissal"]:
         raise HTTPException(status_code=409, detail="No open incident")
-    method = body.get("method", "gaussian_candidate_fit")
+    method = body.get("method", "agent")
     if method == "experimental_setpoint":
         if not reveal(s):
             raise HTTPException(status_code=409, detail={"failure": "Answer key locked", "missing": ["Revealed after the report is issued"]})
-    elif method != "gaussian_candidate_fit":
-        raise HTTPException(status_code=409, detail={"failure": "Method unavailable", "missing": ["pyELQ service not connected"]})
     else:
         rec = record(s)
         if not rec:
@@ -1012,7 +1075,7 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
         # Re-runs the engine calculation at the frozen clock; the frozen record never changes.
         res = engine.post(f"/incidents/{s['engine_id']}/quantify",
                           {"candidate_asset_id": snap["candidate_asset_id"], "as_of_seconds": snap["clock"]["scenario_seconds"]})
-        audit(s, "quantification_run", OPERATOR, f"Re-run at the frozen clock: {res['status']}"
+        audit(s, "quantification_run", OPERATOR, f"Re-ran the agent's tool choice ({res.get('primary_tool')}) at the frozen clock: {res['status']}"
               + (f", {res['rate_kg_h']:.3f} kg CH₄/h (model estimated)" if res.get("rate_kg_h") is not None else ""))
         save()
     return get_quantification(incident_id)
@@ -1037,15 +1100,16 @@ def get_sensor_series(incident_id: str):
     methane = {k: v for k, v in by.items() if var.get(k) == "methane"}
     peak = max(methane, key=lambda k: max(x[1] for x in methane[k])) if methane else None
     pick = lambda v: next((k for k in by if var.get(k) == v), None)
-    wind_s, wind_d = pick("wind_speed"), pick("wind_direction")
+    wind_s, wind_d, sonic_l = pick("wind_speed"), pick("wind_direction"), pick("obukhov_length")
     # Pressure at the suspect equipment (the K-201 load step shows there), else the first pressure sensor.
     src = rec["snapshot"]["candidate_asset_id"] if rec else "XV-2104"
     pres = next((x["id"] for x in fac["sensors"] if x["variable"] == "pressure" and x["asset_id"] == src and x["id"] in by), pick("pressure"))
     series = {"methane_ppm": methane.get(peak, []), "wind_speed_m_s": by.get(wind_s, []),
               "wind_dir_deg_from_north": by.get(wind_d, []),
-              "pressure_bara": [[t, v / 1e5 if v > 1000 else v] for t, v in by.get(pres, [])]}
+              "pressure_bara": [[t, v / 1e5 if v > 1000 else v] for t, v in by.get(pres, [])],
+              "obukhov_m": by.get(sonic_l, [])}
     times = [p[0] for p in series["methane_ppm"]]
-    return {"series": series, "sensor_of": {"methane_ppm": peak, "wind_speed_m_s": wind_s, "wind_dir_deg_from_north": wind_d, "pressure_bara": pres},
+    return {"series": series, "sensor_of": {"methane_ppm": peak, "wind_speed_m_s": wind_s, "wind_dir_deg_from_north": wind_d, "pressure_bara": pres, "obukhov_m": sonic_l},
             "methane_by_sensor": methane, "provenance": "simulated", "interval_label": f"{step} s samples",
             "source": [f"InfluxDB ({m.get('backend')})"],
             "site": {"replay_start_utc": times[0] if times else None, "replay_end_utc": times[-1] if times else None}}

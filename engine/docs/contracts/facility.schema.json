@@ -298,7 +298,10 @@
             "temperature",
             "flow",
             "wind_speed",
-            "wind_direction"
+            "wind_direction",
+            "friction_velocity",
+            "obukhov_length",
+            "sensible_heat_flux"
           ],
           "title": "Variable",
           "type": "string"

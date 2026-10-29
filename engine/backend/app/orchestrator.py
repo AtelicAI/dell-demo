@@ -23,7 +23,7 @@ router = APIRouter()
 STEPS = ('detect', 'locate', 'quantify', 'freeze', 'investigate', 'plan', 'submit')
 FOLLOW_UP_STEPS = ('answer', 'revise', 'submit', 'verify')
 # Physics refusals that can clear as the replay clock advances; anything else is final.
-RETRYABLE_RATE_REASONS = {'non_steady_plume', 'no_resolved_downwind_signal'}
+RETRYABLE_RATE_REASONS = {'non_steady_plume', 'no_resolved_downwind_signal', 'waiting_for_camera_window'}
 # An estimate is kept but the clock keeps advancing while the readings cannot yet separate the camera candidates.
 UNDECIDED_ATTRIBUTION = {'partly_agrees', 'agrees_ambiguous'}
 MODEL_ATTEMPTS = 2
@@ -189,7 +189,9 @@ class Orchestrator:
             attribution = result['telemetry_attribution']
             self.emit('quantify', 'attempt', as_of_seconds=seconds, status=result['status'],
                       rate_kg_h=result['rate_kg_h'], reason=result['reason'], method=result['method'],
-                      attribution=attribution['status'], best_fit_asset_id=attribution.get('best_fit_asset_id'))
+                      attribution=attribution['status'], best_fit_asset_id=attribution.get('best_fit_asset_id'),
+                      primary_tool=result.get('primary_tool'), tool_roles={t['id']: t['role'] for t in result.get('tools', [])},
+                      cross_check=result.get('cross_check'))
             if result['status'] == 'estimated':
                 estimate = (seconds, result)
                 if attribution['status'] not in UNDECIDED_ATTRIBUTION:
@@ -204,7 +206,8 @@ class Orchestrator:
             # A final refusal (e.g. wind lost) stands; an earlier window does not describe the current release.
             seconds, result = estimate
         return dict(as_of_seconds=seconds, status=result['status'], rate_kg_h=result['rate_kg_h'], reason=result['reason'],
-                    sensitivity_kg_h=result.get('sensitivity_kg_h'), telemetry_attribution=result['telemetry_attribution'])
+                    sensitivity_kg_h=result.get('sensitivity_kg_h'), telemetry_attribution=result['telemetry_attribution'],
+                    method=result['method'], primary_tool=result.get('primary_tool'), cross_check=result.get('cross_check'))
 
     def freeze(self, asset_id, seconds):
         body = self.routes.OpenWorkflow(candidate_asset_id=asset_id, as_of_seconds=seconds, idempotency_key='orch-open')

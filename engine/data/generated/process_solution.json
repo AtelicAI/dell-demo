@@ -105,12 +105,7 @@
       "outlet_mass_flow_kg_s": 0.5,
       "side_withdrawal_kg_s": 0.0
     },
-    "XV-105": {
-      "pressure_pa": null,
-      "temperature_k": null,
-      "status": "isolated_closed_branch"
-    },
-    "P-105": {
+    "VENT-01": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
@@ -120,12 +115,17 @@
       "temperature_k": null,
       "status": "isolated_closed_branch"
     },
-    "XV-2111": {
+    "P-105": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
     },
-    "VENT-01": {
+    "XV-105": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    },
+    "XV-2111": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
@@ -357,6 +357,27 @@
       "sensor_id": "MET-01-WD",
       "asset_id": "K-201",
       "unit": "deg_from_north",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-US",
+      "asset_id": "K-201",
+      "unit": "m/s",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-OL",
+      "asset_id": "K-201",
+      "unit": "m",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-HF",
+      "asset_id": "K-201",
+      "unit": "W/m2",
       "value": null,
       "status": "not_modeled"
     }

@@ -4,7 +4,7 @@
     "incident_id": "INC-001",
     "scenario_id": "SCN-001",
     "camera_id": "CAM-01",
-    "timestamp_utc": "2026-10-23T08:10:00Z",
+    "timestamp_utc": "2026-10-23T20:10:00Z",
     "clip_time_seconds": null,
     "mode": "synthetic_annotation_fixture",
     "origin_polygon": [
@@ -38,7 +38,7 @@
     "incident_id": "INC-003",
     "scenario_id": "SCN-003",
     "camera_id": "CAM-02",
-    "timestamp_utc": "2026-10-23T08:10:00Z",
+    "timestamp_utc": "2026-10-23T20:10:00Z",
     "clip_time_seconds": null,
     "mode": "synthetic_annotation_fixture",
     "origin_polygon": [

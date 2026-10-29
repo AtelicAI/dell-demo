@@ -6,6 +6,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"backend"))
 from app.contracts import Facility, DetectionEvent, Measurement, IncidentTransition, EvidenceReference, ReviewDecision
 from app.dispersion import concentration_ppm
 from app.process import solve_process
+from app.bls import ustar_from_wind
+SONIC_L,SONIC_Z0=10.,.03  # Obukhov length (m) and roughness (m): stable night layer, flat gravel pad
 ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/"data"
 
@@ -47,8 +49,11 @@ def generate():
     # class 0 (5.3 g/h, below camera detection) before onset, class 1 (277.7 g/h) from the alert onward.
     source_rate_kg_h=.2777
     weep_rate_kg_h=.0053
+    # SCN-003 (CAM-02, MOV_1239) releases what that footage shows: class 2 (713.1 g/h) at the alarm, class 3 (958.8 g/h)
+    # from clip 545 s = scenario 611 s (data/scenarios/monitor_profiles.json maps clip 525 s to scenario 591 s).
     def release_rate(scenario_id,seconds):
         if seconds>=1200:return 0.
+        if scenario_id=='SCN-003' and seconds>=600:return .9588 if seconds>=611 else .7131
         return source_rate_kg_h if scenario_id!='SCN-002' and seconds>=600 else weep_rate_kg_h
     leak_process=solve_process(f,{'withdrawals_kg_s':{source.id:source_rate_kg_h/3600}})
     leak_process_predictions={r['sensor_id']:r['value'] for r in leak_process['measurements']}
@@ -72,7 +77,8 @@ def generate():
         write(Path("maintenance.json"),maintenance)
     for i,title in enumerate(["Visual inspection","Engineering isolation review","Packing inspection review"],1):
         if not (DATA/f"documents/PROC-{i:03}.md").exists(): (DATA/f"documents/PROC-{i:03}.md").write_text(f"# PROC-{i:03}: {title}\n\nSynthetic example document. Not an operational procedure.\nRecord observations, verify equipment identity and obtain an authorized engineering review. No plant actuation is provided by this application.\n")
-    start=datetime(2026,10,23,8,0,tzinfo=timezone.utc)
+    # Night shift: 20:00 UTC is 23:00 at the site (Eastern Province, UTC+3). Clear desert night: stable surface layer.
+    start=datetime(2026,10,23,20,0,tzinfo=timezone.utc)
     scenarios=[dict(id=s,incident_id=i,start_utc=start.isoformat(),duration_seconds=1800,replay_limit_seconds=1199,seed=42,title=title) for s,i,title in [("SCN-001","INC-001","Representative methane observation"),("SCN-002","INC-002","Control: release below camera detection"),("SCN-003","INC-003","Ambiguous observation; wind unavailable")]]
     write(Path("scenarios/scenarios.json"),scenarios)
     event=dict(event_id="DET-001",incident_id="INC-001",scenario_id="SCN-001",camera_id="CAM-01",timestamp_utc=(start+timedelta(seconds=600)).isoformat(),clip_time_seconds=None,mode="synthetic_annotation_fixture",origin_polygon=[[.51,.50],[.64,.50],[.64,.65],[.51,.65]],confidence=None,provenance=dict(source_kind="simulated",source_dataset="atelic-synthetic-fixture",generator_version="1.0",reference="scenarios/detections.json#DET-001"))
@@ -82,8 +88,9 @@ def generate():
     log_path=DATA/'operations/load_changes.json'
     if log_path.exists():
         log=json.loads(log_path.read_text())
-        log['events']=[e for e in log['events'] if e['id']!='LC-20261023-0809']+[dict(id='LC-20261023-0809',asset_id='K-201',
-            time_utc=(start+timedelta(seconds=load_step_seconds)).isoformat(),kind='load_step',load_before_percent=100,load_after_percent=110,
+        at=start+timedelta(seconds=load_step_seconds)
+        log['events']=[e for e in log['events'] if e['kind']!='load_step']+[dict(id=f"LC-{at:%Y%m%d-%H%M}",asset_id='K-201',
+            time_utc=at.isoformat(),kind='load_step',load_before_percent=100,load_after_percent=110,
             duration_minutes=1,note='Discharge pressure set-point raised (compressor pressure ratio 1.8 -> 2.0)')]
         log_path.write_text(json.dumps(log,indent=1)+'\n')
     if not (DATA/"video_manifest.json").exists(): write(Path("video_manifest.json"),dict(status="unavailable",file=None,fps=None,rights="unverified",source="No recorded footage installed",mapping="Synthetic annotation fixture, not GasVid or model inference"))
@@ -91,12 +98,17 @@ def generate():
     out=DATA/"generated";out.mkdir(exist_ok=True)
     with (out/"measurements.jsonl").open('w') as output, (DATA/'ground_truth/clean_concentrations.jsonl').open('w') as clean_output:
         for scenario in scenarios:
+            sonic_rng=random.Random(scenario['seed']+7)
             rng=random.Random(scenario['seed']); previous={s.id:2. for s in f.sensors if s.variable=='methane'}
             drift_rng=random.Random(scenario['seed']+988)
             drift={s.id:0. for s in f.sensors if s.variable=='methane'}
             for t in range(1801):
                 speed=2.5+.15*math.sin(t/180)
                 direction=270+6*math.sin(t/240)
+                # Sonic anemometer on the mast (3 m): stable night layer over the gravel pad, consistent with the mean wind.
+                obukhov=SONIC_L*(1+.15*math.sin(t/300))*math.exp(sonic_rng.gauss(0,.05))
+                ustar=ustar_from_wind(speed,3.,SONIC_Z0,obukhov)*(1+sonic_rng.gauss(0,.03))
+                heat_flux=-1.18*1005*ustar**3*297.65/(.4*9.81*obukhov)
                 for sensor in f.sensors:
                     qc='good'; value=0.
                     if sensor.variable=='methane':
@@ -113,16 +125,19 @@ def generate():
                         if t%179==0 and t>0:qc='missing';value=None
                     elif sensor.variable=='wind_speed':value=speed
                     elif sensor.variable=='wind_direction':value=direction
+                    elif sensor.variable=='friction_velocity':value=ustar
+                    elif sensor.variable=='obukhov_length':value=obukhov
+                    elif sensor.variable=='sensible_heat_flux':value=heat_flux
                     elif sensor.variable in ('pressure','temperature','flow'):
                         # Same source mass as dispersion; steady states, not a transient solver.
                         predictions=process_state(scenario['id'],t)
                         prediction=predictions[sensor.id]
                         if prediction is None:qc='missing';value=None
                         else:value=prediction+rng.gauss(0,sensor.uncertainty)
-                    if scenario['id']=='SCN-003' and sensor.variable.startswith('wind') and t>=600:qc='missing';value=None
-                    row=Measurement(observation_id=f"{scenario['id']}:{sensor.id}:{t}",timestamp_utc=start+timedelta(seconds=t),scenario_id=scenario['id'],sensor_id=sensor.id,asset_id=sensor.asset_id,value=round(value,5) if value is not None else None,unit=sensor.unit,quality_flag=qc,generator_version='gaussian-process-2')
+                    if scenario['id']=='SCN-003' and sensor.id.startswith('MET-') and t>=600:qc='missing';value=None
+                    row=Measurement(observation_id=f"{scenario['id']}:{sensor.id}:{t}",timestamp_utc=start+timedelta(seconds=t),scenario_id=scenario['id'],sensor_id=sensor.id,asset_id=sensor.asset_id,value=round(value,5) if value is not None else None,unit=sensor.unit,quality_flag=qc,generator_version='gaussian-process-3')
                     output.write(row.model_dump_json()+"\n")
-    write(Path("provenance.json"),dict(facility="simulated",telemetry="simulated; Gaussian forward + solved steady process baseline",detector="synthetic_annotation_fixture",video="recorded GasVid metadata ready; annotations pending; independent scene",runtime="local development; Dell deployment not verified",physics="idealized Gaussian open-terrain forward model, not validated skid CFD",recovery="post-1200s counterfactual validation only; not served by interactive replay"))
+    write(Path("provenance.json"),dict(facility="simulated",telemetry="simulated; Gaussian forward + solved steady process baseline; sonic turbulence consistent with the mean wind",detector="synthetic_annotation_fixture",video="recorded GasVid metadata ready; annotations pending; independent scene",runtime="local development; Dell deployment not verified",physics="idealized Gaussian open-terrain forward model, not validated skid CFD",recovery="post-1200s counterfactual validation only; not served by interactive replay"))
     for name,model in [("facility",Facility),("detection_event",DetectionEvent),("measurement",Measurement),("incident_transition",IncidentTransition),("evidence_reference",EvidenceReference),("review_decision",ReviewDecision)]:
         p=ROOT/f"docs/contracts/{name}.schema.json";p.parent.mkdir(exist_ok=True);p.write_text(json.dumps(model.model_json_schema(),indent=2)+"\n")
     # Static engineering schematic is derived from the same canonical geometry.

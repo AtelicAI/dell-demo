@@ -29,7 +29,7 @@
   let liveIncidents = null;
   // Fictional facility the local investigation is set at (no real operator or site).
   // The site stays anonymous: a generic description, never a station name.
-  const FACILITY = { name: 'Gas gathering station', short: 'Gas gathering station', location: 'Bahrain' };
+  const FACILITY = { name: 'Gas gathering station', short: 'Gas gathering station', location: 'Eastern Province, Saudi Arabia' };
 
   const STAGE_LABELS = {
     detect: 'Detect', locate: 'Locate', quantify: 'Quantify',

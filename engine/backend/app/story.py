@@ -30,10 +30,12 @@ def reveal(incident_id: str):
     facts = monitor.footage(cfg) if cfg else None
     scenario = main.scenario_for(incident_id)
     event = next(iter(main.event_at(incident_id, scenario['replay_limit_seconds'])), None)
-    segment = monitor.segment_at(event.clip_time_seconds, facts) if facts and event and event.clip_time_seconds is not None else None
+    q = record['snapshot']['quantification']
+    # A camera estimate is checked against the release in the footage window it measured, not the alarm moment.
+    clip_at = (q.get('camera_window_clip_seconds') or [None, None])[1] or (event.clip_time_seconds if event else None)
+    segment = monitor.segment_at(clip_at, facts) if facts and clip_at is not None else None
     if segment is None:
         raise HTTPException(404, 'No metered release is published for the footage behind this incident')
-    q = record['snapshot']['quantification']
     attribution = q.get('telemetry_attribution', {})
     estimate = q['rate_kg_h'] * 1000 if q.get('rate_kg_h') is not None else None
     metered = segment['metered_rate_g_h']

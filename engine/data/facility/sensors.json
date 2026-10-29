@@ -193,5 +193,50 @@
     "uncertainty": 0.1,
     "detection_limit": 0.0,
     "lag_seconds": 0.0
+  },
+  {
+    "id": "MET-01-US",
+    "asset_id": "K-201",
+    "variable": "friction_velocity",
+    "unit": "m/s",
+    "position": [
+      12.0,
+      6.0,
+      3.0
+    ],
+    "sample_interval_seconds": 1,
+    "uncertainty": 0.01,
+    "detection_limit": 0,
+    "lag_seconds": 0
+  },
+  {
+    "id": "MET-01-OL",
+    "asset_id": "K-201",
+    "variable": "obukhov_length",
+    "unit": "m",
+    "position": [
+      12.0,
+      6.0,
+      3.0
+    ],
+    "sample_interval_seconds": 1,
+    "uncertainty": 1.0,
+    "detection_limit": 0,
+    "lag_seconds": 0
+  },
+  {
+    "id": "MET-01-HF",
+    "asset_id": "K-201",
+    "variable": "sensible_heat_flux",
+    "unit": "W/m2",
+    "position": [
+      12.0,
+      6.0,
+      3.0
+    ],
+    "sample_interval_seconds": 1,
+    "uncertainty": 2.0,
+    "detection_limit": 0,
+    "lag_seconds": 0
   }
 ]

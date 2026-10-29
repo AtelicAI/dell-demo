@@ -13,6 +13,7 @@ from .investigation import (Investigator, Provider, ModelUnavailable, ToolDenied
                             deterministic_draft, deterministic_findings, deterministic_answer, deterministic_verification)
 from .process import solve_process
 from .quantification import quantify, compare_candidates
+from . import rate_tools
 from .retrieval import Documents, RetrievalUnavailable
 from .video import get_video_manifest, lookup_clip, resolve_video_path, get_annotations
 from .workflow import WorkflowStore, WorkflowError, canonical, report_pdf
@@ -66,6 +67,12 @@ def selected_calculation(incident_id, body):
     result = quantify(m.app.state.facility, history["measurements"], body.candidate_asset_id,
                       history["clock"]["source_timestamp_utc"])
     result["telemetry_attribution"] = compare_candidates(result, {c["asset_id"] for c in local["candidates"]})
+    # The quantify agent reads the case and picks the rate tool; the Gaussian fit above is one of its tools.
+    clock = history["clock"]
+    mapping = clock.get("video_clock_mapping") if isinstance(clock.get("video_clock_mapping"), dict) else {}
+    result = rate_tools.run(m.app.state.facility, history["measurements"], clock["source_timestamp_utc"], result,
+                            result["telemetry_attribution"], local["candidates"], (local.get("event") or {}).get("camera_id"),
+                            mapping.get("clip_id"), clock.get("video_timestamp_seconds"), body.candidate_asset_id)
     result.update(incident_id=incident_id, scenario_id=m.scenario_for(incident_id)["id"],
                   clock=history["clock"], origin_type="derived_from_simulated_measurements",
                   historian=history["backend"], independent_validation="not_completed")
