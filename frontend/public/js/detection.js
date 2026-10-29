@@ -402,8 +402,8 @@
   }
 
   // Trigger plays the event to its alarm on this screen: fast-forward (recording and every clock running fast) up to
-  // shortly before the release shows on camera, then near real time while the fumes come out and the model's samples
-  // turn positive. The alarm latches from those samples (wireMonitor) and raises the incident; the mask slides in.
+  // shortly before the release shows on camera, then near real time in the Atelic view while the fumes come out and the
+  // model's samples turn positive. The alarm latches from those samples (wireMonitor) and raises the incident; the mask slides in.
   const FF_RATE = 8, CLOCK_WARP = 40;
   let monitor = null, alerted = false, ffOn = false;
   const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
@@ -444,6 +444,10 @@
     if (g !== gen) return;
     warp = slowRate;
     v.playbackRate = slowRate;
+    // Near real time the Atelic view takes the whole frame, so the plume colours in as the model tracks it; at the
+    // alarm the slider slides in from the left with the original infrared (revealCompare).
+    const fr = $('frame');
+    if (fr) fr.classList.add('live-det');
     say('', '');  // the model's own sample count takes over (wireMonitor)
     await until(() => v.currentTime >= m.alert_t || raised, g);
     if (g !== gen) return;
