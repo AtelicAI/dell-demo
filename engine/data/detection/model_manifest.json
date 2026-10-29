@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "status": "pretrained_models_executed_locally_research_diagnostic",
+  "model": {
+    "method": "langgas-inspired-owlv2-sam2-v1",
+    "implementation_sha256": "f18960fa70305ef3abafb2b147c657a563c9a5d91b21d0bc1fa37425721dbd9d",
+    "min_alert_mask_pixels": 4,
+    "owl": {
+      "id": "google/owlv2-base-patch16-ensemble",
+      "revision": "cfd3195ba4ea9592eec887ded089f4c08eff231d",
+      "license": "Apache-2.0",
+      "weights_sha256": "e1e130b9e404cf91a75ad45644c1da9d7fa5284085eecc864266a6923efb99e7",
+      "weights_bytes": 619918824
+    },
+    "sam": {
+      "id": "facebook/sam2.1-hiera-small",
+      "revision": "ee5bba1d82bb8749febdf90f45e84b687142ba03",
+      "license": "Apache-2.0",
+      "weights_sha256": "0a4067b11ce1e23d5229203f11c718a823060d15a4b23fa2372a7d4b77cbbc60",
+      "weights_bytes": 184305280
+    },
+    "device": "mps",
+    "hardware": "local workstation; not Dell/NVIDIA deployment",
+    "pretrained": true,
+    "training_performed": false,
+    "threshold": 0.12,
+    "threshold_source": "fixed LangGas SimGas reference default; not fitted to evaluation recordings",
+    "temporal_filter": true,
+    "model_load_seconds": 3.3949152499990305,
+    "versions": {
+      "torch": "2.12.0",
+      "transformers": "5.8.1",
+      "opencv": "4.10.0"
+    },
+    "differences_from_upstream": [
+      "float32 local inference, no CUDA/bitsandbytes requirement",
+      "Hugging Face SAM2 implementation and causal positive-box matching",
+      "bounded prompt boxes; raw masks saved before visual labels",
+      "sample interval and temporal context recorded per run; not a claimed paper reproduction"
+    ],
+    "limitations": [
+      "Not a methane-specific trained detector or calibrated gas classifier",
+      "A visual plume candidate cannot establish gas identity, exact equipment or kg/h",
+      "Masks are predictions, not annotation ground truth"
+    ]
+  },
+  "langgas_reference_commit": "648a55283653c60085517e111570fc8fc6e9997b",
+  "reference_repository": "https://github.com/weathon/Lang-Gas",
+  "reference_code_executed": false,
+  "independent_GasVid_accuracy": null,
+  "full_SimGas_access": "gated; not acquired",
+  "supervised_training_performed": false,
+  "default_GasVid_threshold": 0.06,
+  "default_SimGas_diagnostic_threshold": 0.12,
+  "demo_run_id": "gasvid-reference-threshold-001",
+  "diagnostic_run_id": "simgas-diagnostic-002"
+}

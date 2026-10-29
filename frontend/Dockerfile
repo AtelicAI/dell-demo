@@ -1,5 +1,6 @@
-FROM nginx:alpine
+FROM caddy:2.8.4-alpine
 
-COPY public /usr/share/nginx/html
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY public /srv
 
-EXPOSE 80
+EXPOSE 80 443

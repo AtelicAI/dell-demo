@@ -9,7 +9,8 @@
   const { BADGE, badge } = window.AtelicShell;
   const KIND = {
     candidates: 'Locate', candidate_evidence: 'Locate', procedure: 'Procedure', maintenance: 'Maintenance record',
-    detection: 'Camera', quantification: 'Estimate',
+    detection: 'Camera', quantification: 'Estimate', field_report: 'Field report', commitment: 'Commitment', history: 'Plant history',
+    operations: 'Operations log', sensor: 'Telemetry', source: 'Source',
   };
   const SCREEN = { 'locate.html': 'Locate', 'quantify.html': 'Quantify', 'detection.html': 'Camera' };
   // Footnotes are numbered in reading order: summary first, then the document.
@@ -71,14 +72,15 @@
       const a = d.fields.asset;
       const big = a ? esc(d.assessment).replace(esc(a), `<em>${esc(a)}</em>`) : esc(d.assessment);
       $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">${big}</p>
-        <p class="sub" title="${esc(W.generator.id)} ${esc(W.generator.version)}">Assembled by a fixed template from ${d.evidence.length} sources. No language model was used.</p>
+        <p class="sub" title="${esc(W.generator.id)} ${esc(W.generator.version)}">${W.generator.kind === 'llm'
+          ? `Drafted by <b>${esc(W.generator.label)}</b> from the investigation findings, citing ${d.evidence.length} sources. Advisory only.`
+          : `${esc(W.generator.note)} ${d.evidence.length} sources.`}</p>
         <div class="gb-row">${window.AtelicShell.traceLink('work_order', 'See how this draft was made')}</div>`;
     } else {
-      $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">No response drafted yet</p>
-        <p class="sub">${esc(W.generator.note)}${W.nvidia_inference === 'not_connected' ? ' NVIDIA inference not connected in this run.' : ''}</p>
-        <div class="cta">${W.can_draft
-          ? '<button class="btn primary" id="btn-draft">Draft work order</button>'
-          : `<span class="run-msg err">Cannot draft: ${W.missing.map(esc).join('; ')}</span>`}
+      const busy = W.agent && W.agent.status === 'running', failed = W.agent && W.agent.failed;
+      $('assess').innerHTML = `<span class="lbl">Assessment</span><p class="big">${busy ? 'Agents are drafting the response' : 'No response drafted yet'}</p>
+        <p class="sub">${busy ? `${esc(W.agent.text)}. The Nemotron planner drafts the work order after the investigation.` : W.missing.length ? esc(W.missing.join('; ')) : esc(W.generator.note)}</p>
+        <div class="cta">${failed ? '<button class="btn primary" id="btn-draft">Restart agents</button>' : ''}
           <span class="run-msg" id="draft-msg" role="status" aria-live="polite"></span></div>`;
     }
     $('facts').innerHTML = (W.inputs || []).map((f) => {
@@ -151,12 +153,12 @@
     $('stamp').className = `stamp${approved ? ' ok' : sub ? ' sub' : onThis ? (rej ? ' rej' : ' chg') : ''}`;
     $('tools').hidden = approved;
     const latest = W.versions[W.versions.length - 1];
-    $('doc-meta').innerHTML = `<span title="sha256 ${esc(d.hash)}"><b>v${d.version}</b></span><span title="${esc(latest.author)}">${esc(latest.author === `${W.generator.id} ${W.generator.version}` ? 'Fixed template' : latest.author)}</span><span>${hhmmss(latest.created_at)}</span>`;
+    $('doc-meta').innerHTML = `<span title="sha256 ${esc(d.hash)}"><b>v${d.version}</b></span><span title="${esc(latest.author)}">${esc(latest.author)}</span><span>${hhmmss(latest.created_at)}</span>${d.revision_of ? '<span>revised after review</span>' : ''}`;
     $('btn-edit').textContent = editing ? 'Save as new version' : 'Edit fields';
     $('btn-edit').classList.toggle('primary', editing);
     $('btn-edit').classList.toggle('ghost', !editing);
     $('btn-cancel').hidden = !editing;
-    $('btn-regen').hidden = editing;
+    $('btn-regen').hidden = true;  // the planner revises through Request changes on Approve
     body.innerHTML = `
       ${back && !approved ? returnedCard(back, onThis, d.version, sub) : ''}
       ${W.stale && !approved ? '<div class="banner">The emission estimate changed after this draft was made.<button class="btn sm" data-regen>Regenerate draft</button></div>' : ''}
@@ -180,10 +182,11 @@
           <td>${esc(v.changed.map((c) => c.replace(/_/g, ' ')).join(', '))}</td><td class="m">${hhmmss(v.created_at)}</td></tr>`).join('')}</table></div>
       </details>
       <details class="fold">
-        <summary>Agent trace<span class="meta">No agent run</span></summary>
-        <div class="fold-body">No agent or model call was made for this draft. It was assembled by
-          <b>${esc(W.generator.id)} ${esc(W.generator.version)}</b> from the cited sources.
-          ${W.nvidia_inference === 'not_connected' ? '<br>NVIDIA inference not connected in this run.' : ''}
+        <summary>Agent trace<span class="meta">${(W.agent_activity || []).length ? `${W.agent_activity.length} calls` : 'No agent run'}</span></summary>
+        <div class="fold-body">${(W.agent_activity || []).length
+          ? `<b>${esc(W.generator.label)}</b> made these calls for this draft (read-only tools over the frozen evidence):<table class="vers">${W.agent_activity.map((a) =>
+            `<tr><td class="m">${esc(a.tool)}</td><td>${esc(a.status || '')}</td><td class="m">${a.elapsed_ms != null ? `${Math.round(a.elapsed_ms)} ms` : ''}</td><td>${esc(a.model ? a.model.split('/').pop() : '')}</td></tr>`).join('')}</table>`
+          : `${esc(W.generator.note)}`}
           <br>${window.AtelicShell.traceLink('work_order', 'Open this step in the Glass box')}</div>
       </details>`;
   }
@@ -262,7 +265,16 @@
     btn.disabled = editing || !p || !!rv;
   }
 
-  function renderAll() { lineIx = 0; if (W && W.draft) indexEvidence(W.draft); renderBrief(); renderDoc(); renderEvidence(); renderReady(); }
+  function renderStory() {
+    const S = window.AtelicStory;
+    $('agent-banner').innerHTML = W ? S.agentBanner(W.agent, { restart: true }) : '';
+    $('inv-panel').hidden = !(W && W.investigation);
+    if (W && W.investigation) {
+      $('investigation').innerHTML = S.investigation(W.investigation);
+      $('inv-meta').textContent = `${W.investigation.findings.length} findings`;
+    }
+  }
+  function renderAll() { lineIx = 0; if (W && W.draft) indexEvidence(W.draft); renderStory(); renderBrief(); renderDoc(); renderEvidence(); renderReady(); }
 
   async function act(fn, msgId) {
     const show = (t, err) => { const m = $(msgId || 'doc-msg'); if (m) { m.hidden = !t; m.textContent = t; m.classList.toggle('err', !!err); } };
@@ -327,7 +339,7 @@
     if (!t) return;
     if (t.matches('.fn')) { hidePop(); select(t.dataset.ev, 'doc'); return; }
     if (t.matches('.it')) { select(t.dataset.item, 'rail'); return; }
-    if (t.id === 'btn-draft') { if (await act(() => post('/draft'), 'draft-msg')) reveal(); return; }
+    if (t.id === 'btn-draft' || t.matches('[data-ag-restart]')) { if (await act(() => post('/draft'), 'draft-msg')) reveal(); return; }
     if (t.matches('[data-regen]') || t.id === 'btn-regen') { regenerate(); return; }
     if (t.dataset.prio) {
       if (editing) { editPriority = t.dataset.prio; t.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === t))); return; }
@@ -369,9 +381,21 @@
       'Submit for engineer review', () => act(() => post('/submit', { version: d.version })));
   });
 
+  // While the agents work (or a revision is coming), keep the page live; stop once nothing is running.
+  const busy = (w) => w && w.agent && w.agent.status === 'running';
+  async function load() {
+    const before = W && W.versions.length;
+    const next = await get(`/incidents/${INCIDENT_ID}/work-order`);
+    if (editing) return next;
+    W = next;
+    renderAll();
+    if (before !== undefined && W.versions.length !== before) { reveal(); window.AtelicShell.refresh(); }
+    return W;
+  }
   async function init() {
     try { W = await get(`/incidents/${INCIDENT_ID}/work-order`); } catch (e) { console.error(e); W = null; }
     renderAll();
+    if (W) window.AtelicStory.poll(load, busy, 4000);
   }
   init();
 })();

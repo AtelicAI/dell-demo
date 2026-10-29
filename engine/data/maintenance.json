@@ -1,0 +1,259 @@
+[
+  {
+    "id": "WO-001",
+    "asset_id": "XV-2104",
+    "date": "2026-06-12",
+    "work_type": "LDAR survey",
+    "issue": "Annual optical gas imaging survey of compressor discharge area",
+    "finding": "No visible hydrocarbon indication at XV-2104 stem, bonnet or body joints",
+    "action": "Recorded survey result; no repair required",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "PROC-001",
+    "related_work_orders": [],
+    "commitments": [],
+    "field_report_id": "FR-001"
+  },
+  {
+    "id": "WO-002",
+    "asset_id": "K-201",
+    "date": "2026-07-02",
+    "work_type": "Condition monitoring",
+    "issue": "Rod packing vent flow trending upward on compressor K-201",
+    "finding": "Packing vent flow within OEM allowable range but 40% above last quarter",
+    "action": "Repack deferred to next planned outage; trend added to weekly rounds",
+    "status": "deferred",
+    "follow_up": "Repack rod packing at next outage",
+    "origin_type": "simulated",
+    "document_id": "MAN-K-201",
+    "related_work_orders": [],
+    "commitments": [
+      {
+        "id": "WO-002-C1",
+        "text": "Repack K-201 rod packing at next planned outage",
+        "status": "deferred",
+        "fulfilled_by": null
+      }
+    ],
+    "field_report_id": null
+  },
+  {
+    "id": "WO-003",
+    "asset_id": "V-101",
+    "date": "2026-07-15",
+    "work_type": "Corrective",
+    "issue": "Inlet separator level gauge glass discoloured",
+    "finding": "Gauge glass replaced; isolation valves verified closed and reopened",
+    "action": "Replaced gauge glass and gaskets; leak-checked with soap solution, no bubbles",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "PROC-002",
+    "related_work_orders": [],
+    "commitments": [],
+    "field_report_id": null
+  },
+  {
+    "id": "WO-004",
+    "asset_id": "F-205",
+    "date": "2026-08-19",
+    "work_type": "Corrective",
+    "issue": "Discharge flange gasket replacement after hydrostatic test",
+    "finding": "Spiral-wound gasket replaced; final bolt torque verification sheet not attached to work order",
+    "action": "Closed with exception pending torque record from contractor",
+    "status": "closed_with_exception",
+    "follow_up": "Obtain or repeat bolt torque verification per DS-F-205",
+    "origin_type": "simulated",
+    "document_id": "DS-F-205",
+    "related_work_orders": [],
+    "commitments": [
+      {
+        "id": "WO-004-C1",
+        "text": "Obtain or repeat F-205 bolt torque verification per DS-F-205",
+        "status": "open",
+        "fulfilled_by": null
+      }
+    ],
+    "field_report_id": "FR-004"
+  },
+  {
+    "id": "WO-005",
+    "asset_id": "XV-2105",
+    "date": "2026-08-27",
+    "work_type": "Inspection",
+    "issue": "Vent valve seat passing test",
+    "finding": "Minor seat passing from discharge header toward VENT-01 detected by acoustic test",
+    "action": "Seat lapping planned; valve kept closed and tagged for monitoring",
+    "status": "open",
+    "follow_up": "Seat lapping at next isolation window",
+    "origin_type": "simulated",
+    "document_id": "PROC-003",
+    "related_work_orders": [],
+    "commitments": [
+      {
+        "id": "WO-005-C1",
+        "text": "Lap XV-2105 seat at next isolation window",
+        "status": "open",
+        "fulfilled_by": null
+      }
+    ],
+    "field_report_id": null
+  },
+  {
+    "id": "WO-006",
+    "asset_id": "K-201",
+    "date": "2026-09-04",
+    "work_type": "Corrective",
+    "issue": "Compressor high vibration alarm",
+    "finding": "Coupling alignment slightly out of tolerance; bearings in good condition",
+    "action": "Realigned coupling; vibration returned to normal band",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "MAN-K-201",
+    "related_work_orders": [
+      {
+        "work_order_id": "WO-002",
+        "relation": "SAME_EQUIPMENT_AS"
+      }
+    ],
+    "commitments": [],
+    "field_report_id": "FR-006"
+  },
+  {
+    "id": "WO-007",
+    "asset_id": "XV-2110",
+    "date": "2026-09-10",
+    "work_type": "Preventive",
+    "issue": "Export isolation valve actuator stroke test",
+    "finding": "Full stroke in 9 s, within specification; no external leakage observed",
+    "action": "Recorded stroke test result",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "PROC-001",
+    "related_work_orders": [],
+    "commitments": [],
+    "field_report_id": null
+  },
+  {
+    "id": "WO-008",
+    "asset_id": "XV-2104",
+    "date": "2026-09-18",
+    "work_type": "LDAR survey",
+    "issue": "Quarterly optical gas imaging survey of compressor discharge area",
+    "finding": "Intermittent faint indication near XV-2104 stem packing; not reproduced on re-shoot 10 minutes later",
+    "action": "Raised follow-up to re-torque gland follower and re-survey",
+    "status": "open",
+    "follow_up": "Re-torque gland follower per DS-XV-2104 and repeat OGI survey",
+    "origin_type": "simulated",
+    "document_id": "PROC-003",
+    "related_work_orders": [
+      {
+        "work_order_id": "WO-001",
+        "relation": "REPEATS_SURVEY_OF"
+      }
+    ],
+    "commitments": [
+      {
+        "id": "WO-008-C1",
+        "text": "Re-torque XV-2104 gland follower per DS-XV-2104",
+        "status": "done",
+        "fulfilled_by": "WO-009"
+      },
+      {
+        "id": "WO-008-C2",
+        "text": "Repeat OGI survey of XV-2104 during a load change",
+        "status": "not_done",
+        "fulfilled_by": null
+      }
+    ],
+    "field_report_id": "FR-008"
+  },
+  {
+    "id": "WO-009",
+    "asset_id": "XV-2104",
+    "date": "2026-09-26",
+    "work_type": "Corrective",
+    "issue": "Gland follower re-torque following WO-008 indication",
+    "finding": "Gland nuts re-torqued to datasheet value; post-work soap test showed no bubbles",
+    "action": "Recorded as repaired and verified; OGI re-survey from WO-008 not performed",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "DS-XV-2104",
+    "related_work_orders": [
+      {
+        "work_order_id": "WO-008",
+        "relation": "FOLLOWS_UP"
+      }
+    ],
+    "commitments": [],
+    "field_report_id": "FR-009"
+  },
+  {
+    "id": "WO-010",
+    "asset_id": "P-201",
+    "date": "2026-10-02",
+    "work_type": "Inspection",
+    "issue": "Ultrasonic wall-thickness survey of compressor discharge piping",
+    "finding": "Wall thickness within corrosion allowance at all monitoring points",
+    "action": "Recorded thickness readings",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "PID-001",
+    "related_work_orders": [],
+    "commitments": [],
+    "field_report_id": "FR-010"
+  },
+  {
+    "id": "WO-011",
+    "asset_id": "VENT-01",
+    "date": "2026-10-08",
+    "work_type": "Preventive",
+    "issue": "Vent stack flame arrestor inspection",
+    "finding": "Flame arrestor element clean; no blockage",
+    "action": "Element cleaned and reinstalled",
+    "status": "closed",
+    "follow_up": null,
+    "origin_type": "simulated",
+    "document_id": "PID-001",
+    "related_work_orders": [],
+    "commitments": [],
+    "field_report_id": null
+  },
+  {
+    "id": "WO-012",
+    "asset_id": "XV-2104",
+    "date": "2026-10-14",
+    "work_type": "Operator round",
+    "issue": "Hissing heard near compressor discharge valve area during load change",
+    "finding": "Location not pinpointed between XV-2104 and F-205; no gas detector alarm at the time",
+    "action": "Logged for engineering review; no field work performed",
+    "status": "open",
+    "follow_up": "Engineering review against WO-004 and WO-009 records",
+    "origin_type": "simulated",
+    "document_id": "PROC-001",
+    "related_work_orders": [
+      {
+        "work_order_id": "WO-004",
+        "relation": "REVIEWS"
+      },
+      {
+        "work_order_id": "WO-009",
+        "relation": "REVIEWS"
+      }
+    ],
+    "commitments": [
+      {
+        "id": "WO-012-C1",
+        "text": "Engineering review of the hissing report against WO-004 and WO-009",
+        "status": "open",
+        "fulfilled_by": null
+      }
+    ],
+    "field_report_id": "FR-012"
+  }
+]

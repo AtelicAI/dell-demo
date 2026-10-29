@@ -1,0 +1,6 @@
+# AWS host override: Caddy serves the public hostname on 80/443 with automatic HTTPS.
+services:
+  web:
+    ports: !override
+      - "80:80"
+      - "443:443"

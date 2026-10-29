@@ -3,7 +3,14 @@
 // Everything is rendered from backend state; nothing is hard-coded.
 // A page opts in with <body data-page="overview"> and empty #rail / #topbar / #incident-strip / #stepper.
 (function () {
-  const API = `${location.protocol}//${location.hostname}:8000`;
+  // The UI API sits behind the same origin at /api (nginx/Caddy proxy). Local dev without a proxy: ?api=http://host:port once.
+  const API = (() => {
+    try {
+      const q = new URLSearchParams(location.search).get('api');
+      if (q) sessionStorage.setItem('atelic.api', q);
+      return sessionStorage.getItem('atelic.api') || '/api';
+    } catch (e) { return '/api'; }
+  })();
   // Incident this tab is working on. The link decides (?inc=); without one, the last incident used in this
   // tab (sessionStorage, so two booth screens never change each other); else INC-001.
   const INCIDENT_ID = (() => {
@@ -20,14 +27,14 @@
 
   const STAGE_LABELS = {
     detect: 'Detect', locate: 'Locate', quantify: 'Quantify',
-    plan: 'Plan', approve: 'Approve', report: 'Report',
+    plan: 'Plan', approve: 'Approve', report: 'Report', close: 'Close',
   };
   const STATUS_LABELS = {
     not_started: 'Not started', in_progress: 'In progress',
     ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked', not_needed: 'Not needed',
   };
   // Stage → rail page, so stepper boxes can link to their screen.
-  const STAGE_PAGE = { detect: 'detection', locate: 'locate', quantify: 'quantify', plan: 'plan', approve: 'review', report: 'report' };
+  const STAGE_PAGE = { detect: 'detection', locate: 'locate', quantify: 'quantify', plan: 'plan', approve: 'review', report: 'report', close: 'report' };
   const DELL_LABELS = { running: 'Running', target_deployment: 'Target deployment' };
   const NVIDIA_LABELS = { local_nim: 'Local NIM', hosted_api: 'Hosted API', not_connected: 'Not connected' };
   // Partner roles for the Dell / NVIDIA pills. Status lines come from /status; nothing here claims a live connection.
@@ -41,9 +48,9 @@
     },
     nvidia: {
       title: 'NVIDIA AI stack',
-      role: 'Planned components:',
+      role: 'Components:',
       parts: [
-        ['NIM · Nemotron', 'drafts work orders and answers questions'],
+        ['Nemotron 3 Ultra', 'investigates, drafts and revises work orders, answers questions, verifies repairs (NVIDIA hosted endpoint in this demo)'],
         ['Speech NIM', 'Arabic and English voice'],
         ['NeMo Retriever', 'finds the right plant documents'],
         ['NeMo Guardrails', 'blocks unsafe or out-of-scope actions'],
@@ -51,7 +58,7 @@
       ],
       status: (s) => s.nvidia_inference === 'local_nim' ? ['ok', 'Local NIM: inference runs on the edge server.']
         : s.nvidia_inference === 'hosted_api' ? ['ok', 'Hosted API: inference runs on NVIDIA-hosted endpoints.']
-        : ['off', 'Not connected. No NVIDIA model is in use yet; the Plan draft comes from a fixed template.'],
+        : ['off', 'Not connected. No NVIDIA model is in use; the engine falls back to a labelled template.'],
     },
   };
 
@@ -191,6 +198,12 @@
     review_approve: { page: 'report', kind: 'good', title: (e) => `Work order v${e.version} approved` },
     incident_dismissed: { page: 'incidents', kind: 'good', title: () => 'Closed as a false alarm' },
     incident_reopened: { page: 'detection', kind: 'warn', title: () => 'Reopened after a false-alarm close' },
+    agent_investigation: { page: 'plan', kind: 'good', title: () => 'Investigation agent reported findings' },
+    draft_version: { page: 'plan', kind: 'warn', title: (e) => `Work order v${e.version} drafted`, only: (e) => !String(e.actor).startsWith('Operator') },
+    agent_answer: { page: 'review', kind: 'good', title: () => 'Agent answered your question' },
+    report_issued: { page: 'report', kind: 'good', title: () => 'Final report issued' },
+    agent_verification: { page: 'report', kind: 'warn', title: (e) => e.detail },
+    incident_closed: { page: 'report', kind: 'good', title: () => 'Incident closed and written to the knowledge graph' },
   };
   const SEVERITY = { good: 1, warn: 2, bad: 3 };
   const noteKey = (e) => `${e.incident_id}:${e.seq}@${e.at}`;
@@ -215,7 +228,7 @@
   async function loadNotes() {
     let events;
     try { events = (await get('/audit')).events; } catch (e) { return; }
-    noteEvents = events.filter((e) => NOTE[e.event]);
+    noteEvents = events.filter((e) => NOTE[e.event] && (!NOTE[e.event].only || NOTE[e.event].only(e)));
     const here = document.body.dataset.page;
     if (noteKnown === null) {
       // First load on this page: no toasts; what targets this screen is being looked at now.
@@ -502,7 +515,7 @@
     observed: 'Observed', provider_reported: 'Provider reported', experimental_setpoint: 'Experimental setpoint',
     model_estimated: 'Model estimated', simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
     hypothesis: 'Hypothesis', approved: 'Approved', pending: 'Pending', gap: 'Gap',
-    human_decision: 'Human decision', system: 'System status',
+    human_decision: 'Human decision', system: 'System status', agent_drafted: 'Agent drafted',
   };
   const escAttr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function badge(p, title) {

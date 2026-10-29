@@ -1,0 +1,23 @@
+{
+  "version": "assumed-skid-1",
+  "provenance": "Assumed synthetic skid inputs; not calibrated GasLib data",
+  "inlet_asset_id": "V-101",
+  "compressor_asset_id": "K-201",
+  "outlet_asset_id": "P-203",
+  "closed_line_ids": ["L-VENT"],
+  "mass_flow_kg_s": 0.5,
+  "withdrawals_kg_s": {},
+  "inlet_pressure_pa": 700000,
+  "compressor_pressure_ratio": 1.8,
+  "inlet_temperature_k": 293.15,
+  "aftercooler_temperature_k": 303.15,
+  "isentropic_efficiency": 0.75,
+  "heat_capacity_ratio": 1.3,
+  "specific_gas_constant_j_kg_k": 518.3,
+  "dynamic_viscosity_pa_s": 0.000011,
+  "compressibility_factor": 1.0,
+  "pipe_diameter_m": 0.1,
+  "roughness_m": 0.000045,
+  "minimum_edge_length_m": 1.0,
+  "valve_minor_loss_k": 2.0
+}

@@ -1,0 +1,30 @@
+{
+  "version": "metec-recorded-case-v1",
+  "incident_id": "METEC2024-BENCH-001",
+  "source_kind": "recorded_controlled_experiment",
+  "public_files": [
+    {
+      "path": "facility.json",
+      "sha256": "7208b7331726f8bdfb1648bd8fcee02df3cc5fab8a0d80f3319c11e7e7d5a182"
+    },
+    {
+      "path": "hypotheses.json",
+      "sha256": "13fa5cd759a9b31ebe806ef2a8fba95b648eecf9bdd7cd1c1950d8854f670192"
+    },
+    {
+      "path": "incident.json",
+      "sha256": "4ab190ff37ed5bae12af19a64a1530e9d4639bd33ac3b7c5e16a4d7d324b4483"
+    },
+    {
+      "path": "measurements.jsonl",
+      "sha256": "9dff5dfb8fbeb51d1f44b0c9ff79f68ad4612f60fe9c2979aeaf4151b379f05b"
+    }
+  ],
+  "preparation_sha256": "0f873a6ff077ac6c16a05f820e443cb519904adeb09ac19c755f9c03f2b98b4f",
+  "raw_source_manifest": "docs/evidence/gas-data/inventory.json",
+  "source_release_sha256": "626d4e114514cb44edd854225f26518669516112c8714b24cf1de9d8cab13363",
+  "method_sha256": "c5700c4c09eb8674f2cec0d76a9cb0a643fa5dcf20a9358909a34c28304b1af1",
+  "truth_in_public": false,
+  "video_paired": false,
+  "frontend_modified": false
+}

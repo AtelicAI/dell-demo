@@ -1,14 +1,69 @@
 {
-  "_comment": "DRAFT for team review. Cameras on the representative skid, for the camera row on the Camera screen. CAM-01 shows the detection clip. CAM-02..04 loop other real GasVid/METEC clips, cut to segments the Atelic team picked as having no visible plume; they are recorded METEC footage, not live feeds from this skid. Clips are local only (data/ogi/*.mp4 is gitignored): download from the GasVid Drive folder, cut to 'segment' and convert to H.264 with avconvert. status 'sample' -> UI shows Simulated. Kept out of equipment.json so the Locate graph is unchanged.",
+  "_comment": "Cameras on the plant for the camera row on the Camera screen. CAM-01 is the incident camera: recorded GasVid MOV_1242 (METEC metered release) with executed OWLv2+SAM2 model output, mapped illustratively to the compressor discharge area of the synthetic plant (engine/data/facility). CAM-02..04 loop other recorded GasVid/METEC clips picked as having no visible plume; they are not in the engine's knowledge graph and are not live feeds.",
   "status": "sample",
   "provenance": "simulated",
   "cameras": [
-    { "camera_id": "CAM-01", "area": "Vent & outlet", "watches": ["VENT-01", "XV-104", "P-101"], "feed": "ogi_clip" },
-    { "camera_id": "CAM-02", "area": "Separator", "watches": ["XV-101", "V-101", "P-100"],
-      "feed": { "file": "cam02_MOV_2571.mp4", "ogi_clip_id": "MOV_2571", "segment": { "start": "00:00", "end": "04:40" }, "picked_by": "Atelic team (no visible plume)" } },
-    { "camera_id": "CAM-03", "area": "Relief valves", "watches": ["PSV-102", "BDV-103", "P-102"],
-      "feed": { "file": "cam03_MOV_2583.mp4", "ogi_clip_id": "MOV_2583", "segment": { "start": "00:00", "end": "05:00" }, "picked_by": "Atelic team (no visible plume)" } },
-    { "camera_id": "CAM-04", "area": "Perimeter", "watches": ["SKID-A"],
-      "feed": { "file": "cam04_MOV_2570.mp4", "ogi_clip_id": "MOV_2570", "segment": { "start": "00:00", "end": "03:50" }, "picked_by": "Atelic team (no visible plume)" } }
+    {
+      "camera_id": "CAM-01",
+      "area": "Compressor discharge",
+      "watches": [
+        "XV-2104",
+        "F-205",
+        "P-202"
+      ],
+      "feed": "ogi_clip"
+    },
+    {
+      "camera_id": "CAM-02",
+      "area": "Inlet separator",
+      "watches": [
+        "V-101",
+        "XV-104",
+        "P-101"
+      ],
+      "feed": {
+        "file": "cam02_MOV_2571.mp4",
+        "ogi_clip_id": "MOV_2571",
+        "segment": {
+          "start": "00:00",
+          "end": "04:40"
+        },
+        "picked_by": "Atelic team (no visible plume)"
+      }
+    },
+    {
+      "camera_id": "CAM-03",
+      "area": "Vent & relief",
+      "watches": [
+        "VENT-01",
+        "XV-105",
+        "P-102"
+      ],
+      "feed": {
+        "file": "cam03_MOV_2583.mp4",
+        "ogi_clip_id": "MOV_2583",
+        "segment": {
+          "start": "00:00",
+          "end": "05:00"
+        },
+        "picked_by": "Atelic team (no visible plume)"
+      }
+    },
+    {
+      "camera_id": "CAM-04",
+      "area": "Perimeter",
+      "watches": [
+        "FAC-001"
+      ],
+      "feed": {
+        "file": "cam04_MOV_2570.mp4",
+        "ogi_clip_id": "MOV_2570",
+        "segment": {
+          "start": "00:00",
+          "end": "03:50"
+        },
+        "picked_by": "Atelic team (no visible plume)"
+      }
+    }
   ]
 }

@@ -1,0 +1,364 @@
+{
+  "method": "isothermal-darcy-steady-train",
+  "version": "1.1",
+  "status": "solved",
+  "assumptions": {
+    "version": "assumed-skid-1",
+    "provenance": "Assumed synthetic skid inputs; not calibrated GasLib data",
+    "inlet_asset_id": "V-101",
+    "compressor_asset_id": "K-201",
+    "outlet_asset_id": "P-203",
+    "closed_line_ids": [
+      "L-VENT"
+    ],
+    "mass_flow_kg_s": 0.5,
+    "withdrawals_kg_s": {},
+    "inlet_pressure_pa": 700000,
+    "compressor_pressure_ratio": 1.8,
+    "inlet_temperature_k": 293.15,
+    "aftercooler_temperature_k": 303.15,
+    "isentropic_efficiency": 0.75,
+    "heat_capacity_ratio": 1.3,
+    "specific_gas_constant_j_kg_k": 518.3,
+    "dynamic_viscosity_pa_s": 1.1e-05,
+    "compressibility_factor": 1.0,
+    "pipe_diameter_m": 0.1,
+    "roughness_m": 4.5e-05,
+    "minimum_edge_length_m": 1.0,
+    "valve_minor_loss_k": 2.0
+  },
+  "nodes": {
+    "V-101": {
+      "pressure_pa": 700000,
+      "temperature_k": 293.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "P-101": {
+      "pressure_pa": 699773.8283218477,
+      "temperature_k": 293.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "XV-104": {
+      "pressure_pa": 698742.2807920459,
+      "temperature_k": 293.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "P-102": {
+      "pressure_pa": 698591.2363482765,
+      "temperature_k": 293.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "K-201": {
+      "pressure_pa": 1257056.2951730222,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "P-201": {
+      "pressure_pa": 1256926.0680227454,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "XV-2104": {
+      "pressure_pa": 1256289.044577975,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "F-205": {
+      "pressure_pa": 1256202.1749519347,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "P-202": {
+      "pressure_pa": 1256115.29931822,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "XV-2110": {
+      "pressure_pa": 1255477.8644933663,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "P-203": {
+      "pressure_pa": 1255390.9387358797,
+      "temperature_k": 303.15,
+      "inlet_mass_flow_kg_s": 0.5,
+      "outlet_mass_flow_kg_s": 0.5,
+      "side_withdrawal_kg_s": 0.0
+    },
+    "VENT-01": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    },
+    "XV-2111": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    },
+    "P-105": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    },
+    "XV-2105": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    },
+    "XV-105": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    }
+  },
+  "edges": [
+    {
+      "from_id": "V-101",
+      "to_id": "P-101",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 3.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 226.17167815228458,
+      "squared_pressure_loss_pa2": 316589195.78516394
+    },
+    {
+      "from_id": "P-101",
+      "to_id": "XV-104",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 2.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 1031.5475298018428,
+      "squared_pressure_loss_pa2": 1442635837.7445045
+    },
+    {
+      "from_id": "XV-104",
+      "to_id": "P-102",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 2.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 151.04444376938045,
+      "squared_pressure_loss_pa2": 211059463.85677594
+    },
+    {
+      "from_id": "P-102",
+      "to_id": "K-201",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 3.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 226.62791881978046,
+      "squared_pressure_loss_pa2": 316589195.78516394
+    },
+    {
+      "from_id": "K-201",
+      "to_id": "P-201",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 3.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 130.22715027676895,
+      "squared_pressure_loss_pa2": 327388759.0048523
+    },
+    {
+      "from_id": "P-201",
+      "to_id": "XV-2104",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 3.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 637.0234447703697,
+      "squared_pressure_loss_pa2": 1600976948.4780395
+    },
+    {
+      "from_id": "XV-2104",
+      "to_id": "F-205",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 2.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 86.86962604033761,
+      "squared_pressure_loss_pa2": 218259172.66990152
+    },
+    {
+      "from_id": "F-205",
+      "to_id": "P-202",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 2.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 86.8756337147206,
+      "squared_pressure_loss_pa2": 218259172.66990152
+    },
+    {
+      "from_id": "P-202",
+      "to_id": "XV-2110",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 3.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 637.4348248536699,
+      "squared_pressure_loss_pa2": 1600976948.4780395
+    },
+    {
+      "from_id": "XV-2110",
+      "to_id": "P-203",
+      "mass_flow_kg_s": 0.5,
+      "length_m": 2.0,
+      "reynolds_number": 578745.2476068921,
+      "darcy_friction_factor": 0.017137342704173726,
+      "pressure_loss_pa": 86.92575748660602,
+      "squared_pressure_loss_pa2": 218259172.66990152
+    }
+  ],
+  "compressor": {
+    "asset_id": "K-201",
+    "inlet_mass_flow_kg_s": 0.5,
+    "suction_pressure_pa": 698364.6084294567,
+    "discharge_pressure_pa": 1257056.2951730222,
+    "suction_temperature_k": 293.15,
+    "discharge_temperature_k": 349.9323911643463,
+    "aftercooler_temperature_k": 303.15,
+    "shaft_power_w": 63765.67890437485,
+    "cooling_duty_w": 52535.84557104152
+  },
+  "inlet_mass_flow_kg_s": 0.5,
+  "outlet_mass_flow_kg_s": 0.5,
+  "total_side_withdrawal_kg_s": 0.0,
+  "reynolds_number": 578745.2476068921,
+  "darcy_friction_factor": 0.017137342704173726,
+  "mass_balance_residual_kg_s": {
+    "V-101": 0.0,
+    "P-101": 0.0,
+    "XV-104": 0.0,
+    "P-102": 0.0,
+    "K-201": 0.0,
+    "P-201": 0.0,
+    "XV-2104": 0.0,
+    "F-205": 0.0,
+    "P-202": 0.0,
+    "XV-2110": 0.0,
+    "P-203": 0.0,
+    "XV-105": 0.0,
+    "P-105": 0.0,
+    "XV-2105": 0.0,
+    "VENT-01": 0.0,
+    "XV-2111": 0.0
+  },
+  "max_mass_balance_residual_kg_s": 0.0,
+  "measurements": [
+    {
+      "sensor_id": "CH4-01",
+      "asset_id": "XV-2104",
+      "unit": "ppm",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "CH4-02",
+      "asset_id": "XV-2104",
+      "unit": "ppm",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "CH4-03",
+      "asset_id": "XV-2104",
+      "unit": "ppm",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "CH4-04",
+      "asset_id": "K-201",
+      "unit": "ppm",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "CH4-05",
+      "asset_id": "K-201",
+      "unit": "ppm",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "PT-101",
+      "asset_id": "V-101",
+      "unit": "bar(a)",
+      "value": 7.0,
+      "status": "model_prediction"
+    },
+    {
+      "sensor_id": "PT-201",
+      "asset_id": "K-201",
+      "unit": "bar(a)",
+      "value": 12.570562951730222,
+      "status": "model_prediction"
+    },
+    {
+      "sensor_id": "PT-2104",
+      "asset_id": "XV-2104",
+      "unit": "bar(a)",
+      "value": 12.56289044577975,
+      "status": "model_prediction"
+    },
+    {
+      "sensor_id": "TT-101",
+      "asset_id": "V-101",
+      "unit": "K",
+      "value": 293.15,
+      "status": "model_prediction"
+    },
+    {
+      "sensor_id": "TT-201",
+      "asset_id": "K-201",
+      "unit": "K",
+      "value": 303.15,
+      "status": "model_prediction"
+    },
+    {
+      "sensor_id": "FT-201",
+      "asset_id": "P-201",
+      "unit": "kg/h",
+      "value": 1800.0,
+      "status": "model_prediction"
+    },
+    {
+      "sensor_id": "MET-01-WS",
+      "asset_id": "K-201",
+      "unit": "m/s",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-WD",
+      "asset_id": "K-201",
+      "unit": "deg_from_north",
+      "value": null,
+      "status": "not_modeled"
+    }
+  ]
+}

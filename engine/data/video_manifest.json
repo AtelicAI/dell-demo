@@ -1,0 +1,1112 @@
+{
+  "schema_version": "1.0",
+  "status": "recorded_metadata_ready_annotations_pending",
+  "rights": "unverified",
+  "default_clip_id": "MOV_1242",
+  "source": "Local GasVid 2 recordings; not model inference",
+  "mapping": "synthetic_illustrative",
+  "clips": [
+    {
+      "id": "MOV_1237",
+      "file": "downloaded/GasVid 2/Videos/MOV_1237.mp4",
+      "sha256": "55b188cd39b9373d20d9a1cedcee98ea6ca15aaf554ea06302fe9e445e644c71",
+      "bytes": 70444398,
+      "duration_seconds": 1535.500333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "68628000/4606501",
+      "r_frame_rate": "181/12",
+      "frame_count": "22876",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 9,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1140,
+            "candidate_mm_ss_seconds": 19.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11940,
+            "candidate_mm_ss_seconds": 199.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1238",
+      "file": "downloaded/GasVid 2/Videos/MOV_1238.mp4",
+      "sha256": "bfd3bf5f195ee702ac92f60b03bb802b6172fdf9a7ea9ce04dc1d7fb4c9c1e30",
+      "bytes": 54638671,
+      "duration_seconds": 1483.442333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "66348000/4450327",
+      "r_frame_rate": "181/12",
+      "frame_count": "22116",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 10,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 240,
+            "candidate_mm_ss_seconds": 4.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11040,
+            "candidate_mm_ss_seconds": 184.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1239",
+      "file": "downloaded/GasVid 2/Videos/MOV_1239.mp4",
+      "sha256": "eea224b313bdfec0ab979804454ed4d5820e218e734d86830aa92ca758ebd97f",
+      "bytes": 66905965,
+      "duration_seconds": 1524.002333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "68127000/4572007",
+      "r_frame_rate": "181/12",
+      "frame_count": "22709",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 11,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 300,
+            "candidate_mm_ss_seconds": 5.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11100,
+            "candidate_mm_ss_seconds": 185.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1240",
+      "file": "downloaded/GasVid 2/Videos/MOV_1240.mp4",
+      "sha256": "698cfdcb07c82dc1fa9a68d5c6295026c6a7684b8bfa1ec356180159e45faea0",
+      "bytes": 75716028,
+      "duration_seconds": 1527.741333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "8542875/572903",
+      "r_frame_rate": "30/1",
+      "frame_count": "22781",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 12,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 420,
+            "candidate_mm_ss_seconds": 7.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11220,
+            "candidate_mm_ss_seconds": 187.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1241",
+      "file": "downloaded/GasVid 2/Videos/MOV_1241.mp4",
+      "sha256": "728ad9a13ae301b0504657fd07bfbc42a77b42500d923d37d5bed5d7d09e965b",
+      "bytes": 76246553,
+      "duration_seconds": 1640.013333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "1831350/123001",
+      "r_frame_rate": "181/12",
+      "frame_count": "24418",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 13,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 360,
+            "candidate_mm_ss_seconds": 6.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11160,
+            "candidate_mm_ss_seconds": 186.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1242",
+      "file": "downloaded/GasVid 2/Videos/MOV_1242.mp4",
+      "sha256": "b7a125f5ab21572c1a11403b9d76528a54d95a73b1b007843ab084c6550da19f",
+      "bytes": 43240243,
+      "duration_seconds": 1466.202333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "65583000/4398607",
+      "r_frame_rate": "181/12",
+      "frame_count": "21861",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 8,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 300,
+            "candidate_mm_ss_seconds": 5.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11100,
+            "candidate_mm_ss_seconds": 185.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": [
+        {
+          "scenario_id": "SCN-004",
+          "kind": "synthetic_illustrative",
+          "scenario_start_seconds": 0,
+          "scenario_end_seconds": 1199,
+          "clip_start_seconds": 0,
+          "clip_seconds_per_scenario_second": 1,
+          "basis": "Illustrative playback only; no correspondence to synthetic incident, assets, sensors or UTC"
+        }
+      ]
+    },
+    {
+      "id": "MOV_1467",
+      "file": "downloaded/GasVid 2/Videos/MOV_1467.mp4",
+      "sha256": "fe8afc6451c272b900fd71011b3f2c59d5254a10f7cac57034a4bc34a6deab1b",
+      "bytes": 76928369,
+      "duration_seconds": 1481.808333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "2649600/177817",
+      "r_frame_rate": "91/6",
+      "frame_count": "22080",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 26,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1080,
+            "candidate_mm_ss_seconds": 18.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11880,
+            "candidate_mm_ss_seconds": 198.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1468",
+      "file": "downloaded/GasVid 2/Videos/MOV_1468.mp4",
+      "sha256": "16cb6756f925a756689c63ac0170975af8872102039fc9405f05d8564155371c",
+      "bytes": 75611265,
+      "duration_seconds": 1484.704333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "66399000/4454113",
+      "r_frame_rate": "30/1",
+      "frame_count": "22133",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 27,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 300,
+            "candidate_mm_ss_seconds": 5.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11100,
+            "candidate_mm_ss_seconds": 185.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1469",
+      "file": "downloaded/GasVid 2/Videos/MOV_1469.mp4",
+      "sha256": "de6c03130eb363acbbe1fbd17c202d468c87e577a5eb041ce153870083695aa4",
+      "bytes": 58337848,
+      "duration_seconds": 1489.117333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "8321625/558419",
+      "r_frame_rate": "30/1",
+      "frame_count": "22191",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 28,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 540,
+            "candidate_mm_ss_seconds": 9.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11340,
+            "candidate_mm_ss_seconds": 189.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1470",
+      "file": "downloaded/GasVid 2/Videos/MOV_1470.mp4",
+      "sha256": "b452c082c178a94f180d442df8107fbad58993d6d89c14ce1ae07c91d450579f",
+      "bytes": 53461820,
+      "duration_seconds": 1493.492333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "66792000/4480477",
+      "r_frame_rate": "181/12",
+      "frame_count": "22264",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 29,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 180,
+            "candidate_mm_ss_seconds": 3.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 10980,
+            "candidate_mm_ss_seconds": 183.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1471",
+      "file": "downloaded/GasVid 2/Videos/MOV_1471.mp4",
+      "sha256": "ab74fa6d0fda49b7eb865230592062b30c1b1289a654d367c3fad3d14bbfb607",
+      "bytes": 74838830,
+      "duration_seconds": 1607.486333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "71952000/4822459",
+      "r_frame_rate": "30/1",
+      "frame_count": "23984",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 30,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 9960,
+            "candidate_mm_ss_seconds": 166.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 20760,
+            "candidate_mm_ss_seconds": 346.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1472",
+      "file": "downloaded/GasVid 2/Videos/MOV_1472.mp4",
+      "sha256": "994322c82fd0e297c693c70f04fcee1f3be7cc64e3cccd39bc5714e5ae69196a",
+      "bytes": 92561475,
+      "duration_seconds": 1457.749333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "1019625/68332",
+      "r_frame_rate": "30/1",
+      "frame_count": "21752",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 31,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 240,
+            "candidate_mm_ss_seconds": 4.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11040,
+            "candidate_mm_ss_seconds": 184.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_1473",
+      "file": "downloaded/GasVid 2/Videos/MOV_1473.mp4",
+      "sha256": "dbfd1036ace4aa220c5f95dc93c68b2fbbc12486e7b5b5d17ab458904e578abf",
+      "bytes": 131148727,
+      "duration_seconds": 1445.183333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "1290960/86711",
+      "r_frame_rate": "30/1",
+      "frame_count": "21516",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 32,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 60,
+            "candidate_mm_ss_seconds": 1.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 10860,
+            "candidate_mm_ss_seconds": 181.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2559",
+      "file": "downloaded/GasVid 2/Videos/MOV_2559.mp4",
+      "sha256": "881b7206fc74c5c5007cff750811768b530f0e1233adddd2b1b3457cc76a95cf",
+      "bytes": 52032426,
+      "duration_seconds": 1519.607333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "33937500/2279411",
+      "r_frame_rate": "181/12",
+      "frame_count": "22625",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 3,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1740,
+            "candidate_mm_ss_seconds": 29.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12540,
+            "candidate_mm_ss_seconds": 209.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2560",
+      "file": "downloaded/GasVid 2/Videos/MOV_2560.mp4",
+      "sha256": "ecbbece833529d4591f83a28a7a52c658e30186c8170bc16da20695322f274f7",
+      "bytes": 45926710,
+      "duration_seconds": 1468.686333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "65538000/4406059",
+      "r_frame_rate": "181/12",
+      "frame_count": "21846",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 4,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1020,
+            "candidate_mm_ss_seconds": 17.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11820,
+            "candidate_mm_ss_seconds": 197.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2561",
+      "file": "downloaded/GasVid 2/Videos/MOV_2561.mp4",
+      "sha256": "bb5009fb2f9c587f0e61f924ae6d34c1cdb886f3804ce02ae0d5c5afb127f9c6",
+      "bytes": 54625754,
+      "duration_seconds": 1471.632333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "65745000/4414897",
+      "r_frame_rate": "181/12",
+      "frame_count": "21915",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 5,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1140,
+            "candidate_mm_ss_seconds": 19.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11940,
+            "candidate_mm_ss_seconds": 199.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2562",
+      "file": "downloaded/GasVid 2/Videos/MOV_2562.mp4",
+      "sha256": "a192288016e6960d20e7b8a7d2eb71838b87b82332f59ed231b13ac57a8dd481",
+      "bytes": 54198078,
+      "duration_seconds": 1479.190333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "66057000/4437571",
+      "r_frame_rate": "30/1",
+      "frame_count": "22019",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 6,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1440,
+            "candidate_mm_ss_seconds": 24.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12240,
+            "candidate_mm_ss_seconds": 204.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2563",
+      "file": "downloaded/GasVid 2/Videos/MOV_2563.mp4",
+      "sha256": "45bd26227da903b752381047d7b3d21784d7b0b8b1c4a05a4974dc702abc6936",
+      "bytes": 64139679,
+      "duration_seconds": 1596.495333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "35676000/2394743",
+      "r_frame_rate": "181/12",
+      "frame_count": "23784",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 7,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 660,
+            "candidate_mm_ss_seconds": 11.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11460,
+            "candidate_mm_ss_seconds": 191.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2564",
+      "file": "downloaded/GasVid 2/Videos/MOV_2564.mp4",
+      "sha256": "b73b2b7b8717f53444202fc81fb8fd594b5a062af15aa894493d7881a3c7e9b5",
+      "bytes": 36679025,
+      "duration_seconds": 1462.050333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "9336000/626593",
+      "r_frame_rate": "30/1",
+      "frame_count": "21784",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 2,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 960,
+            "candidate_mm_ss_seconds": 16.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11760,
+            "candidate_mm_ss_seconds": 196.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2566",
+      "file": "downloaded/GasVid 2/Videos/MOV_2566.mp4",
+      "sha256": "8402b2b66ee9985167c7692f704095d3a127d5b37383c39dfb02c2241ae8281f",
+      "bytes": 44039122,
+      "duration_seconds": 1464.504333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "65448000/4393513",
+      "r_frame_rate": "181/12",
+      "frame_count": "21816",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 14,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1080,
+            "candidate_mm_ss_seconds": 18.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11880,
+            "candidate_mm_ss_seconds": 198.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2567",
+      "file": "downloaded/GasVid 2/Videos/MOV_2567.mp4",
+      "sha256": "b8105e27244d9f2db72de36a0b52655ccf63f837bb98ba25ee486bfd93386748",
+      "bytes": 54275488,
+      "duration_seconds": 1464.837333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "8186625/549314",
+      "r_frame_rate": "181/12",
+      "frame_count": "21831",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 15,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 420,
+            "candidate_mm_ss_seconds": 7.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11220,
+            "candidate_mm_ss_seconds": 187.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2569",
+      "file": "downloaded/GasVid 2/Videos/MOV_2569.mp4",
+      "sha256": "27e9cfa1de39b3f92e162d5c45d05690d67dcc635a8b91a9102a1b749a8bdad0",
+      "bytes": 156443220,
+      "duration_seconds": 1465.930333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "65490000/4397791",
+      "r_frame_rate": "181/12",
+      "frame_count": "21830",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 17,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1020,
+            "candidate_mm_ss_seconds": 17.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11820,
+            "candidate_mm_ss_seconds": 197.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2571",
+      "file": "downloaded/GasVid 2/Videos/MOV_2571.mp4",
+      "sha256": "489b0e6f94f6eb9ba5e48ad8eb393a531a07523fe6e1b43af7125a60eb38a5b0",
+      "bytes": 139871376,
+      "duration_seconds": 1596.961333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "17847750/1197721",
+      "r_frame_rate": "181/12",
+      "frame_count": "23797",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 19,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1620,
+            "candidate_mm_ss_seconds": 27.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12420,
+            "candidate_mm_ss_seconds": 207.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2578",
+      "file": "downloaded/GasVid 2/Videos/MOV_2578.mp4",
+      "sha256": "57a6cd9227cb3374d88da5ee0415d1e56046a85bfcfe735973099abfd478511e",
+      "bytes": 64156782,
+      "duration_seconds": 1468.579333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "32791500/2202869",
+      "r_frame_rate": "30/1",
+      "frame_count": "21861",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 20,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1560,
+            "candidate_mm_ss_seconds": 26.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12360,
+            "candidate_mm_ss_seconds": 206.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2579",
+      "file": "downloaded/GasVid 2/Videos/MOV_2579.mp4",
+      "sha256": "262caf0bbfc020b27b50b00ee7d806364ad5d37dd98f362fc0bb940ab8ec9341",
+      "bytes": 61892764,
+      "duration_seconds": 1520.041333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "16963500/1140031",
+      "r_frame_rate": "181/12",
+      "frame_count": "22618",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 21,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1020,
+            "candidate_mm_ss_seconds": 17.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": true,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 11820,
+            "candidate_mm_ss_seconds": 197.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2580",
+      "file": "downloaded/GasVid 2/Videos/MOV_2580.mp4",
+      "sha256": "adfd7bc5cb2cf7edc064d0793a6f3962dab33e9eab84b61f4b57b2566efa34bd",
+      "bytes": 102029744,
+      "duration_seconds": 1481.250333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "66285000/4443751",
+      "r_frame_rate": "181/12",
+      "frame_count": "22095",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 22,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1620,
+            "candidate_mm_ss_seconds": 27.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12420,
+            "candidate_mm_ss_seconds": 207.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2581",
+      "file": "downloaded/GasVid 2/Videos/MOV_2581.mp4",
+      "sha256": "bb6a9aeb383abb60e70952dac07b6beb6ad1444edf6ff9385a042d6fc622b44f",
+      "bytes": 111080124,
+      "duration_seconds": 1549.914333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "69285000/4649743",
+      "r_frame_rate": "181/12",
+      "frame_count": "23095",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 23,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 1680,
+            "candidate_mm_ss_seconds": 28.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12480,
+            "candidate_mm_ss_seconds": 208.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    },
+    {
+      "id": "MOV_2583",
+      "file": "downloaded/GasVid 2/Videos/MOV_2583.mp4",
+      "sha256": "8643c586e075a091c2e0c3c045269acbf84d9cd8b15dfcf6f485ea85f9e5b6c2",
+      "bytes": 93975648,
+      "duration_seconds": 1483.736333,
+      "width": 320,
+      "height": 240,
+      "codec": "mpeg4",
+      "avg_frame_rate": "66330000/4451209",
+      "r_frame_rate": "181/12",
+      "frame_count": "22110",
+      "time_base": "1/90000",
+      "source_kind": "recorded",
+      "rights": "unverified",
+      "review_status": "pending",
+      "source_log": {
+        "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx",
+        "sheet": "GasVid Logging File",
+        "row": 25,
+        "offsets": {
+          "E": {
+            "excel_hours_seconds": 2040,
+            "candidate_mm_ss_seconds": 34.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          },
+          "F": {
+            "excel_hours_seconds": 12840,
+            "candidate_mm_ss_seconds": 214.0,
+            "status": "unverified_interpretation",
+            "excel_hours_in_bounds": false,
+            "candidate_mm_ss_in_bounds": true
+          }
+        }
+      },
+      "scenario_mappings": []
+    }
+  ]
+}

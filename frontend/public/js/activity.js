@@ -11,17 +11,19 @@
     returned: 'Returned', not_reached: 'Not reached', blocked: 'Blocked', manual: 'Demo trigger',
   };
   const FILTERS = [['all', 'All'], ['ran', 'Ran'], ['not_run', 'Not run'], ['human', 'Human']];
-  const EVENT = { submitted_for_review: 'Submitted for review', review_approve: 'Approved', review_request_changes: 'Changes requested', review_reject: 'Rejected' };
+  const EVENT = { submitted_for_review: 'Submitted for review', review_approve: 'Approved', review_request_changes: 'Changes requested', review_reject: 'Rejected',
+    question_asked: 'Question asked', report_issued: 'Report issued', repair_recorded: 'Repair recorded', incident_closed: 'Closure decision' };
   const DELL = { running: 'Running', target_deployment: 'Target deployment' };
   const NVIDIA = { local_nim: 'Local NIM', hosted_api: 'Hosted API', not_connected: 'Not connected' };
   const hms = (t) => (t ? t.slice(11, 19) : '—');
-  const human = (s) => s.id === 'approval';
+  const human = (s) => s.id === 'approval' || s.id === 'closure';
 
   // Where each step's result is shown in the app (for "Shown on …" links and the back link).
   const SCREEN = {
     camera_event: ['detection.html', 'Camera'], equipment_mapping: ['locate.html', 'Locate'], graph: ['graph.html', 'Knowledge graph'],
     procedure_passages: ['plan.html', 'Plan'], emission_estimate: ['quantify.html', 'Quantify'], work_order: ['plan.html', 'Plan'],
-    approval: ['review.html', 'Approve'],
+    approval: ['review.html', 'Approve'], investigation: ['plan.html', 'Plan'], answer: ['review.html', 'Approve'],
+    verification: ['report.html', 'Report'], closure: ['report.html', 'Report'],
   };
   // ?step=<id>&from=<page>: opened from a "View in Glass box" link on another screen.
   const params = new URLSearchParams(location.search);
@@ -97,9 +99,11 @@
       li('NVIDIA inference', NVIDIA[h.nvidia_inference] || 'Unknown', h.nvidia_inference === 'not_connected' ? 'off' : 'ok',
         h.nvidia_inference === 'not_connected' ? 'NVIDIA inference not connected in this run.' : null),
       li('GPU', 'Not measured', 'off', 'No GPU metrics are collected in this run.'),
-      li('Agent orchestrator', h.orchestrator || 'None', 'off', 'LangGraph or NeMo Agent Toolkit: decision pending.'),
-      li('Retriever', h.retriever || 'None', 'off', 'NeMo Retriever not connected; procedures matched by asset id.'),
-      li('Guardrails', h.guardrails || 'None', 'off', 'NeMo Guardrails not connected.'),
+      li('Agent orchestrator', h.orchestrator || 'None', h.orchestrator ? 'ok' : 'off', h.orchestrator ? 'Runs Locate → Quantify → Investigate → Plan and stops at every human decision.' : null),
+      li('Knowledge graph', h.graph ? `Neo4j · ${h.graph}` : 'Unknown', h.graph === 'connected' ? 'ok' : 'off', null),
+      li('Telemetry', h.historian ? `InfluxDB · ${h.historian}` : 'Unknown', h.historian === 'connected' ? 'ok' : 'off', null),
+      li('Retriever', h.retriever || 'None', h.retriever ? 'ok' : 'off', 'Token-hash cosine over plant documents; NeMo Retriever not connected.'),
+      li('Guardrails', h.guardrails || 'None', h.guardrails ? 'ok' : 'off', 'NeMo Guardrails not connected; boundaries are enforced in the engine.'),
     ].join('');
     $('safety').textContent = A.safety;
   }
@@ -173,6 +177,8 @@
     try { A = await get(`/incidents/${INCIDENT_ID}/agent-runs`); } catch (e) { console.error(e); A = null; }
     render();
     applyFocus();
+    // Live while agents run: new spans appear as the engine records them.
+    if (A) window.AtelicStory.poll(async () => { if (!timer) { A = await get(`/incidents/${INCIDENT_ID}/agent-runs`); render(); } return A; }, (a) => a.status === 'running', 3000);
   }
   init();
 })();

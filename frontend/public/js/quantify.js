@@ -21,7 +21,7 @@
   const hhmm = (t) => (t ? t.slice(11, 16) : '—');
   const hhmmss = (t) => (t ? t.slice(11, 19) : '—');
 
-  let S = null, Q = null, method = null, traces = null, qcChart = null;
+  let S = null, Q = null, method = null, traces = null, qcChart = null, H = null, histChart = null;
 
   // ----- result card -----
   function renderHero() {
@@ -33,6 +33,12 @@
       return;
     }
     const rateBlock = (num, sub) => `<div class="rate"><span class="lbl">Rate (kg CH₄/h)</span>${num}${sub}</div>`;
+    if (!r && Q.progress) {
+      title.textContent = 'Quantify agent working';
+      body.innerHTML = rateBlock('<div class="num none">…</div>', '') +
+        `<div class="hero-empty"><span class="ag-spin"></span> ${esc(Q.progress.text)}. The agent re-runs the fit every 10 s of replay until the plume is steady and the sensors can tell the candidate locations apart. No number is shown before that.</div>`;
+      return;
+    }
     if (!r) {
       title.textContent = 'Emission rate not estimated yet';
       body.innerHTML = rateBlock('<div class="num none">—</div>', '') +
@@ -49,7 +55,7 @@
     $('res-badges').innerHTML = badge(r.provenance, `Produced by ${r.model_version}`);
     const qc = r.qc || {};
     body.innerHTML = rateBlock(`<div class="num">${r.rate_kg_ch4_h.toFixed(2)}</div>`,
-      `<div class="unit">kg CH₄/h</div><div class="sub">Median of ${qc.samples_used} per-sample estimates</div>`) + gauge(r);
+      `<div class="unit">kg CH₄/h</div><div class="sub">${r.attempts ? `Frozen at replay ${r.as_of_seconds} s after ${r.attempts.length} agent attempts · ${qc.samples_used} readings` : `Median of ${qc.samples_used} per-sample estimates`}</div>`) + gauge(r);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const b = body.querySelector('.band');
       if (b) b.classList.remove('pre');
@@ -105,7 +111,7 @@
     const times = S.series[have[0].q].map((p) => p[0]);
     const cats = times.map(hhmm);
     const last = times.length - 1;
-    $('series-meta').textContent = `${hhmm(S.site.replay_start_utc)}–${hhmm(S.site.replay_end_utc)} UTC · 30 s samples`;
+    $('series-meta').textContent = `${hhmm(S.site.replay_start_utc)}–${hhmm(S.site.replay_end_utc)} UTC · ${S.interval_label || '30 s samples'}`;
     $('t-legend').hidden = !(w && w.start_utc);
 
     labels.style.paddingBottom = `${AXIS_H}px`;
@@ -249,13 +255,58 @@
     if (so.methane_ppm) items.push(li(so.methane_ppm, 'Methane concentration', badge(prov)));
     if (so.wind_speed_m_s) items.push(li(so.wind_speed_m_s, 'Wind speed + direction', badge(prov)));
     if (so.pressure_bara) items.push(li(so.pressure_bara, 'Pressure (context only)', badge(prov)));
-    items.push(li('Geometry', 'Draft positions + heights', badge('synthetic', 'scenario/geometry.json (draft)')));
+    items.push(li('Geometry', 'Facility positions + heights', badge('synthetic', 'engine facility model (Neo4j)')));
     if (r && r.source_asset_id) items.push(li(r.source_asset_id, 'Assumed source', badge('hypothesis', 'Top Locate candidate, unconfirmed')));
     $('inputs').innerHTML = items.join('');
   }
 
+  // Every assumed source location fitted to the same readings: which ones explain them, which are contradicted.
+  function renderAttr() {
+    const r = Q && Q.result, a = r && r.attribution;
+    $('attr-panel').hidden = !(a && (r.candidate_fits || []).length);
+    if ($('attr-panel').hidden) return;
+    const LBL = { agrees_single: 'Sensors agree with the camera', agrees_ambiguous: 'Sensors agree, but cannot separate candidates', partly_agrees: 'Partly agrees',
+      disagrees: 'Sensors disagree with the camera', no_consistent_location: 'No location explains the readings', not_assessed: 'Not assessed' };
+    const cams = new Set((a.camera_candidates || []).map((c) => c.candidate_asset_id));
+    const fits = r.candidate_fits.filter((f) => f.fit_status !== 'cannot_test' && f.fit_status !== 'not_assessed')
+      .sort((x, y) => (x.residual_rms_ppm ?? 9) - (y.residual_rms_ppm ?? 9)).slice(0, 8);
+    $('attr-meta').textContent = `${r.candidate_fits.length} locations fitted`;
+    $('attr').innerHTML = `<div class="attr"><p><b>${esc(LBL[a.status] || a.status)}</b>${a.best_fit_asset_id ? ` · best fit <b>${esc(a.best_fit_asset_id)}</b>` : ''}. ${esc(a.note || '')}</p>
+      <table><tr><th>Assumed source</th><th>Camera candidate</th><th>Fit</th><th>Rate</th><th>Residual</th><th>vs best</th></tr>
+      ${fits.map((f) => `<tr class="${f.fit_status === 'best_fit' ? 'best' : f.fit_status === 'poor_fit' ? 'poor' : ''}"><td>${esc(f.candidate_asset_id)}</td><td>${cams.has(f.candidate_asset_id) ? 'yes' : '—'}</td>
+        <td>${esc((f.fit_status || '').replace(/_/g, ' '))}</td><td>${f.rate_kg_h != null ? `${f.rate_kg_h.toFixed(3)} kg/h` : '—'}</td>
+        <td>${f.residual_rms_ppm != null ? `${f.residual_rms_ppm.toFixed(2)} ppm` : '—'}</td><td>${f.error_ratio_to_best != null ? `${f.error_ratio_to_best}×` : ''}</td></tr>`).join('')}</table>
+      <p class="hist-note">Only best and comparable fits carry a rate. A location fitted outside the camera view is listed when it explains the readings too.</p></div>`;
+  }
+
+  function renderHistory() {
+    $('hist-panel').hidden = !H;
+    if (!H) return;
+    const a = H.analysis, lc = a.load_change_alignment || {}, obs = a.observability || [];
+    const quiet = (a.quiet_stretches || []).slice().sort((x, y) => y.days - x.days)[0];
+    $('hist-meta').textContent = `${a.period_start_utc.slice(0, 10)} → ${a.period_end_utc.slice(0, 10)} · 5-minute averages`;
+    $('hist-facts').innerHTML = [
+      [a.episode_count, 'methane episodes above background'],
+      [`${lc.episodes_starting_after_load_change}/${lc.episodes}`, `start within ${lc.window_minutes} min of a K-201 load change (${Math.round((lc.share_expected_by_chance || 0) * 100)}% by chance)`],
+      [quiet ? `${quiet.days} d` : '—', quiet ? `longest quiet stretch, ${quiet.start_utc.slice(5, 10)} → ${quiet.end_utc.slice(5, 10)}` : 'no quiet stretch'],
+      [obs.length ? `${Math.round(Math.max(...obs.map((o) => o.observable_fraction)) * 100)}%` : '—', 'of the time a 50 g/h leak here would reach a sensor (wind)'],
+    ].map(([v, t]) => `<div><b>${esc(v)}</b><span>${esc(t)}</span></div>`).join('');
+    $('hist-note').textContent = `${H.note || ''} Episodes are found from public sensor data only; 5-minute fits narrow the area but give no rate.`;
+    histChart = histChart || echarts.init($('hist-chart'), null, { renderer: 'canvas' });
+    const pts = H.series.points, ss = H.series.sensors;
+    const cols = ['--n-well', '--n-equip', '--n-wt', '--n-station', '--violet'];
+    histChart.setOption({
+      animation: false, grid: { left: 44, right: 14, top: 26, bottom: 30 },
+      legend: { top: 0, textStyle: { fontFamily: MONO, fontSize: 10, color: css('--ink-mute') }, itemWidth: 12, itemHeight: 6 },
+      tooltip: { trigger: 'axis', textStyle: { fontFamily: MONO, fontSize: 11 } },
+      xAxis: { type: 'category', data: pts.map((p) => p.hour_utc.slice(5, 13).replace('T', ' ')), axisLabel: { color: css('--ink-dim'), fontFamily: MONO, fontSize: 9.5, interval: 95 }, axisTick: { show: false } },
+      yAxis: { type: 'value', name: 'ppm above background', nameTextStyle: { color: css('--ink-dim'), fontSize: 10 }, splitLine: { lineStyle: { color: css('--line') } }, axisLabel: { color: css('--ink-dim'), fontFamily: MONO, fontSize: 9.5 } },
+      series: ss.map((sid, i) => ({ name: sid, type: 'line', showSymbol: false, data: pts.map((p) => p[sid]), lineStyle: { width: 1, color: css(cols[i % cols.length]) }, itemStyle: { color: css(cols[i % cols.length]) } })),
+    }, true);
+  }
+
   function renderAll() {
-    renderMethods(); renderHero(); renderInputs(); renderTraces(); renderLower();
+    renderMethods(); renderHero(); renderInputs(); renderTraces(); renderLower(); renderAttr(); renderHistory();
   }
 
   async function run() {
@@ -281,7 +332,7 @@
   $('methods').addEventListener('change', (e) => { method = e.target.value; renderMethods(); });
   $('btn-run').addEventListener('click', run);
   $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
-  window.addEventListener('resize', () => { if (traces) traces.resize(); if (qcChart) qcChart.resize(); });
+  window.addEventListener('resize', () => { if (traces) traces.resize(); if (qcChart) qcChart.resize(); if (histChart) histChart.resize(); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.
   new ResizeObserver(() => { if (qcChart) qcChart.resize(); }).observe($('qc'));
 
@@ -291,8 +342,19 @@
     ]);
     S = s.status === 'fulfilled' ? s.value : null;
     Q = q.status === 'fulfilled' ? q.value : null;
+    H = await get(`/incidents/${INCIDENT_ID}/plant-history`).catch(() => null);
     if (typeof echarts === 'undefined') await new Promise((r) => window.addEventListener('load', r, { once: true }));
     renderAll();
+    // While the quantify agent is still stepping the replay clock, follow it.
+    if (Q && Q.progress) {
+      window.AtelicStory.poll(async () => {
+        Q = await get(`/incidents/${INCIDENT_ID}/quantification`);
+        if (!Q.progress) S = await get(`/incidents/${INCIDENT_ID}/sensor-series`);
+        renderAll();
+        if (!Q.progress) window.AtelicShell.refresh();
+        return Q;
+      }, (v) => !!v.progress, 3000);
+    }
   }
   init();
 })();

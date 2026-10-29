@@ -1,0 +1,873 @@
+{
+  "id": "METEC2024",
+  "name": "METEC2024 fence-line measured benchmark",
+  "coordinate_reference": "local_ENU_m",
+  "origin_latitude": 40.5960359,
+  "origin_longitude": -105.14032186,
+  "source_dataset": "metec-fenceline-2024",
+  "release_points": [
+    {
+      "id": "METEC2024-RP-4S-12",
+      "source_tag": "4S-12",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        8.11056100147996,
+        -46.33832578547063,
+        0.9144
+      ],
+      "latitude": 40.59561917,
+      "longitude": -105.1402258,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-14",
+      "source_tag": "4S-14",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        7.907923624843853,
+        -42.79898638191388,
+        0.8636
+      ],
+      "latitude": 40.595651,
+      "longitude": -105.1402282,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-16",
+      "source_tag": "4S-16",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        7.924810073096838,
+        -43.83643648021209,
+        2.54
+      ],
+      "latitude": 40.59564167,
+      "longitude": -105.140228,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-21",
+      "source_tag": "4S-21",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        4.733271390478236,
+        -41.27894963497716,
+        1.143
+      ],
+      "latitude": 40.59566467,
+      "longitude": -105.1402658,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-22",
+      "source_tag": "4S-22",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        5.07100035073851,
+        -41.501339794882746,
+        1.143
+      ],
+      "latitude": 40.59566267,
+      "longitude": -105.1402618,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-23",
+      "source_tag": "4S-23",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        4.902135870608373,
+        -45.05958236285316,
+        2.286
+      ],
+      "latitude": 40.59563067,
+      "longitude": -105.1402638,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-31",
+      "source_tag": "4S-31",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        1.3137656582441235,
+        -43.169265998915165,
+        2.54
+      ],
+      "latitude": 40.59564767,
+      "longitude": -105.1403063,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-32",
+      "source_tag": "4S-32",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        1.8456887728137934,
+        -43.92984034743565,
+        1.143
+      ],
+      "latitude": 40.59564083,
+      "longitude": -105.1403,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-41",
+      "source_tag": "4S-41",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        -2.3337071212057907,
+        -40.908670017185784,
+        1.9812
+      ],
+      "latitude": 40.595668,
+      "longitude": -105.1403495,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-42",
+      "source_tag": "4S-42",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        -2.1057400727901343,
+        -41.20556088148144,
+        1.143
+      ],
+      "latitude": 40.59566533,
+      "longitude": -105.1403468,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-43",
+      "source_tag": "4S-43",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        -2.147956192822669,
+        -43.70745018673997,
+        1.4224
+      ],
+      "latitude": 40.59564283,
+      "longitude": -105.1403473,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4S-44",
+      "source_tag": "4S-44",
+      "group_id": "4S",
+      "equipment_group_type": "horizontal_separator_group",
+      "position_m": [
+        -2.64610641088637,
+        -43.262669866138715,
+        2.54
+      ],
+      "latitude": 40.59564683,
+      "longitude": -105.1403532,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4T-11",
+      "source_tag": "4T-11",
+      "group_id": "4T",
+      "equipment_group_type": "tank_group",
+      "position_m": [
+        36.353145374036814,
+        -31.716172734544276,
+        4.9276
+      ],
+      "latitude": 40.59575067,
+      "longitude": -105.1398913,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4T-12",
+      "source_tag": "4T-12",
+      "group_id": "4T",
+      "equipment_group_type": "tank_group",
+      "position_m": [
+        35.339958490856276,
+        -30.233942314854716,
+        4.572
+      ],
+      "latitude": 40.595764,
+      "longitude": -105.1399033,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4T-22",
+      "source_tag": "4T-22",
+      "group_id": "4T",
+      "equipment_group_type": "tank_group",
+      "position_m": [
+        37.872925698807606,
+        -26.37880888337874,
+        4.572
+      ],
+      "latitude": 40.59579867,
+      "longitude": -105.1398733,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4T-31",
+      "source_tag": "4T-31",
+      "group_id": "4T",
+      "equipment_group_type": "tank_group",
+      "position_m": [
+        42.03543514457421,
+        -22.876163856174806,
+        4.9276
+      ],
+      "latitude": 40.59583017,
+      "longitude": -105.139824,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4T-32",
+      "source_tag": "4T-32",
+      "group_id": "4T",
+      "equipment_group_type": "tank_group",
+      "position_m": [
+        40.28768777138775,
+        -22.061103917782177,
+        4.572
+      ],
+      "latitude": 40.5958375,
+      "longitude": -105.1398447,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-11",
+      "source_tag": "4W-11",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        8.642484114849776,
+        -9.921937009280873,
+        0.3556
+      ],
+      "latitude": 40.59594667,
+      "longitude": -105.1402195,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-12",
+      "source_tag": "4W-12",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        8.828235043232896,
+        -11.349681839098286,
+        0.508
+      ],
+      "latitude": 40.59593383,
+      "longitude": -105.1402173,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-22",
+      "source_tag": "4W-22",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        5.0372274554323955,
+        -9.236975314464612,
+        1.4478
+      ],
+      "latitude": 40.59595283,
+      "longitude": -105.1402622,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-27",
+      "source_tag": "4W-27",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        4.944351990640907,
+        -11.238486759145493,
+        0.3302
+      ],
+      "latitude": 40.59593483,
+      "longitude": -105.1402633,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-31",
+      "source_tag": "4W-31",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        1.5332894831332142,
+        -9.774047552185172,
+        0.7366
+      ],
+      "latitude": 40.595948,
+      "longitude": -105.1403037,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-32",
+      "source_tag": "4W-32",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        1.2546630899586046,
+        -9.885242632137965,
+        0.9652
+      ],
+      "latitude": 40.595947,
+      "longitude": -105.140307,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-33",
+      "source_tag": "4W-33",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        1.3644250030030771,
+        -9.885242632137965,
+        1.1684
+      ],
+      "latitude": 40.595947,
+      "longitude": -105.1403057,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-42",
+      "source_tag": "4W-42",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        -2.2914910011732563,
+        -9.829645092161568,
+        0.7112
+      ],
+      "latitude": 40.5959475,
+      "longitude": -105.140349,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-51",
+      "source_tag": "4W-51",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        -5.862974765284522,
+        -9.755144388561595,
+        0.4572
+      ],
+      "latitude": 40.59594817,
+      "longitude": -105.1403913,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-4W-54",
+      "source_tag": "4W-54",
+      "group_id": "4W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        -5.879861213537506,
+        -10.682511357801355,
+        1.0668
+      ],
+      "latitude": 40.59593983,
+      "longitude": -105.1403915,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-11",
+      "source_tag": "5S-11",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        80.66318507273114,
+        -14.925715619007855,
+        1.1176
+      ],
+      "latitude": 40.59590167,
+      "longitude": -105.1393665,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-12",
+      "source_tag": "5S-12",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        80.39300190308309,
+        -13.128803123083495,
+        2.2098
+      ],
+      "latitude": 40.59591783,
+      "longitude": -105.1393697,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-14",
+      "source_tag": "5S-14",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        81.08534627305649,
+        -14.741131786349428,
+        0.2794
+      ],
+      "latitude": 40.59590333,
+      "longitude": -105.1393615,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-15",
+      "source_tag": "5S-15",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        81.7354745241972,
+        -13.702569737156873,
+        1.2192
+      ],
+      "latitude": 40.59591267,
+      "longitude": -105.1393538,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-25",
+      "source_tag": "5S-25",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        78.51016294507261,
+        -12.962010502364217,
+        1.4732
+      ],
+      "latitude": 40.59591933,
+      "longitude": -105.139392,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-26",
+      "source_tag": "5S-26",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        78.76345966646768,
+        -12.590618934468596,
+        1.7526
+      ],
+      "latitude": 40.59592267,
+      "longitude": -105.139389,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-27",
+      "source_tag": "5S-27",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        79.24472343507854,
+        -12.368228773772922,
+        1.2192
+      ],
+      "latitude": 40.59592467,
+      "longitude": -105.1393833,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-28",
+      "source_tag": "5S-28",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        78.63681130517021,
+        -11.572071999793959,
+        3.175
+      ],
+      "latitude": 40.59593183,
+      "longitude": -105.1393905,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-32",
+      "source_tag": "5S-32",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        75.31862426245402,
+        -10.33002295352931,
+        1.0414
+      ],
+      "latitude": 40.595943,
+      "longitude": -105.1394298,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-34",
+      "source_tag": "5S-34",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        76.33181114563455,
+        -11.275181135498311,
+        1.4224
+      ],
+      "latitude": 40.5959345,
+      "longitude": -105.1394178,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-35",
+      "source_tag": "5S-35",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        76.88062070725734,
+        -10.811497650483387,
+        1.0922
+      ],
+      "latitude": 40.59593867,
+      "longitude": -105.1394113,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5S-36",
+      "source_tag": "5S-36",
+      "group_id": "5S",
+      "equipment_group_type": "vertical_separator_group",
+      "position_m": [
+        76.5091188504911,
+        -11.01609659844982,
+        1.6764
+      ],
+      "latitude": 40.59593683,
+      "longitude": -105.1394157,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-11",
+      "source_tag": "5W-11",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        75.78300158401174,
+        -46.48732719267058,
+        0.254
+      ],
+      "latitude": 40.59561783,
+      "longitude": -105.1394243,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-13",
+      "source_tag": "5W-13",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        76.29803825032843,
+        -46.76531489334265,
+        1.2192
+      ],
+      "latitude": 40.59561533,
+      "longitude": -105.1394182,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-16",
+      "source_tag": "5W-16",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        75.86743382407681,
+        -46.09814441204572,
+        0.0762
+      ],
+      "latitude": 40.59562133,
+      "longitude": -105.1394233,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-17",
+      "source_tag": "5W-17",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        74.93867918096136,
+        -46.04254687206932,
+        1.4986
+      ],
+      "latitude": 40.59562183,
+      "longitude": -105.1394343,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-18",
+      "source_tag": "5W-18",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        74.55873410066854,
+        -45.91244862770286,
+        1.143
+      ],
+      "latitude": 40.595623,
+      "longitude": -105.1394388,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-21",
+      "source_tag": "5W-21",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        77.39565737357404,
+        -42.59549938484179,
+        0.9398
+      ],
+      "latitude": 40.59565283,
+      "longitude": -105.1394052,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-22",
+      "source_tag": "5W-22",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        78.53549261685217,
+        -42.5765962212182,
+        0.7874
+      ],
+      "latitude": 40.595653,
+      "longitude": -105.1393917,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-26",
+      "source_tag": "5W-26",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        78.23997977662442,
+        -42.7433888411474,
+        0.5588
+      ],
+      "latitude": 40.5956515,
+      "longitude": -105.1393952,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-28",
+      "source_tag": "5W-28",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        77.01571229208137,
+        -42.15071906345044,
+        1.1176
+      ],
+      "latitude": 40.59565683,
+      "longitude": -105.1394097,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-31",
+      "source_tag": "5W-31",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        80.07215938987596,
+        -39.55542589096835,
+        0.5588
+      ],
+      "latitude": 40.59568017,
+      "longitude": -105.1393735,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    },
+    {
+      "id": "METEC2024-RP-5W-32",
+      "source_tag": "5W-32",
+      "group_id": "5W",
+      "equipment_group_type": "wellhead_group",
+      "position_m": [
+        80.34234255952398,
+        -39.704427298958386,
+        1.2446
+      ],
+      "latitude": 40.59567883,
+      "longitude": -105.1393703,
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024",
+      "source_dataset": "metec-fenceline-2024"
+    }
+  ],
+  "sensors": [
+    {
+      "id": "METEC2024-AERIS-2M",
+      "cache_id": "aeris2",
+      "variable": "methane",
+      "unit": "ppm",
+      "position_m": [
+        -0.3216868350798589,
+        9.370409411514087,
+        2.0
+      ],
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024"
+    },
+    {
+      "id": "METEC2024-AERIS-4M",
+      "cache_id": "aeris4",
+      "variable": "methane",
+      "unit": "ppm",
+      "position_m": [
+        -0.3216868350798589,
+        9.370409411514087,
+        4.0
+      ],
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024"
+    },
+    {
+      "id": "METEC2024-MGGA-3M",
+      "cache_id": "mgga3",
+      "variable": "methane",
+      "unit": "ppm",
+      "position_m": [
+        0.0,
+        0.0,
+        3.0
+      ],
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024"
+    },
+    {
+      "id": "METEC2024-WEATHER-3M",
+      "variable": "meteorology",
+      "position_m": [
+        0.0,
+        0.0,
+        3.0
+      ],
+      "origin_type": "recorded_geometry",
+      "facility_id": "METEC2024"
+    }
+  ],
+  "weather_sensor_id": "METEC2024-WEATHER-3M",
+  "process_connections": [],
+  "camera_mapping": null,
+  "unit_evidence": {
+    "wind": "Supplement S4/S5: +u FROM east,+v FROM north; WD=mod(90-atan2(v,u),360)",
+    "timezone": "Author preprocessing S1 uses America/Denver; meteorology epoch UTC authoritative",
+    "temperature": "Kelvin interpretation supported by potential-temperature calculation AT*(1000/BP)^0.286 and enhancement conversion proportional to1/AT",
+    "pressure": "BP hPa converted to Pa; source README",
+    "concentration": "AERIS ppm as recorded; MGGA dry ppm; cross-instrument basis/calibration not independently verified",
+    "reference": "https://amt.copernicus.org/articles/18/5687/2025/amt-18-5687-2025-supplement.zip"
+  }
+}

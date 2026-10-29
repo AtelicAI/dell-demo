@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "dataset": "GasVid",
+  "publication": {
+    "citation": "Wang J., Tchapmi L.P., Ravikumar A.P., McGuire M., Bell C.S., Zimmerle D., Savarese S., Brandt A.R. Machine vision for natural gas methane emissions detection using an infrared camera. Applied Energy 257 (2020) 113998",
+    "preprint": "https://arxiv.org/abs/1904.08500",
+    "data": "https://purl.stanford.edu/gn716hm8958"
+  },
+  "site": "Methane Emissions Technology Evaluation Center (METEC), Colorado State University, Fort Collins, Colorado",
+  "campaign": "Controlled releases, 10-14 July 2017",
+  "release_hardware": "Metered leak points made from 1/4-inch steel tubing on a separator; flow set by orifice and regulated compressed natural gas",
+  "camera": "FLIR GF-320 infrared (OGI) camera on a tripod, normal mode (not high-sensitivity); ~15 frames/s, 320x240 grayscale on-camera recording",
+  "protocol": "Each 24-minute video steps through eight leak-size classes, including class 0, in 3-minute intervals; the authors treat the first 15 s and last 5 s of each interval as not steady",
+  "leak_classes": [
+    {"class": 0, "rate_g_h": 5.3, "ci95_g_h": 0.1, "rate_scfh": 0.3},
+    {"class": 1, "rate_g_h": 277.7, "ci95_g_h": 1.1, "rate_scfh": 16.8},
+    {"class": 2, "rate_g_h": 713.1, "ci95_g_h": 2.6, "rate_scfh": 43.2},
+    {"class": 3, "rate_g_h": 958.8, "ci95_g_h": 3.1, "rate_scfh": 58.1},
+    {"class": 4, "rate_g_h": 1124.3, "ci95_g_h": 4.3, "rate_scfh": 68.1},
+    {"class": 5, "rate_g_h": 1389.8, "ci95_g_h": 4.8, "rate_scfh": 84.2},
+    {"class": 6, "rate_g_h": 1806.1, "ci95_g_h": 41.4, "rate_scfh": 109.5},
+    {"class": 7, "rate_g_h": 2051.6, "ci95_g_h": 48.0, "rate_scfh": 124.3}
+  ],
+  "leak_classes_source": "Wang et al. 2020, Table 1 (rates with 95% confidence intervals)",
+  "clips": {
+    "MOV_1242": {
+      "recorded_date": "2017-07-13",
+      "shooting_time_as_logged": "11:30",
+      "imaging_distance_m": 4.6,
+      "release_location": "Separator on METEC pad 1",
+      "release_location_basis": "Inferred: the paper reports 13 pad-1 videos, matching the 13 MOV_12xx/MOV_14xx recordings; the workbook does not name the pad",
+      "workbook": "downloaded/GasVid 2/GasVid Logging File.xlsx, sheet 'GasVid Logging File', row for video 1242",
+      "segments": [
+        {"class": 0, "start_seconds": 5, "end_seconds": 185, "label": "Below camera detection"},
+        {"class": 1, "start_seconds": 185, "end_seconds": 365, "label": "Visible release"}
+      ],
+      "segment_timing_basis": "Workbook 'Start Time for Leak 0/1 Video Clip' values (0:05, 3:05) read as minutes:seconds, plus the paper's 3-minute interval; unverified interpretation. The executed detector's first alert at about 194 s is consistent with it. Classes after 1 are not labeled in the workbook and are not asserted here."
+    }
+  },
+  "plant_alignment": "The synthetic plant releases the same metered rates at XV-2104: class 0 (5.3 g/h) before the scenario onset and class 1 (277.7 g/h) from 600 s. The footage is a different physical scene; only the rates are matched.",
+  "agent_access": "Not an agent tool or frozen evidence: these are facts about the recorded footage, shown to people as the answer key"
+}

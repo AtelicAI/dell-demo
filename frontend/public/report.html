@@ -7,10 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=54">
-<script src="js/shell.js?v=54" defer></script>
-<script src="js/report.js?v=8" defer></script>
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<link rel="stylesheet" href="css/story.css?v=101">
+<script src="js/shell.js?v=101" defer></script>
+<script src="js/story.js?v=101" defer></script>
+<script src="js/report.js?v=101" defer></script>
 <style>
 
   /* PRD Screen 7 (scrolling page): the report document with its audit timeline, a sticky side column
@@ -170,6 +172,15 @@
       </section>
     </aside>
   </div>
+
+  <section class="panel rise" style="animation-delay:100ms;margin-bottom:18px" id="fu-panel" aria-label="Repair, verification and closure" hidden>
+    <div class="panel-head"><h2>Repair, verification and closure</h2><span class="meta" id="fu-meta">—</span><span class="gb-slot" data-trace="verification" data-trace-text="Trace"></span></div>
+    <div style="padding:14px 16px" id="fu-body"></div>
+  </section>
+  <section class="panel rise" style="animation-delay:110ms;margin-bottom:18px" id="ak-panel" aria-label="Answer key" hidden>
+    <div class="panel-head"><h2>Answer key</h2><span class="meta">What the camera actually recorded</span></div>
+    <div style="padding:14px 16px" id="ak-body"></div>
+  </section>
 
   <section class="panel evt rise" style="animation-delay:120ms" id="evidence" aria-label="Source evidence">
     <div class="panel-head"><h2>Source evidence</h2><span class="meta" id="ev-meta">—</span></div>

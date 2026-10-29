@@ -1,0 +1,19 @@
+# Static UI + same-origin API proxy. SITE_ADDRESS is ":8080" locally, a hostname (automatic HTTPS) on AWS.
+# Every request needs the demo password: the API can start paid model calls.
+{$SITE_ADDRESS::8080} {
+	encode gzip
+	basic_auth {
+		{$BASIC_AUTH_USER:atelic} {$BASIC_AUTH_HASH}
+	}
+	handle_path /api/* {
+		reverse_proxy backend:8000 {
+			flush_interval -1
+		}
+	}
+	handle {
+		root * /srv
+		header /js/* Cache-Control "no-cache"
+		header /css/* Cache-Control "no-cache"
+		file_server
+	}
+}

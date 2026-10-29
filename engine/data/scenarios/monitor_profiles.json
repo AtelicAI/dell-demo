@@ -1,0 +1,21 @@
+[
+  {
+    "profile": "no_leak",
+    "title": "Control: release below camera detection (SCN-002)",
+    "run_id": "monitor-mov1242-020-184-001",
+    "scenario_id": "SCN-002",
+    "incident_prefix": "INC-002-M",
+    "clip_start_seconds": 20,
+    "clip_end_seconds": 184,
+    "scenario_seconds_at_clip_start": 435,
+    "mapping_basis": "Illustrative demonstration alignment on the same clock as the leak profile (clip 125 s at scenario 540 s), using footage before the GasVid workbook Leak 1 boundary (185 s): GasVid class 0, a metered 5.3 g/h release below camera detection, matched by a 5.3 g/h release in SCN-002. The segment boundary is an unverified reading of the workbook. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
+  },
+  {
+    "profile": "wind_outage",
+    "title": "Leak on camera while the weather station is down (SCN-003)",
+    "scenario_id": "SCN-003",
+    "incident_prefix": "INC-003-M",
+    "origin_region_reference": "scenarios/detections.json#DET-003",
+    "mapping_basis": "Same illustrative alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
+  }
+]

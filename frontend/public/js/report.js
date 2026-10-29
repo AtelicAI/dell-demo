@@ -11,18 +11,21 @@
   const KIND = {
     candidates: 'Locate', candidate_evidence: 'Locate', procedure: 'Procedure', maintenance: 'Maintenance record',
     detection: 'Camera annotation', quantification: 'Estimate', video: 'OGI clip', scenario: 'Scenario', sensor: 'Sensor traces',
-    satellite: 'Satellite',
+    satellite: 'Satellite', field_report: 'Field report', commitment: 'Commitment', history: 'Plant history', operations: 'Operations log',
   };
   const EVENT = {
     alert_triggered: 'Alert triggered', quantification_run: 'Emission estimate run', draft_version: 'Work order version', claim_flagged: 'Claim flagged',
     claim_unflagged: 'Flag cleared', submitted_for_review: 'Submitted for engineer review', review_approve: 'Approved',
     review_request_changes: 'Changes requested', review_reject: 'Rejected', report_exported: 'Report exported',
+    agent_detect: 'Camera alert registered', agent_investigation: 'Investigation findings', agent_answer: 'Agent answered',
+    question_asked: 'Question asked', report_issued: 'Report issued', repair_recorded: 'Repair recorded',
+    agent_verification: 'Verifier result', incident_closed: 'Incident closed', incident_kept_open: 'Kept open', agents_restarted: 'Agents restarted',
   };
   const when = (t) => (t ? `${t.slice(0, 10)} ${t.slice(11, 19)}` : '—');
   const MONO = /^(v\d|INC-|MOV_|[A-Z]{2,4}-\d|\d)/;
 
   // Report section -> the Glass box step that produced it.
-  const SEC_STEP = { camera: 'camera_event', candidates: 'equipment_mapping', emissions: 'emission_estimate', action: 'work_order', decision: 'approval' };
+  const SEC_STEP = { camera: 'camera_event', candidates: 'investigation', emissions: 'emission_estimate', action: 'work_order', decision: 'approval', followup: 'verification' };
   let R = null, evNo = {};
 
   function rows(s) {
@@ -93,7 +96,49 @@
   function renderAll() {
     evNo = {};
     if (R) R.evidence.forEach((e, i) => (evNo[e.id] = i + 1));
-    renderDoc(); renderSide(); renderEvidence();
+    renderDoc(); renderSide(); renderEvidence(); renderStory();
+  }
+
+  function readName() { try { return localStorage.getItem('atelic.reviewer') || ''; } catch (e) { return ''; } }
+  function renderStory() {
+    const S = window.AtelicStory, fu = R && R.follow_up;
+    $('fu-panel').hidden = !(fu && ['approved', 'reported', 'repair_recorded', 'verification_ready', 'closed', 'follow_up_required'].includes(fu.state));
+    if (!$('fu-panel').hidden && !(document.activeElement && /^fu-/.test(document.activeElement.id))) {
+      $('fu-body').innerHTML = S.followUp(fu, readName());
+      $('fu-meta').textContent = fu.state.replace(/_/g, ' ');
+    }
+    $('ak-panel').hidden = !R || R.status !== 'final';
+    if (R && R.status === 'final') {
+      const em = R.sections.find((x) => x.id === 'emissions');
+      const rate = em && em.rows[0].value ? parseFloat(em.rows[0].value) : null;
+      $('ak-body').innerHTML = S.answerKey(R.answer_key, rate);
+    }
+  }
+
+  async function act(path, body, msgId) {
+    const msg = $(msgId);
+    msg.textContent = 'Recording…';
+    const r = await fetch(`${API}/incidents/${INCIDENT_ID}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await r.json();
+    if (!r.ok) { msg.textContent = typeof data.detail === 'string' ? data.detail : 'Failed'; return; }
+    try { localStorage.setItem('atelic.reviewer', body.by); } catch (e) { /* ignore */ }
+    R = data;
+    document.activeElement.blur();
+    renderAll();
+    window.AtelicShell.refresh();
+    startPoll();
+  }
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'fu-repair') act('/repair', { by: $('fu-by').value.trim(), work_performed: $('fu-text').value.trim() }, 'fu-msg');
+    const c = e.target.closest('[data-close]');
+    if (c) act('/close', { by: $('fu-cby').value.trim(), decision: c.dataset.close, rationale: $('fu-why').value.trim() }, 'fu-cmsg');
+  });
+  // Live while the verifier works.
+  const waiting = (r) => r && r.follow_up && (r.follow_up.state === 'repair_recorded' || (r.follow_up.agent && r.follow_up.agent.status === 'running'));
+  let stop = null;
+  function startPoll() {
+    if (stop) stop();
+    stop = window.AtelicStory.poll(async () => { R = await get(`/incidents/${INCIDENT_ID}/report`); renderAll(); return R; }, waiting, 4000);
   }
 
   async function load() {
@@ -145,5 +190,5 @@
     else if (t.matches('.fn')) showEvidence(t.dataset.ev);
   });
 
-  load();
+  load().then(startPoll);
 })();

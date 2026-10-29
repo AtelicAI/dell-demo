@@ -7,10 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=54">
-<script src="js/shell.js?v=54" defer></script>
-<script src="js/review.js?v=5" defer></script>
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<link rel="stylesheet" href="css/story.css?v=101">
+<script src="js/shell.js?v=101" defer></script>
+<script src="js/story.js?v=101" defer></script>
+<script src="js/review.js?v=101" defer></script>
 <style>
   @keyframes ink{from{opacity:0;transform:scale(1.2)}}
   @media (prefers-reduced-motion:reduce){.rise,.sig.just .seal{animation:none!important}}
@@ -176,6 +178,12 @@
         <div class="card-h"><h2>Proposed work order</h2><span class="chip" id="wo-chip" hidden></span><span class="meta" id="doc-meta"></span></div>
         <div id="doc-body"><div class="empty">Loading…</div></div>
       </article>
+
+      <!-- 4 · investigation findings and questions to the agent -->
+      <section class="panel rise" style="animation-delay:100ms" aria-label="Investigation and questions" id="inv-panel" hidden>
+        <div class="card-h"><h2>Investigation and questions</h2><span class="meta" id="inv-meta"></span></div>
+        <div style="padding:14px 16px"><div id="agent-banner"></div><div id="investigation"></div><div id="qa"></div></div>
+      </section>
     </div>
 
     <!-- 4 · reviewer decision -->

@@ -74,6 +74,8 @@
         ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
         ${row('Source', `${CAM} · ${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
+        ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint') : ''}
+        ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · 3 of 5 one-second samples positive`, 'model_estimated') : ''}
       </div>
       <details class="more">
         <summary>More details <span>confidence, recording, camera, model, licence</span></summary>
@@ -84,6 +86,7 @@
           ${row('Resolution', meta.resolution, prov)}
           ${row('Frame rate', meta.frame_rate != null ? `${meta.frame_rate} fps${meta.variable_frame_rate ? ' (variable)' : ''}` : null, prov)}
           ${row('Model/version', meta.model_version, prov)}
+          ${row('Footage', 'Recorded METEC controlled release, a different scene from the synthetic plant; only the metered rate is matched', 'experimental_setpoint')}
           ${row('Licence', meta.license_status, meta.license_status === 'verified' ? prov : 'pending')}
         </div>
       </details>`;
