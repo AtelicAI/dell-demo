@@ -1241,6 +1241,7 @@ def investigation_view(rec, names=None):
             "summary": c.get("summary"), "findings": c.get("findings", []), "open_questions": c.get("open_questions", []),
             "candidate_assessment": c.get("candidate_assessment", []), "source_origin": f.get("source_origin"),
             "model": f.get("model"), "deployment": f.get("deployment"), "recorded_at": utc(inv.get("recorded_at")),
+            "replayed": bool(f.get("replay_of")),
             "tools": [a["tool"] for a in f.get("activity", []) if a["tool"] != "model_inference"]}
 
 
@@ -1257,7 +1258,11 @@ def agent_status(s):
     if not orch:
         return None
     running = orch["status"] == "running"
-    return {"status": orch["status"], "current_step": orch.get("current_step"),
+    step = orch.get("current_step")
+    # The automatic chain's investigate/plan replay a recorded Nemotron run when one exists (engine/data/recorded_runs).
+    recs = cached(("recordings",), lambda: engine.try_get("/model/recordings") or {}, ttl=30)
+    replayed = running and f"{s['incident_id']}.{step}" in recs and not (step == "plan" and (record(s) or {}).get("draft_version"))
+    return {"status": orch["status"], "current_step": step, "replayed": bool(replayed),
             "text": AGENT_TEXT.get(orch.get("current_step"), orch.get("current_step")) if running else None,
             "failed": orch["status"] in ("failed", "interrupted"), "detail": (orch.get("result") or {}).get("detail")}
 

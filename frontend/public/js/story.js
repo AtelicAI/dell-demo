@@ -14,7 +14,8 @@
     }
     if (agent.status !== 'running') return '';
     return `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>${esc(agent.text || 'Agents working')}</b>
-      <span>Live · NVIDIA Nemotron agents with read-only tools. This page updates by itself.</span></div>`;
+      <span>${agent.replayed ? 'Recorded NVIDIA Nemotron run, replayed with live read-only tools. Questions and research run live.'
+        : 'Live · NVIDIA Nemotron agents with read-only tools.'} This page updates by itself.</span></div>`;
   }
 
   function cites(ids) {
@@ -28,7 +29,7 @@
     const n = (k) => fs.filter((f) => f.kind === k).length;
     return `<div class="inv">
       <div class="inv-h"><span class="lbl">Investigation agent${inv.round > 1 ? ` · research round ${inv.round}` : ''}</span>
-        <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
+        <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.replayed ? ' · recorded run' : ''}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
         <span class="inv-n">${n('contradiction')} contradiction${n('contradiction') === 1 ? '' : 's'} · ${n('gap')} gap${n('gap') === 1 ? '' : 's'} · ${n('supporting')} supporting</span></div>
       ${inv.round > 1 ? `<div class="inv-ch"><span class="lbl">What changed since round ${inv.round - 1}</span>
         ${inv.focus ? `<p>Focus from ${esc(inv.requested_by || 'the engineer')}: “${esc(inv.focus)}”</p>` : ''}

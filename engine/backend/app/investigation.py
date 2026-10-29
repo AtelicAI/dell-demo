@@ -2,7 +2,10 @@
 import json
 import os
 import re
+import tempfile
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Literal, NamedTuple
 import httpx
 from pydantic import Field
@@ -213,6 +216,89 @@ class Provider:
         return choice["message"]
 
 
+# Recorded runs: the automatic chain (investigate, then the first plan) of each demo incident is recorded from its first
+# successful live Nemotron run, and later triggers replay the recorded model turns at their recorded pace (capped).
+# Tools still execute live on the new incident; only the model's replies come from the recording, with the recorded
+# engine incident ID swapped for the new one. Engineer questions, research rounds and revisions always call the model.
+# Delete a recording (or set MODEL_REPLAY=0) to run live again.
+RECORDINGS = Path(os.getenv("RECORDED_RUNS_DIR", Path(__file__).resolve().parents[2] / "data" / "recorded_runs"))
+RECORDED_TASKS = ("investigate", "plan")
+REPLAY_MAX_TURN_SECONDS = float(os.getenv("REPLAY_MAX_TURN_SECONDS", "6"))
+
+
+def _recording_path(incident_id, task):
+    slot = incident_id.rsplit("-M", 1)[0]
+    if not re.fullmatch(r"INC-\d{3}", slot) or task not in RECORDED_TASKS:
+        return None
+    return RECORDINGS / f"{slot}.{task}.json"
+
+
+def recorded_provider(incident_id, task):
+    """Replay of the recorded run for this incident's chain step, else a provider that records a live run, else None."""
+    path = _recording_path(incident_id, task)
+    if path is None or os.getenv("MODEL_REPLAY", "1") == "0":
+        return None
+    if path.is_file():
+        return ReplayProvider(json.loads(path.read_text()), incident_id)
+    return RecordingProvider(path, incident_id, task)
+
+
+def recording_status():
+    return {p.name.removesuffix(".json"): json.loads(p.read_text()).get("recorded_at")
+            for p in sorted(RECORDINGS.glob("INC-*.json"))} if RECORDINGS.is_dir() else {}
+
+
+class RecordingProvider(Provider):
+    """Live provider that keeps every model reply; saved once the run is accepted (Investigator.run succeeds)."""
+    def __init__(self, path, incident_id, task):
+        super().__init__()
+        self.path, self.incident_id, self.task, self.turns = path, incident_id, task, []
+
+    def complete(self, messages, tools=None):
+        started = time.perf_counter()
+        message = super().complete(messages, tools)
+        self.turns.append(dict(message=message, elapsed_ms=round((time.perf_counter() - started) * 1000)))
+        return message
+
+    def finish(self):
+        try:
+            self._save()
+        except OSError as exc:  # a recording that cannot be written never fails the live run it came from
+            print(f"Recording {self.path.name} not saved: {exc}", flush=True)
+
+    def _save(self):
+        if self.path.exists():
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        data = dict(task=self.task, engine_incident_id=self.incident_id, model=self.model, endpoint=self.url,
+                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"), turns=self.turns)
+        fd, tmp = tempfile.mkstemp(dir=self.path.parent, suffix=".tmp")
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=1)
+        os.replace(tmp, self.path)
+
+
+class ReplayProvider(Provider):
+    """Returns the recorded model replies in order, with the recorded incident ID swapped for this incident's."""
+    def __init__(self, recording, incident_id):
+        super().__init__()
+        self.recording, self.incident_id, self.i = recording, incident_id, 0
+        self.model, self.url = recording["model"], recording["endpoint"]
+        self.replay_of = dict(engine_incident_id=recording["engine_incident_id"], recorded_at=recording["recorded_at"])
+
+    def available(self):
+        return True
+
+    def complete(self, messages, tools=None):
+        turns = self.recording["turns"]
+        if self.i >= len(turns):
+            raise ModelUnavailable("The recorded run has no reply for this turn; delete the recording to run live")
+        turn = turns[self.i]
+        self.i += 1
+        time.sleep(min(turn["elapsed_ms"] / 1000, REPLAY_MAX_TURN_SECONDS))
+        return json.loads(json.dumps(turn["message"]).replace(self.recording["engine_incident_id"], self.incident_id))
+
+
 class _Transient(Exception):
     def __init__(self, reason, retry_after=None):
         super().__init__(reason)
@@ -272,7 +358,8 @@ class Investigator:
             started = time.perf_counter()
             message = self.provider.complete(messages, specs)
             self._record(dict(tool="model_inference", model=self.provider.model,
-                                      endpoint=self.provider.url, elapsed_ms=round((time.perf_counter()-started)*1000, 2), status="completed"))
+                                      endpoint=self.provider.url, elapsed_ms=round((time.perf_counter()-started)*1000, 2), status="completed",
+                                      **({"replay_of": self.provider.replay_of} if getattr(self.provider, "replay_of", None) else {})))
             messages.append(message)
             if message.get("tool_calls"):
                 for call in message["tool_calls"]:
@@ -333,9 +420,12 @@ class Investigator:
                 messages.append({"role": "user", "content": problem + ". " + failure +
                                  ". Return the corrected JSON ONLY, citing only evidence IDs delivered by the tools."})
                 continue
+            if hasattr(self.provider, "finish"):
+                self.provider.finish()
             return dict(content=content.model_dump(), origin="model_generated_draft", task=self.task.name, model=self.provider.model,
                         deployment="hosted_endpoint" if self.provider.url.startswith("https://integrate.api.nvidia.com") else "configured_endpoint_unverified_hardware",
-                        activity=self.activity, citation_validation="reference_membership_only; human review of factual entailment required")
+                        activity=self.activity, citation_validation="reference_membership_only; human review of factual entailment required",
+                        **({"replay_of": self.provider.replay_of} if getattr(self.provider, "replay_of", None) else {}))
         raise ToolDenied("Investigation exceeded model-turn budget")
 
 

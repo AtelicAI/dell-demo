@@ -10,6 +10,7 @@ from .contracts import Contract
 from .data import load_json
 from .historian import HistorianUnavailable
 from .investigation import (Investigator, Provider, ModelUnavailable, ToolDenied, INVESTIGATE, REINVESTIGATE, ANSWER, VERIFY,
+                            recorded_provider, recording_status,
                             deterministic_draft, deterministic_findings, deterministic_reinvestigation, deterministic_answer,
                             deterministic_verification)
 from .process import solve_process
@@ -105,6 +106,12 @@ def datasets():
 @router.get("/videos")
 def videos():
     return get_video_manifest()
+
+
+@router.get("/model/recordings")
+def model_recordings():
+    """Recorded agent runs the automatic chain replays (slot.task -> recorded_at)."""
+    return recording_status()
 
 
 @router.get("/recorded-replays")
@@ -436,7 +443,7 @@ def run_investigation(incident_id, body, observer=None):
         return save(provenance(deterministic_findings(record['snapshot'])))
     if body.mode == "model":
         tools = {k:v for k,v in evidence_tools(record).items() if k in Investigator.EVIDENCE}
-        engine = Investigator(tools, allowed_evidence(record), Provider(), observer, task=INVESTIGATE)
+        engine = Investigator(tools, allowed_evidence(record), recorded_provider(incident_id, 'investigate') or Provider(), observer, task=INVESTIGATE)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
                          lambda result: save(provenance(result, engine)), 'investigate')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
@@ -493,7 +500,9 @@ def run_draft_plan(incident_id, body, observer=None):
                 'reviewer':review['engineer_id'],'decision':review['decision'],'feedback':review['rationale'],
                 'previous_draft_version':review['draft_version'],'previous_draft':draft,
                 'answered_questions':[dict(question=q['question'],answer=(q.get('answer') or {}).get('answer',{}).get('content')) for q in record.get('questions',[])]}
-        engine = Investigator(tools, allowed_evidence(record), Provider(), observer)
+        # Only the first draft of the automatic chain is recorded/replayed; revisions answer live feedback.
+        first = not (basis or revising)
+        engine = Investigator(tools, allowed_evidence(record), (first and recorded_provider(incident_id, 'plan')) or Provider(), observer)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
                          lambda plan: save({"text": json.dumps(plan["content"]), "source_origin": "llm", "generation_method": "bounded_read_only_tool_calling",
                                             "model_run": model_run(engine), "evidence_backed_draft":plan}), 'plan')
