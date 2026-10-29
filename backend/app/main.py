@@ -420,7 +420,7 @@ def post_trigger(incident_id: str):
                                                      "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")}, human=True)
             s.update(engine_id=res["incident_id"], triggered_at=now_utc())
             ev = res["event"]
-            audit(s, "alert_triggered", "Presenter (Trigger event control)",
+            audit(s, "alert_triggered", "CAM-01 model alarm (OWLv2 + SAM2, 3 of 5 samples)",
                   f"{s['camera_id']} alert raised; engine incident {res['incident_id']} opened. Model alert on recorded "
                   f"GasVid footage at clip {ev.get('clip_time_seconds') or 0:.1f} s; agents started")
             save()
@@ -502,6 +502,7 @@ def overview_plume_image():
 # recording at 125-185 s (GasVid class 0, below camera detection).
 CLIP = {"before": "ogi/cam01_mov1242_before.mp4", "event": "ogi/source_clip.mp4", "original": "ogi/source_clip_original.mp4"}
 EVENT_START = 215.056  # source seconds of the first frame of the event clips
+MONITOR_START, MONITOR_END = 125.0, 230.0  # source seconds of the continuous pre-alert clip (CLIP["before"])
 EVENT_SECONDS = 5.0
 FPS = 15.0
 
@@ -529,7 +530,25 @@ def model_annotations():
             frames.append({"start_frame": start, "end_frame": min(int(EVENT_SECONDS * FPS) - 1, start + int(FPS) - 1),
                            "bbox_normalized": [round(v, 4) for v in (b[0], b[1], b[2] - b[0], b[3] - b[1])] if b else None,
                            "confidence": None, "source_seconds": round(t, 3)})
-        return {"mon": mon, "ranges": frames}
+        # Continuous monitoring before the alarm: every executed 1 Hz sample in the pre-alert clip, and the moment
+        # the persistence policy (3 of the last 5 samples positive) first latches, as the engine computes it.
+        window = [p for p in det["predictions"] if p.get("pts_seconds") is not None and MONITOR_START <= p["pts_seconds"] < MONITOR_END]
+        samples = []
+        for p in window:
+            polys = sorted(p.get("plume_extent_polygons") or [], key=len, reverse=True)
+            b = (p.get("normalized_boxes") or [None])[0]
+            samples.append({"t": round(p["pts_seconds"] - MONITOR_START, 3), "positive": bool(p.get("prediction")),
+                            "mask_polygon_normalized": [[round(x, 4), round(y, 4)] for x, y in polys[0]] if p.get("prediction") and polys else [],
+                            "bbox_normalized": [round(v, 4) for v in (b[0], b[1], b[2] - b[0], b[3] - b[1])] if p.get("prediction") and b else None})
+        status = engine.get("/monitor/status", {"profile": "leak", "clip_seconds": MONITOR_END})
+        alert = status.get("alert") or {}
+        segs = [{"start": round(x["start_seconds"] - MONITOR_START, 3), "end": round(x["end_seconds"] - MONITOR_START, 3),
+                 "rate_g_h": x.get("metered_rate_g_h") or x.get("rate_g_h"), "label": x.get("label")} for x in footage().get("segments", [])]
+        monitor = {"clip_start_seconds": MONITOR_START, "clip_end_seconds": MONITOR_END, "samples": samples,
+                   "alert_t": round(alert["clip_seconds"] - MONITOR_START, 3) if alert.get("clip_seconds") is not None else None,
+                   "policy": mon["alert_policy"], "segments": segs,
+                   "note": "Executed OWLv2+SAM2 samples at 1 Hz on the recorded footage; the alarm latches when 3 of the last 5 samples are positive"}
+        return {"mon": mon, "ranges": frames, "monitor": monitor}
     return cached(("annotations",), build, ttl=3600)
 
 
@@ -565,6 +584,7 @@ def get_detections(incident_id: str):
         "triggered": bool(s["engine_id"]), "dismissal": s["dismissal"], "clip_available": True,
         "before_available": True, "original_available": True, "frame_times": None,
         "camera_wall": read_json("skid", "camera_wall.json"),
+        "monitor": a["monitor"],
         "alert": ev and {"clip_time_seconds": ev.get("clip_time_seconds"), "timestamp_utc": ev.get("timestamp_utc"),
                          "reference": (ev.get("provenance") or {}).get("reference")},
     }

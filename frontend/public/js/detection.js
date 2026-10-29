@@ -74,7 +74,7 @@
         ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
         ${row('Source', `${CAM} · ${meta.camera_type ? `${meta.camera_type} · ` : ''}${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
-        ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint') : ''}
+        ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint', 'v-release') : ''}
         ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · 3 of 5 one-second samples positive`, 'model_estimated') : ''}
       </div>
       <details class="more">
@@ -176,7 +176,9 @@
   // Incident camera screen: the pre-leak view during normal operations, the leak (with before/after compare) after the alert.
   function cam1Screen(mode, clipOk, origOk) {
     if (mode === 'before') {
-      return `<div class="frame" id="frame-before"><video id="video-before" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/before"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
+      // Normal operations: the recording plays from the start of the monitored window with the executed model's
+      // 1 Hz output on top; the alarm latches by itself when the persistence policy is met.
+      return `<div class="frame" id="frame-before"><video id="video-before" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/before"></video><svg class="overlay" id="overlay-before" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span></div>`;
     }
     return clipOk ? `<div class="frame${origOk ? ' cmp-on' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
       : `<div class="no-feed"><b>${esc(CAM)} leak recording not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
@@ -386,9 +388,62 @@
     if (r) r.addEventListener('click', reset);
   }
 
+  // Trigger while CAM-01 is monitoring: fast-forward the recording to just before the model alarm; the alarm then
+  // latches from the model's own samples and raises the incident (raise below). Otherwise raise directly.
+  let monitor = null, alerted = false;
+  function fastForward() {
+    const v = $('video-before');
+    if (!monitor || monitor.alert_t == null || !v || v.readyState < 1) return false;
+    const to = Math.max(0, monitor.alert_t - 6);
+    if (v.currentTime < to) v.currentTime = to;
+    v.play().catch(() => {});
+    const tag = $('mon-tag');
+    if (tag) { tag.textContent = 'Fast-forward to the model alarm'; tag.className = 'mon-tag ff'; setTimeout(() => tag.classList.remove('ff'), 2500); }
+    return true;
+  }
+
+  function wireMonitor(m) {
+    monitor = m;
+    const v = $('video-before'), svg = $('overlay-before'), tag = $('mon-tag');
+    if (!v || !m) return;
+    const seg = (t) => (m.segments || []).find((x) => x.start <= t && t < x.end);
+    let last = null;
+    const step = () => {
+      const t = v.currentTime;
+      // Causal: only samples taken at or before the playhead, shown until the next sample (1 Hz).
+      let i = -1;
+      for (let k = 0; k < m.samples.length && m.samples[k].t <= t + 1e-3; k++) i = k;
+      const smp = i >= 0 && t - m.samples[i].t < 1.05 ? m.samples[i] : null;
+      const recent = m.samples.slice(Math.max(0, i - m.policy.window_samples + 1), i + 1).filter((x) => x.positive).length;
+      if (smp !== last) {
+        last = smp;
+        const W = v.videoWidth || 320, H = v.videoHeight || 240, poly = smp && smp.positive ? smp.mask_polygon_normalized : [];
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        svg.innerHTML = poly.length > 2 ? `<polygon class="mask" points="${poly.map(([x, y]) => `${x * W},${y * H}`).join(' ')}"/>` : '';
+        if (tag && !tag.classList.contains('ff')) {
+          tag.textContent = smp && smp.positive ? `Model: possible plume · ${recent} of ${m.policy.window_samples} recent samples` : 'Model watching · 1 Hz';
+          tag.className = `mon-tag${smp && smp.positive ? ' pos' : ''}`;
+        }
+        const g = seg(t), rel = $('v-release');
+        if (rel && g) rel.innerHTML = `<span class="pdot experimental_setpoint"></span><span>${g.rate_g_h} g/h metered · ${esc(g.label || '')}</span>`;
+      }
+      if (!alerted && !raised && m.alert_t != null && t >= m.alert_t) { alerted = true; raise(); return; }
+      if (!raised) requestAnimationFrame(step);
+    };
+    if (!v.paused && v.readyState > 2) requestAnimationFrame(step); else v.addEventListener('playing', () => requestAnimationFrame(step), { once: true });
+    // The recording ends a little after the alarm; hold the last frame rather than loop back to quiet footage.
+    v.addEventListener('ended', () => { if (!alerted && !raised) raise(); });
+  }
+
   let triggering = false;
   async function trigger() {
     if (triggering || !$('btn-trigger') || !pick) return;
+    if (pick === window.AtelicShell.INCIDENT_ID && !raised && fastForward()) return;
+    raise();
+  }
+
+  async function raise() {
+    if (triggering || !pick) return;
     triggering = true;
     // Another camera's alert opens its own incident.
     if (pick !== window.AtelicShell.INCIDENT_ID) {
@@ -482,6 +537,7 @@
       renderStatus(false);
       if (before) {
         renderControls('before');
+        wireMonitor(d.monitor);
         return;
       }
       startEvent(d, frames, origOk);

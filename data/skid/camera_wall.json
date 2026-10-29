@@ -25,10 +25,10 @@
         "file": "cam02_MOV_2571.mp4",
         "ogi_clip_id": "MOV_2571",
         "segment": {
-          "start": "00:00",
-          "end": "04:40"
+          "start": "00:42",
+          "end": "03:22"
         },
-        "picked_by": "Atelic team (no visible plume)"
+        "picked_by": "GasVid class 0 only (metered 5.3 g/h, below camera detection): from 15 s after Leak 0 starts (0:27) to 5 s before Leak 1 starts (3:27), per the GasVid logging workbook"
       }
     },
     {
@@ -43,10 +43,10 @@
         "file": "cam03_MOV_2583.mp4",
         "ogi_clip_id": "MOV_2583",
         "segment": {
-          "start": "00:00",
-          "end": "05:00"
+          "start": "00:49",
+          "end": "03:29"
         },
-        "picked_by": "Atelic team (no visible plume)"
+        "picked_by": "GasVid class 0 only (metered 5.3 g/h, below camera detection): from 15 s after Leak 0 starts (0:34) to 5 s before Leak 1 starts (3:34), per the GasVid logging workbook"
       }
     },
     {
@@ -59,10 +59,10 @@
         "file": "cam04_MOV_2570.mp4",
         "ogi_clip_id": "MOV_2570",
         "segment": {
-          "start": "00:00",
-          "end": "03:50"
+          "start": "00:45",
+          "end": "03:25"
         },
-        "picked_by": "Atelic team (no visible plume)"
+        "picked_by": "GasVid class 0 only (metered 5.3 g/h, below camera detection): from 15 s after Leak 0 starts (0:30) to 5 s before Leak 1 starts (3:30), per the GasVid logging workbook"
       }
     }
   ]
