@@ -8,16 +8,18 @@ need on top: the incident slot the presenter triggers, typed reviewer names, ope
 before submission, and the report export log. Nothing here can operate plant equipment.
 """
 import hashlib
+import hmac
 import json
 import os
+import secrets
 import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi import Body, Cookie, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 
 from app import engine
 from app.evidence import Evidence
@@ -36,6 +38,60 @@ AGENT_STEPS = ("investigate", "plan", "revise", "answer", "verify")
 SLOT_DEFAULTS = {"INC-001": {"camera_id": "CAM-01", "profile": "leak"}}
 REPORTED = ("reported", "repair_recorded", "verification_ready", "closed", "follow_up_required")
 APPROVED_OR_LATER = ("approved",) + REPORTED
+
+# ----- sign-in: one shared demo login; the web proxy asks /auth/check before serving any page or API call -----
+
+LOGIN_USER = os.getenv("LOGIN_USER", "atelic")
+LOGIN_PASSWORD = os.getenv("LOGIN_PASSWORD", "")
+SESSION_SECRET = (os.getenv("SESSION_SECRET") or secrets.token_hex(32)).encode()
+SESSION_HOURS = 12
+COOKIE = "atelic_session"
+
+
+def session_token(user, now=None):
+    exp = int((now or time.time()) + SESSION_HOURS * 3600)
+    body = f"{user}|{exp}"
+    return f"{body}|{hmac.new(SESSION_SECRET, body.encode(), hashlib.sha256).hexdigest()}"
+
+
+def session_user(token):
+    try:
+        user, exp, sig = (token or "").split("|")
+    except ValueError:
+        return None
+    good = hmac.new(SESSION_SECRET, f"{user}|{exp}".encode(), hashlib.sha256).hexdigest()
+    return user if hmac.compare_digest(sig, good) and int(exp) > time.time() else None
+
+
+@app.post("/login")
+def login(request: Request, body: dict = Body(...)):
+    user, password = str(body.get("username") or ""), str(body.get("password") or "")
+    user_ok = hmac.compare_digest(user.encode(), LOGIN_USER.encode())
+    password_ok = hmac.compare_digest(password.encode(), LOGIN_PASSWORD.encode())
+    ok = bool(LOGIN_PASSWORD) and user_ok and password_ok
+    if not ok:
+        time.sleep(1)  # slow down guessing
+        raise HTTPException(status_code=401, detail="Wrong username or password")
+    res = JSONResponse({"user": user})
+    secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+    res.set_cookie(COOKIE, session_token(user), max_age=SESSION_HOURS * 3600, httponly=True, secure=secure, samesite="lax", path="/")
+    return res
+
+
+@app.post("/logout")
+def logout():
+    res = JSONResponse({"signed_out": True})
+    res.delete_cookie(COOKIE, path="/")
+    return res
+
+
+@app.get("/auth/check")
+def auth_check(atelic_session: str | None = Cookie(None)):
+    user = session_user(atelic_session)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in required")
+    return Response(status_code=200, headers={"X-Atelic-User": user})
+
 
 # ----- presenter slot state (small, persisted so a restart keeps the current run) -----
 
@@ -361,7 +417,7 @@ def post_trigger(incident_id: str):
     with _lock:
         if not s["engine_id"]:
             res = engine.post("/monitor/incidents", {"profile": s["profile"], "plan_mode": "model",
-                                                     "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")})
+                                                     "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")}, human=True)
             s.update(engine_id=res["incident_id"], triggered_at=now_utc())
             ev = res["event"]
             audit(s, "alert_triggered", "Presenter (Trigger event control)",
@@ -1052,7 +1108,7 @@ def post_work_order_draft(incident_id: str):
     s = slot_or_404(incident_id)
     orch = orchestration(s)
     if orch and orch["status"] in ("failed", "interrupted"):
-        engine.post(f"/incidents/{s['engine_id']}/orchestration", {"plan_mode": "model", "plan_fallback": "deterministic"})
+        engine.post(f"/incidents/{s['engine_id']}/orchestration", {"plan_mode": "model", "plan_fallback": "deterministic"}, human=True)
         audit(s, "agents_restarted", OPERATOR, f"Agents restarted after: {(orch.get('result') or {}).get('detail') or orch['status']}")
         forget(s)
         save()

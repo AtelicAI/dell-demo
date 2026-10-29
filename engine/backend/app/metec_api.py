@@ -1,4 +1,5 @@
 """Additive read-only measured-incident benchmark APIs; no labels or workflow controls."""
+from .routes import OPERATOR  # human/operator credential on state-changing routes
 from datetime import datetime
 from typing import Literal
 from fastapi import APIRouter,HTTPException,Query
@@ -50,7 +51,7 @@ def measurements(incident_id:str,as_of_utc:datetime|None=None,backend:Literal['a
                 origin_type='recorded_aggregated',source_rate_truth_available=False)
 
 
-@router.post('/incidents/{incident_id}/estimate')
+@router.post('/incidents/{incident_id}/estimate', dependencies=OPERATOR)
 def calculation(incident_id:str,body:EstimateRequest):
     f,c,rows=selected(incident_id)
     if body.candidate_id not in c['candidate_ids']:raise HTTPException(422,'Unknown measured candidate')

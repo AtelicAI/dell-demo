@@ -4,6 +4,7 @@ The alert time comes only from saved model predictions and a fixed persistence p
 The origin region used for candidate equipment is the illustrative synthetic mapping,
 never a drifting plume extent from the recorded scene.
 """
+from .routes import OPERATOR  # human/operator credential on state-changing routes
 import math
 import re
 from datetime import datetime, timedelta
@@ -184,7 +185,7 @@ class MonitorIncidentRequest(OrchestrationRequest):
     profile: str = DEFAULT_PROFILE
 
 
-@router.post('/monitor/incidents')
+@router.post('/monitor/incidents', dependencies=OPERATOR)
 def register_incident(body: MonitorIncidentRequest | None = None):
     """Allocate the next monitoring incident ID and, by default, start the orchestrator."""
     body = body or MonitorIncidentRequest()

@@ -1,4 +1,5 @@
 """Job-based real model execution and timestamped replay assets, no UI changes."""
+from .routes import OPERATOR  # human/operator credential on state-changing routes
 import json
 import os
 from pathlib import Path
@@ -123,7 +124,7 @@ def detection_at(clip_id:str,run_id:str,
             'overlay_policy':'Render only fresh masks; stale/not_analyzed means unknown, not no gas'}
 
 
-@router.post('/videos/{clip_id}/detect',status_code=202)
+@router.post('/videos/{clip_id}/detect',status_code=202, dependencies=OPERATOR)
 def start_detection(clip_id:str,body:DetectionRequest):
     try:clip=lookup_clip(clip_id)
     except KeyError as exc:raise HTTPException(404,'Unknown recorded video') from exc

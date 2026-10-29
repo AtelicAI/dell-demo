@@ -6,6 +6,7 @@ evidence rules still apply. After a human acts (question, request_changes, repai
 it resumes the agent work that unblocks. It never reviews, approves, reports, closes or
 controls equipment.
 """
+from .routes import OPERATOR  # human/operator credential on state-changing routes
 import math
 import threading
 import time
@@ -318,7 +319,7 @@ def start(incident_id, options=None):
     return claimed
 
 
-@router.post('/incidents/{incident_id}/orchestration', status_code=202)
+@router.post('/incidents/{incident_id}/orchestration', status_code=202, dependencies=OPERATOR)
 def start_orchestration(incident_id: str, body: OrchestrationRequest | None = None):
     claimed = start(incident_id, body)
     from .routes import store

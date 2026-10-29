@@ -1,8 +1,9 @@
 """Backend workflow and source APIs; no frontend dependency or physical controls."""
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
-from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import Field
 from .contracts import Contract
@@ -14,7 +15,7 @@ from .process import solve_process
 from .quantification import quantify, compare_candidates
 from .retrieval import Documents, RetrievalUnavailable
 from .video import get_video_manifest, lookup_clip, resolve_video_path, get_annotations
-from .workflow import WorkflowStore, WorkflowError, report_pdf
+from .workflow import WorkflowStore, WorkflowError, canonical, report_pdf
 
 router = APIRouter()
 
@@ -69,6 +70,17 @@ def selected_calculation(incident_id, body):
                   clock=history["clock"], origin_type="derived_from_simulated_measurements",
                   historian=history["backend"], independent_validation="not_completed")
     return result, local, history
+
+
+def require_operator(authorization: str | None = Header(None)):
+    """Every state-changing route needs the provisioned human/operator credential. The orchestrator calls the
+    agent steps in process and never goes through these routes."""
+    durable = store()
+    with durable.connect() as conn:
+        return durable._authenticate(conn, authorization)
+
+
+OPERATOR = [Depends(require_operator)]
 
 
 @router.get("/datasets")
@@ -179,7 +191,7 @@ def asset_documents(asset_id: str, query: str = Query("inspection engineering ev
         docs.close()
 
 
-@router.post("/incidents/{incident_id}/workflow/open")
+@router.post("/incidents/{incident_id}/workflow/open", dependencies=OPERATOR)
 def open_workflow(incident_id: str, body: OpenWorkflow):
     durable=store()
     with durable.connect() as conn:
@@ -250,7 +262,7 @@ def workflow_incident(incident_id: str):
     return store().get_incident(incident_id)
 
 
-@router.post("/incidents/{incident_id}/draft-plan")
+@router.post("/incidents/{incident_id}/draft-plan", dependencies=OPERATOR)
 def draft_plan(incident_id: str, body: DraftRequest):
     return run_draft_plan(incident_id, body)
 
@@ -333,18 +345,32 @@ def model_run(engine):
     return {"provider":engine.provider.url, "model":engine.provider.model, "run_id":str(uuid4()), "generated_at":datetime.now(timezone.utc).isoformat()}
 
 
-def prior_response(durable, incident_id, key):
+
+
+def prior_response(durable, incident_id, key, request=None):
+    """Saved response for a retried key, only when the retry is the same request (same action and body)."""
     with durable.connect() as conn:
         row=conn.execute('SELECT response FROM requests WHERE incident_id=%s AND key=%s', (incident_id,key)).fetchone()
+        if row and request is not None:
+            job=conn.execute('SELECT fingerprint FROM draft_jobs WHERE incident_id=%s AND key=%s', (incident_id,key)).fetchone()
+            # Model attempts are bound to their action and body; a deterministic save has no job row to compare.
+            if job and job['fingerprint']!=hashlib.sha256(canonical(request).encode()).hexdigest():
+                raise WorkflowError('idempotency_key_reused')
     return row['response'] if row else None
 
 
-def run_agent(durable, incident_id, body, version, engine, states, save):
+def job_request(body, action):
+    """What a request key is bound to: the action (and its target) plus the body."""
+    return {**body.model_dump(), 'action': action}
+
+
+def run_agent(durable, incident_id, body, version, engine, states, save, action):
     """One reserved paid model attempt, saved durably; retries with the same key never call the model twice."""
     if not engine.provider.available():
         raise ModelUnavailable('Model unavailable; no inference executed. Configure a provider/model or explicitly request deterministic mode')
-    if not durable.reserve_draft_job(incident_id,body.idempotency_key,body.model_dump(),version,states):
-        return prior_response(durable, incident_id, body.idempotency_key) or IN_PROGRESS(body.idempotency_key)
+    request = job_request(body, action)
+    if not durable.reserve_draft_job(incident_id,body.idempotency_key,request,version,states):
+        return prior_response(durable, incident_id, body.idempotency_key, request) or IN_PROGRESS(body.idempotency_key)
     try:
         response=save(engine.run())
     except Exception as exc:
@@ -364,7 +390,7 @@ def IN_PROGRESS(key):
     return JSONResponse(status_code=202,content={'status':'in_progress','idempotency_key':key,'retry_after_seconds':2})
 
 
-@router.post("/incidents/{incident_id}/investigate")
+@router.post("/incidents/{incident_id}/investigate", dependencies=OPERATOR)
 def investigate(incident_id: str, body: DraftRequest):
     return run_investigation(incident_id, body)
 
@@ -372,7 +398,7 @@ def investigate(incident_id: str, body: DraftRequest):
 def run_investigation(incident_id, body, observer=None):
     """Separate investigation agent: findings, contradictions and gaps before any work order."""
     durable = store()
-    previous = prior_response(durable, incident_id, body.idempotency_key)
+    previous = prior_response(durable, incident_id, body.idempotency_key, job_request(body, 'investigate'))
     if previous:
         return previous
     record = durable.get_incident(incident_id)
@@ -384,7 +410,7 @@ def run_investigation(incident_id, body, observer=None):
         tools = {k:v for k,v in evidence_tools(record).items() if k in Investigator.EVIDENCE}
         engine = Investigator(tools, allowed_evidence(record), Provider(), observer, task=INVESTIGATE)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
-                         lambda result: save(provenance(result, engine)))
+                         lambda result: save(provenance(result, engine)), 'investigate')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
 
 
@@ -432,7 +458,7 @@ def run_draft_plan(incident_id, body, observer=None):
         engine = Investigator(tools, allowed_evidence(record), Provider(), observer)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
                          lambda plan: save({"text": json.dumps(plan["content"]), "source_origin": "llm", "generation_method": "bounded_read_only_tool_calling",
-                                            "model_run": model_run(engine), "evidence_backed_draft":plan}))
+                                            "model_run": model_run(engine), "evidence_backed_draft":plan}), 'plan')
     else:
         raise HTTPException(422, "mode must explicitly be model or deterministic")
     return save(saved)
@@ -466,7 +492,7 @@ def ask_question(incident_id: str, body: QuestionRequest, authorization: str | N
     return record
 
 
-@router.post("/incidents/{incident_id}/questions/{question_id}/answer")
+@router.post("/incidents/{incident_id}/questions/{question_id}/answer", dependencies=OPERATOR)
 def answer(incident_id: str, question_id: str, body: DraftRequest):
     return run_answer(incident_id, question_id, body)
 
@@ -474,7 +500,7 @@ def answer(incident_id: str, question_id: str, body: DraftRequest):
 def run_answer(incident_id, question_id, body, observer=None):
     """Answer agent: reads frozen evidence only and never changes the draft or the review state."""
     durable = store()
-    previous = prior_response(durable, incident_id, body.idempotency_key)
+    previous = prior_response(durable, incident_id, body.idempotency_key, job_request(body, f'answer:{question_id}'))
     if previous:
         return previous
     record = durable.get_incident(incident_id)
@@ -499,7 +525,7 @@ def run_answer(incident_id, question_id, body, observer=None):
             verification = record['verification']
             tools['get_post_repair_readings'] = lambda: {'evidence_ids':[e['id'] for e in verification['evidence_references']],'verification':verification}
         engine = Investigator(tools, allowed, Provider(), observer, task=ANSWER, question=question['question'])
-        return run_agent(durable, incident_id, body, record['version'], engine, None, lambda result: save(provenance(result, engine)))
+        return run_agent(durable, incident_id, body, record['version'], engine, None, lambda result: save(provenance(result, engine)), f'answer:{question_id}')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
 
 
@@ -560,7 +586,7 @@ def recovery_check(incident_id, record):
 def run_verification(incident_id, body, observer=None):
     """Verifier agent drafts a closure recommendation; only a human can close the incident."""
     durable = store()
-    previous = prior_response(durable, incident_id, body.idempotency_key)
+    previous = prior_response(durable, incident_id, body.idempotency_key, job_request(body, 'verify'))
     if previous:
         return previous
     record = durable.get_incident(incident_id)
@@ -588,11 +614,11 @@ def run_verification(incident_id, body, observer=None):
                  'get_approved_work_order': lambda: {'evidence_ids':[work_order, repair], 'approved_plan':plan['evidence_backed_draft']['content'],
                                                      'review':record['review'], 'repair_record':record['repair']}}
         engine = Investigator(tools, [e['id'] for e in evidence], Provider(), observer, task=VERIFY)
-        return run_agent(durable, incident_id, body, body.expected_version, engine, ('repair_recorded',), lambda result: save(provenance(result, engine)))
+        return run_agent(durable, incident_id, body, body.expected_version, engine, ('repair_recorded',), lambda result: save(provenance(result, engine)), 'verify')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
 
 
-@router.post("/incidents/{incident_id}/verify")
+@router.post("/incidents/{incident_id}/verify", dependencies=OPERATOR)
 def verify(incident_id: str, body: DraftRequest):
     return run_verification(incident_id, body)
 
@@ -635,7 +661,7 @@ def remember(record):
         return dict(status='failed', error=type(exc).__name__)
 
 
-@router.post("/incidents/{incident_id}/submit-review")
+@router.post("/incidents/{incident_id}/submit-review", dependencies=OPERATOR)
 def submit_review(incident_id: str, body: Mutation):
     return store().submit_review(incident_id, expected_version=body.expected_version, idempotency_key=body.idempotency_key)
 

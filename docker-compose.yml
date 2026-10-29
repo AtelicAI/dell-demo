@@ -1,5 +1,5 @@
 # Full stack: the engine (agents + Neo4j/InfluxDB/PostgreSQL/Qdrant), the UI API and the web front.
-#   cp .env.example .env   # then fill the secrets (scripts: deploy/gen_env.sh)
+#   deploy/gen_env.sh .env :8080     # or copy .env.example and fill it
 #   docker compose up -d --build
 #   docker compose run --rm seed     # once, on a fresh volume set
 name: atelic-dell-demo
@@ -105,6 +105,9 @@ services:
       DATA_DIR: /data
       UI_STATE_FILE: /state/state.json
       DEPLOYMENT_LABEL: ${DEPLOYMENT_LABEL:-Docker Compose}
+      LOGIN_USER: ${LOGIN_USER:-atelic}
+      LOGIN_PASSWORD: ${LOGIN_PASSWORD:?set LOGIN_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
     volumes:
       - ./data:/data:ro
       - ui-state:/state
@@ -115,8 +118,6 @@ services:
     build: ./frontend
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:8080}
-      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-atelic}
-      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?set BASIC_AUTH_HASH (caddy hash-password)}
     ports:
       - "${HTTP_PORT:-8080}:8080"
     volumes: [caddy-data:/data]

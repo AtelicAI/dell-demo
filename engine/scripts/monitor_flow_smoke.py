@@ -64,7 +64,7 @@ if __name__ == '__main__':
             else:
                 raise SystemExit('No monitoring alert in the replayed interval')
             alert = status['alert']
-            registered = expect(client.post('/monitor/incidents', json={'plan_mode': mode}))
+            registered = expect(client.post('/monitor/incidents', headers=auth, json={'plan_mode': mode}))
             incident = registered['incident_id']
             timeline.append(dict(stage='detect', incident_id=incident, **alert))
             print('ALERT ->', incident, 'at scenario', alert['scenario_seconds'], 's | orchestrator started')

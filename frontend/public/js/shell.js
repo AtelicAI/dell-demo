@@ -143,7 +143,7 @@
       <button type="button" class="rail-tg" id="rail-tg" aria-label="Collapse menu" title="Collapse menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
-      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator</span></div></div>`;
+      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator · <button type="button" class="linkish" id="sign-out">Sign out</button></span></div></div>`;
     $('rail-tg').addEventListener('click', () => setRailMin(!document.documentElement.classList.contains('rail-min')));
     setRailMin(readRailMin(), true);
   }
@@ -497,8 +497,16 @@
     if (stepper) stepper.innerHTML = '<div class="step-empty">Stage status unavailable: backend is not reachable.</div>';
   }
 
+  // Session expired (or signed out in another tab): back to the sign-in page, then here again.
+  const toLogin = () => location.replace(`/login.html?next=${encodeURIComponent(location.pathname + location.search)}`);
+  document.addEventListener('click', async (e) => {
+    if (e.target.id !== 'sign-out') return;
+    await fetch(`${API}/logout`, { method: 'POST' }).catch(() => null);
+    location.replace('/login.html');
+  });
   async function get(path) {
     const r = await fetch(API + path);
+    if (r.status === 401 && API === '/api') { toLogin(); throw new Error('Sign in required'); }
     if (!r.ok) throw new Error(`${path} → ${r.status}`);
     return r.json();
   }

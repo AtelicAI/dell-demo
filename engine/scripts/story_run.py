@@ -95,12 +95,12 @@ def record(client, mode):
     story = Story(client)
     # 1. No-leak control: the whole recording replays without an alert and no incident can be opened.
     assert story.monitor_until_alert('no_leak') is None
-    refused = client.post('/monitor/incidents', json={'profile': 'no_leak', 'plan_mode': mode})
+    refused = client.post('/monitor/incidents', headers=AUTH, json={'profile': 'no_leak', 'plan_mode': mode})
     story.beat('no_leak_control', alert=False, register_status=refused.status_code, detail=refused.json().get('detail'))
 
     # 2. Leak: alert, then the orchestrator runs every agent step up to the engineer.
     alert = story.monitor_until_alert('leak')
-    registered = story.call('post', '/monitor/incidents', json={'profile': 'leak', 'plan_mode': mode})
+    registered = story.call('post', '/monitor/incidents', headers=AUTH, json={'profile': 'leak', 'plan_mode': mode})
     incident = registered['incident_id']
     on_camera = story.call('get', '/monitor/status', params={'clip_seconds': alert['clip_seconds']})['metered_release']
     story.beat('alert_registered', incident_id=incident, alert=alert, on_camera_metered_release=on_camera)
@@ -181,7 +181,7 @@ def record(client, mode):
 
     # 8. Contrast: same footage, weather station down → no rate, the plan says so.
     alert = story.monitor_until_alert('wind_outage')
-    contrast = story.call('post', '/monitor/incidents', json={'profile': 'wind_outage', 'plan_mode': mode})['incident_id']
+    contrast = story.call('post', '/monitor/incidents', headers=AUTH, json={'profile': 'wind_outage', 'plan_mode': mode})['incident_id']
     story.beat('wind_outage_registered', incident_id=contrast, alert=alert)
     wind_run = story.watch(contrast, 'awaiting_human_review')
     wind = story.call('get', f'/incidents/{contrast}/workflow')

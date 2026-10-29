@@ -1,3 +1,4 @@
+from .routes import OPERATOR  # human/operator credential on state-changing routes
 import copy
 import time
 from contextlib import asynccontextmanager
@@ -281,7 +282,7 @@ def investigation(incident_id:str,as_of_seconds:int=Query(760,ge=0),asset_id:str
     trace=dict(tool='get_sensor_history',backend=history['backend'],elapsed_ms=round((time.perf_counter()-started)*1000,2),status='completed',observation_count=history['count'])
     return dict(incident=incident(incident_id,as_of_seconds),localization=result,history=history,selected_asset_id=asset_id,selected_context=selected_context,tool_activity=result.get('tool_activity',[])+selected_trace+[trace],agent_status='No LLM executed; deterministic backend tools only')
 
-@app.post('/events/detections')
+@app.post('/events/detections', dependencies=OPERATOR)
 def ingest_event(event:DetectionEvent):
     try:validate_event_reference(event,app.state.scenarios,app.state.facility)
     except ValueError as exc:raise HTTPException(422,str(exc)) from exc

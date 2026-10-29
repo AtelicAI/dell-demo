@@ -15,7 +15,7 @@ docker compose up -d --build
 docker compose --profile seed run --rm seed   # once per fresh volume set
 ```
 
-Open <http://localhost:8080> (user `atelic`, the demo password). The UI calls the API at `/api` on the same origin.
+Open <http://localhost:8080> (sign in as `atelic`, password from LOGIN_PASSWORD; the demo uses `atelicadmin`). The UI calls the API at `/api` on the same origin.
 
 ## Deploy on AWS
 
@@ -27,7 +27,7 @@ NVIDIA_API_KEY=... deploy/gen_env.sh .deploy/aws.env <ip-dashed>.sslip.io <demo-
 deploy/aws/deploy.sh --seed    # later updates: deploy/aws/deploy.sh
 ```
 
-One Graviton host (t4g.large, eu-west-1) runs the whole stack in Docker Compose; Caddy serves HTTPS with a password.
+One Graviton host (t4g.large, eu-west-1) runs the whole stack in Docker Compose; Caddy serves HTTPS; every page and API call needs a signed-in session.
 
 ## Layout
 

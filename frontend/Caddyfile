@@ -1,16 +1,38 @@
 # Static UI + same-origin API proxy. SITE_ADDRESS is ":8080" locally, a hostname (automatic HTTPS) on AWS.
-# Every request needs the demo password: the API can start paid model calls.
+# Everything except the sign-in page needs a session: the UI API checks the cookie (/auth/check).
 {$SITE_ADDRESS::8080} {
 	encode gzip
-	basic_auth {
-		{$BASIC_AUTH_USER:atelic} {$BASIC_AUTH_HASH}
+
+	# Sign-in page and what it needs: public.
+	@public path /login.html /js/login.js /css/theme.css /img/*
+	handle @public {
+		root * /srv
+		file_server
 	}
+	handle /api/login {
+		rewrite * /login
+		reverse_proxy backend:8000
+	}
+
+	# API: 401 without a session.
 	handle_path /api/* {
+		forward_auth backend:8000 {
+			uri /auth/check
+		}
 		reverse_proxy backend:8000 {
 			flush_interval -1
 		}
 	}
+
+	# Pages: back to the sign-in page without a session.
 	handle {
+		forward_auth backend:8000 {
+			uri /auth/check
+			@denied status 401
+			handle_response @denied {
+				redir * /login.html?next={uri} 302
+			}
+		}
 		root * /srv
 		header /js/* Cache-Control "no-cache"
 		header /css/* Cache-Control "no-cache"
