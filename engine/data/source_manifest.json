@@ -1,0 +1,359 @@
+{
+  "schema_version": "2.0",
+  "downloaded_inventory": "downloaded_manifest.json",
+  "downloaded_inventory_sha256": "a61e2ae9891e0b1a264c8a3966f8f798e72118826ce05a02c59933debcabbcdc",
+  "sources": [
+    {
+      "id": "atelic-synthetic-fixture",
+      "kind": "simulated",
+      "status": "generated",
+      "version": "gaussian-process-2",
+      "seed": 42,
+      "license": "Project-authored synthetic demonstration data",
+      "records": [
+        "facility/",
+        "documents/",
+        "maintenance.json",
+        "scenarios/",
+        "generated/measurements.jsonl"
+      ],
+      "validation": "contract/reproducibility/steady-process checks; not a validated digital twin",
+      "rate_alignment": "SCN-001/SCN-003 release the GasVid MOV_1242 metered rates: 5.3 g/h before 600 s, 277.7 g/h from 600 s; SCN-002 releases 5.3 g/h throughout"
+    },
+    {
+      "id": "gaslib582",
+      "kind": "technical_network_benchmark",
+      "status": "present_locally_audited",
+      "provided_by": "user",
+      "acquisition_date": null,
+      "original_archive_hash": null,
+      "upstream_reference": "https://gaslib.zib.de/",
+      "directory": "downloaded/GasLib-582-v2-20211129",
+      "file_count": 8458,
+      "bytes": 380631537,
+      "role": "network_topology_reference; not_skid_reconstruction",
+      "redistribution_rights": "unverified; see per-file local license evidence in audit",
+      "integrated_into_synthetic_sensor_history": false
+    },
+    {
+      "id": "gasvid",
+      "kind": "recorded",
+      "status": "present_locally_audited",
+      "provided_by": "user",
+      "acquisition_date": null,
+      "original_archive_hash": null,
+      "upstream_reference": "https://github.com/weathon/Lang-Gas",
+      "directory": "downloaded/GasVid 2",
+      "file_count": 29,
+      "bytes": 2085451710,
+      "role": "recorded_video_metadata_and_local_replay; gas_labels_pending",
+      "redistribution_rights": "unverified; see per-file local license evidence in audit",
+      "integrated_into_synthetic_sensor_history": false
+    },
+    {
+      "id": "tadi2019",
+      "kind": "recorded",
+      "status": "present_locally_audited",
+      "provided_by": "user",
+      "acquisition_date": null,
+      "original_archive_hash": null,
+      "upstream_reference": "https://zenodo.org/records/8399829",
+      "directory": "downloaded/Tadi",
+      "file_count": 9,
+      "bytes": 4687937,
+      "role": "independent_reference_methane_and_wind_benchmark; geometry_and_time_gaps",
+      "redistribution_rights": "unverified; see per-file local license evidence in audit",
+      "integrated_into_synthetic_sensor_history": false
+    },
+    {
+      "id": "tadi2024",
+      "kind": "recorded",
+      "status": "present_locally_audited",
+      "provided_by": "user",
+      "acquisition_date": null,
+      "original_archive_hash": null,
+      "upstream_reference": "https://github.com/amcmanemin2/TADI_controlled_release_2024",
+      "directory": "downloaded/amcmanemin2-TADI_controlled_release_2024-671b4ef",
+      "file_count": 494,
+      "bytes": 128093847,
+      "role": "independent_release_rate_and_operator_result_benchmark; not_raw_sensor_join",
+      "redistribution_rights": "unverified; see per-file local license evidence in audit",
+      "integrated_into_synthetic_sensor_history": false
+    },
+    {
+      "id": "langgas_reference_and_pretrained_models",
+      "kind": "versioned_research_code_and_weights",
+      "status": "pretrained_models_executed_locally_research_diagnostic",
+      "model_manifest": "detection/model_manifest.json",
+      "reference_commit": "648a55283653c60085517e111570fc8fc6e9997b",
+      "diagnostic_scope": "Limited public synthetic GT panel crops; not full dataset or real-GasVid accuracy",
+      "training_performed": false
+    },
+    {
+      "id": "metec-fenceline-2024",
+      "kind": "recorded_controlled_experiment",
+      "status": "measured_benchmark_prepared",
+      "provided_by": "user",
+      "upstream_reference": "https://doi.org/10.5061/dryad.hhmgqnkss",
+      "directory": "Gas-Data",
+      "role": "Independent measured sensor/geometry and inverse-calculation benchmark; not paired GasVid footage",
+      "public_manifest": "benchmarks/metec2024/public/manifest.json",
+      "incident_id": "METEC2024-BENCH-001",
+      "integrated_into_synthetic_sensor_history": false,
+      "source_rate_truth_available_to_runtime": false,
+      "training_performed": false
+    },
+    {
+      "id": "simgas-full-hf",
+      "kind": "published_synthetic_segmentation_dataset",
+      "status": "downloaded_hash_verified_sample_profiled",
+      "upstream_reference": "https://huggingface.co/datasets/weathon/sim_gas",
+      "revision": "7cdb8c9aff93fee3d66da5474c571a0b61f30fd8",
+      "directory": "downloaded/SimGas/7cdb8c9aff93fee3d66da5474c571a0b61f30fd8",
+      "bytes": 747765689,
+      "rows": 11758,
+      "video_groups": 26,
+      "temporal_sequences": 30,
+      "license": "not_declared",
+      "source_manifest": "downloaded/SimGas/7cdb8c9aff93fee3d66da5474c571a0b61f30fd8/source_manifest.json",
+      "inspection": "downloaded/SimGas/7cdb8c9aff93fee3d66da5474c571a0b61f30fd8/inspection.json",
+      "role": "Synthetic segmentation reference; all rows decoded and binary masks derived using the fixed author rule; raw GT retained",
+      "integrated_into_synthetic_sensor_history": false,
+      "paired_with_real_gasvid_or_metec": false,
+      "training_performed": true,
+      "derived_manifest": "detection/training/simgas-binary-v1/manifest.json",
+      "derived_manifest_sha256": "d8ee5fa99ad37e213c8bda08ccd098a51464ac489e67087b7cb7e307fb409539",
+      "binary_export_counts": {
+        "positive": 6940,
+        "negative": 4818,
+        "foreground_pixels": 30417482,
+        "samples": 11758,
+        "sequences": 30,
+        "source_groups": 26
+      },
+      "binary_conversion": "gt.mean(axis=-1) > 20 on original RGB uint8 pixels; background=0, foreground=1",
+      "training_runs": [
+        {
+          "results_path": "detection/experiments/plume-mask-pilot-20261026/real-plus-synthetic/results.json",
+          "results_sha256": "c2d08efe88e5b05d531234b9418464ac998b9a1651cc43ceaab4930c55c5a4f7",
+          "mode": "real-plus-synthetic",
+          "optimizer_updates": 200,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 771,
+          "selected_checkpoint_step": 50,
+          "model": "LeakHunter mask/detection heads; SAM2 unchanged",
+          "promoted_to_application": false,
+          "scope": "Bounded same-session development pilot, not full-dataset training or field validation"
+        }
+      ]
+    },
+    {
+      "id": "detection-coco-external",
+      "kind": "external_ogi_segmentation_annotations",
+      "provided_by": "user",
+      "directory": "Detection.v1i.coco",
+      "status": "automatically_binary_exported",
+      "upstream_reference": "https://universe.roboflow.com/detection-icxpj/detection-cueu8",
+      "declared_license": "CC BY 4.0",
+      "annotation_method": "Unverified supplied annotations; no human review by this project claimed",
+      "derived_manifest": "detection/training/detection-coco-binary-v1/manifest.json",
+      "derived_manifest_sha256": "e06e2ce2d772adb054f2406836329e471b6c148bd077348c65c29d8866bb3e2c",
+      "counts": {
+        "source_images": 1000,
+        "included_images": 999,
+        "excluded_images": 1,
+        "positives": 739,
+        "negatives": 260,
+        "by_split": {
+          "train": {
+            "images": 300,
+            "positives": 248,
+            "negatives": 52,
+            "source_groups": [
+              "MOV_1237"
+            ]
+          },
+          "validation": {
+            "images": 300,
+            "positives": 237,
+            "negatives": 63,
+            "source_groups": [
+              "MOV_2569"
+            ]
+          },
+          "test": {
+            "images": 399,
+            "positives": 254,
+            "negatives": 145,
+            "source_groups": [
+              "MOV_2571"
+            ]
+          }
+        }
+      },
+      "independent_session_holdout": false,
+      "integrated_into_synthetic_sensor_history": false,
+      "paired_with_metec": false,
+      "training_performed": true,
+      "training_runs": [
+        {
+          "results_path": "detection/experiments/plume-mask-pilot-20261026/real-only/results.json",
+          "results_sha256": "6a0dd4dc2a3ad1b21d31f62e71718cbfcbbf6374a771416bad1d1233f634bb45",
+          "mode": "real-only",
+          "optimizer_updates": 200,
+          "source_sample_exposures": 1600,
+          "unique_source_examples": 300,
+          "selected_checkpoint_step": 50,
+          "model": "LeakHunter mask/detection heads; SAM2 unchanged",
+          "promoted_to_application": false,
+          "scope": "Bounded same-session development pilot, not full-dataset training or field validation"
+        },
+        {
+          "results_path": "detection/experiments/plume-mask-pilot-20261026/real-plus-synthetic/results.json",
+          "results_sha256": "c2d08efe88e5b05d531234b9418464ac998b9a1651cc43ceaab4930c55c5a4f7",
+          "mode": "real-plus-synthetic",
+          "optimizer_updates": 200,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 283,
+          "selected_checkpoint_step": 50,
+          "model": "LeakHunter mask/detection heads; SAM2 unchanged",
+          "promoted_to_application": false,
+          "scope": "Bounded same-session development pilot, not full-dataset training or field validation"
+        }
+      ],
+      "equipment_context": {
+        "plan": "detection/training/equipment-context-cv-v1.json",
+        "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+        "view_groups": [
+          "MOV_1237",
+          "MOV_2569",
+          "MOV_2571"
+        ],
+        "calibration": "Earliest ten supplied chimney equipment boxes per view; no plume labels used for ROI",
+        "physical_asset_mapping_verified": false,
+        "camera_pose_verified": false,
+        "independent_test": false
+      },
+      "source_video_mapping_audit": {
+        "path": "detection/training/coco-video-mapping-v1.json",
+        "sha256": "982470322c10de03c0909a20ad2b1abc78ed39d7194508de9b64bab52f3527fd",
+        "scope": "Bounded native-image fidelity check; exact global timing/camera calibration not claimed"
+      },
+      "equipment_context_training_runs": [
+        {
+          "results_path": "detection/experiments/equipment-context-cv-20261026-v1/holdout_MOV_1237__full-trained/results.json",
+          "results_sha256": "0fb120f1ff9be8ddb78f84f4730fca4b34ce3f6ef552acf1e0d6a388afa81a13",
+          "arm": "full-trained",
+          "heldout_group": "MOV_1237",
+          "optimizer_updates": 100,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 483,
+          "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+          "promoted_to_application": false,
+          "scope": "Three-view development cross-validation; not a fresh site/session evaluation"
+        },
+        {
+          "results_path": "detection/experiments/equipment-context-cv-20261026-v1/holdout_MOV_1237__roi-trained/results.json",
+          "results_sha256": "7da7b503057a036a4410a924735b33baab664f4a82ce192eb35c49c721b70f98",
+          "arm": "roi-trained",
+          "heldout_group": "MOV_1237",
+          "optimizer_updates": 100,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 483,
+          "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+          "promoted_to_application": false,
+          "scope": "Three-view development cross-validation; not a fresh site/session evaluation"
+        },
+        {
+          "results_path": "detection/experiments/equipment-context-cv-20261026-v1/holdout_MOV_2569__full-trained/results.json",
+          "results_sha256": "5776fd4a22636040a9e577835c555f9402e22cb62e22f8496995e1ccad1468f1",
+          "arm": "full-trained",
+          "heldout_group": "MOV_2569",
+          "optimizer_updates": 100,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 483,
+          "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+          "promoted_to_application": false,
+          "scope": "Three-view development cross-validation; not a fresh site/session evaluation"
+        },
+        {
+          "results_path": "detection/experiments/equipment-context-cv-20261026-v1/holdout_MOV_2569__roi-trained/results.json",
+          "results_sha256": "95473dc002c4ca9a0d7f76be64753b782776e59c40aa5de493954b6f5e68579e",
+          "arm": "roi-trained",
+          "heldout_group": "MOV_2569",
+          "optimizer_updates": 100,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 483,
+          "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+          "promoted_to_application": false,
+          "scope": "Three-view development cross-validation; not a fresh site/session evaluation"
+        },
+        {
+          "results_path": "detection/experiments/equipment-context-cv-20261026-v1/holdout_MOV_2571__full-trained/results.json",
+          "results_sha256": "33a18f69e1a1e2301f55ab1c7f133f388829d74ec6f70a0600397841b4cfa5f1",
+          "arm": "full-trained",
+          "heldout_group": "MOV_2571",
+          "optimizer_updates": 100,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 442,
+          "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+          "promoted_to_application": false,
+          "scope": "Three-view development cross-validation; not a fresh site/session evaluation"
+        },
+        {
+          "results_path": "detection/experiments/equipment-context-cv-20261026-v1/holdout_MOV_2571__roi-trained/results.json",
+          "results_sha256": "921845c0d17ac0ce649baa2b043a3189ee6cb0a8a9bcfdc2c94fabf054753590",
+          "arm": "roi-trained",
+          "heldout_group": "MOV_2571",
+          "optimizer_updates": 100,
+          "source_sample_exposures": 800,
+          "unique_source_examples": 442,
+          "plan_sha256": "6d3fe5672bd968780b00cedccae3b301cdd167d7eb62db94d3519388525655a4",
+          "promoted_to_application": false,
+          "scope": "Three-view development cross-validation; not a fresh site/session evaluation"
+        }
+      ]
+    },
+    {
+      "id": "plant-history-synthetic",
+      "kind": "simulated_with_measured_parameters",
+      "status": "generated",
+      "version": "history-1",
+      "seed": 2104,
+      "records": [
+        "generated/history.jsonl"
+      ],
+      "records_sha256": {
+        "generated/history.jsonl": "9f2bb788ea2b95035080193c69aa443c78e37d3790dced4b290a38da66ce3403"
+      },
+      "generator": "scripts/generate_history.py",
+      "calibration": "generated/history_calibration.json",
+      "calibration_sha256": "059b4f9602d494da63512ec3c80ecbf8df539f24d9854ae49d0e713cfc07a2c7",
+      "derived_from": [
+        "metec2024 weather minute cache (wind, time-shifted, direction rotated -40 deg)",
+        "metec2024 AERIS-2m quiet minutes (background diurnal profile and AR(1) variability)"
+      ],
+      "hidden_truth": "ground_truth/history_truth.json (evaluator only)",
+      "role": "Synthetic 5-minute plant history before SCN-001; scripted leak episodes consistent with maintenance records; not plant measurements"
+    },
+    {
+      "id": "gasvid-published-facts",
+      "kind": "published_reference",
+      "status": "transcribed",
+      "records": [
+        "footage/gasvid_facts.json"
+      ],
+      "records_sha256": {
+        "footage/gasvid_facts.json": "4e125dc762651060487d7bf3b6e2a4b3f3f170362ae55998f297a84fd8d1fe11"
+      },
+      "upstream_reference": "https://arxiv.org/abs/1904.08500",
+      "role": "Metered leak classes (Table 1), site, camera and protocol for the GasVid footage; shown to people as the answer key, never an agent input; segment timing is an unverified workbook reading"
+    }
+  ],
+  "evidence_boundaries": [
+    "No recorded clip is claimed to match the representative facility",
+    "TADI2019 and TADI2024 release IDs are independent",
+    "Recorded pretrained inference is separately registered; no reviewed real-GasVid accuracy or source attribution is asserted",
+    "Benchmark source-rate labels are validation-only"
+  ]
+}

@@ -1,0 +1,197 @@
+[
+  {
+    "id": "CH4-01",
+    "asset_id": "XV-2104",
+    "variable": "methane",
+    "unit": "ppm",
+    "position": [
+      25.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.12,
+    "detection_limit": 0.1,
+    "lag_seconds": 8.0
+  },
+  {
+    "id": "CH4-02",
+    "asset_id": "XV-2104",
+    "variable": "methane",
+    "unit": "ppm",
+    "position": [
+      30.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.12,
+    "detection_limit": 0.1,
+    "lag_seconds": 8.0
+  },
+  {
+    "id": "CH4-03",
+    "asset_id": "XV-2104",
+    "variable": "methane",
+    "unit": "ppm",
+    "position": [
+      35.0,
+      8.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.12,
+    "detection_limit": 0.1,
+    "lag_seconds": 8.0
+  },
+  {
+    "id": "CH4-04",
+    "asset_id": "K-201",
+    "variable": "methane",
+    "unit": "ppm",
+    "position": [
+      18.0,
+      0.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.12,
+    "detection_limit": 0.1,
+    "lag_seconds": 8.0
+  },
+  {
+    "id": "CH4-05",
+    "asset_id": "K-201",
+    "variable": "methane",
+    "unit": "ppm",
+    "position": [
+      8.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.12,
+    "detection_limit": 0.1,
+    "lag_seconds": 8.0
+  },
+  {
+    "id": "PT-101",
+    "asset_id": "V-101",
+    "variable": "pressure",
+    "unit": "bar(a)",
+    "position": [
+      2.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.02,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "PT-201",
+    "asset_id": "K-201",
+    "variable": "pressure",
+    "unit": "bar(a)",
+    "position": [
+      12.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.02,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "PT-2104",
+    "asset_id": "XV-2104",
+    "variable": "pressure",
+    "unit": "bar(a)",
+    "position": [
+      18.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.02,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "TT-101",
+    "asset_id": "V-101",
+    "variable": "temperature",
+    "unit": "K",
+    "position": [
+      2.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.1,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "TT-201",
+    "asset_id": "K-201",
+    "variable": "temperature",
+    "unit": "K",
+    "position": [
+      12.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.1,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "FT-201",
+    "asset_id": "P-201",
+    "variable": "flow",
+    "unit": "kg/h",
+    "position": [
+      15.0,
+      6.0,
+      1.2
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.1,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "MET-01-WS",
+    "asset_id": "K-201",
+    "variable": "wind_speed",
+    "unit": "m/s",
+    "position": [
+      12.0,
+      6.0,
+      3.0
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.1,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  },
+  {
+    "id": "MET-01-WD",
+    "asset_id": "K-201",
+    "variable": "wind_direction",
+    "unit": "deg_from_north",
+    "position": [
+      12.0,
+      6.0,
+      3.0
+    ],
+    "sample_interval_seconds": 1.0,
+    "uncertainty": 0.1,
+    "detection_limit": 0.0,
+    "lag_seconds": 0.0
+  }
+]

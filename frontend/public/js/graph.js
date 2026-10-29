@@ -13,15 +13,26 @@
   const TYPE_COLOR = {
     Vessel: '--n-station', Valve: '--n-equip', Vent: '--n-well', PipeSegment: '--ink-dim',
     Sensor: '--n-tag', Camera: '--n-wt', EquipmentArea: '--ink-mute', WorkOrder: '--n-sap',
+    Compressor: '--n-station', Flange: '--n-equip', FieldReport: '--pink', Commitment: '--warn', Document: '--ink-dim',
+    IncidentRecord: '--good',
   };
-  const TYPE_NAME = { PipeSegment: 'Pipe', EquipmentArea: 'Area', WorkOrder: 'Work order' };
-  const EDGE_COLOR = { CONNECTED_TO: '--ink-mute', MONITORS: '--ink-mute', CAN_OBSERVE: '--ink-dim', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap' };
-  // Relationship filters. "Area" links every asset to the skid, so it starts hidden.
+  const TYPE_NAME = { PipeSegment: 'Pipe', EquipmentArea: 'Area', WorkOrder: 'Work order', FieldReport: 'Field report', IncidentRecord: 'Closed incident' };
+  const EDGE_COLOR = { CONNECTED_TO: '--ink-mute', MONITORS: '--ink-mute', CAN_OBSERVE: '--ink-dim', CONTAINS: '--ink-faint', HAS_WORK_ORDER: '--n-sap',
+    ON_ASSET: '--pink', COMMITTED_TO: '--warn', FULFILLED_BY: '--good', FOLLOWS_UP: '--n-sap', REVIEWS: '--n-sap', REPEATS_SURVEY_OF: '--n-sap',
+    SAME_EQUIPMENT_AS: '--n-sap', CONCERNS: '--good', CONSIDERED: '--good', HAS_DOCUMENT: '--ink-faint', REFERENCES: '--ink-faint', DOCUMENTS: '--pink' };
+  // Relationship filters (Neo4j relationship types). "Area" links every asset to the site, so it starts hidden.
+  const WO_LINKS = ['FOLLOWS_UP', 'REVIEWS', 'REPEATS_SURVEY_OF', 'SAME_EQUIPMENT_AS'];
   const RELS = [
-    ['CONNECTED_TO', 'Piping'], ['MONITORS', 'Sensors'], ['CAN_OBSERVE', 'Camera'], ['HAS_WORK_ORDER', 'Work orders'], ['CONTAINS', 'Area'],
+    ['CONNECTED_TO', 'Piping'], ['MONITORS', 'Sensors'], ['CAN_OBSERVE', 'Camera'], ['HAS_WORK_ORDER', 'Work orders'],
+    ['ON_ASSET', 'Field reports'], ['COMMITTED_TO', 'Commitments'], ['WO_LINKS', 'Work-order links'], ['CONCERNS', 'Incident memory'],
+    ['HAS_DOCUMENT', 'Documents'], ['CONTAINS', 'Area'],
   ];
-  const on = { CONNECTED_TO: true, MONITORS: true, CAN_OBSERVE: true, HAS_WORK_ORDER: true, CONTAINS: false };
-  const EQUIP = new Set(['Vessel', 'Valve', 'PipeSegment', 'Vent']);
+  const on = { CONNECTED_TO: true, MONITORS: true, CAN_OBSERVE: true, HAS_WORK_ORDER: true, CONTAINS: false, ON_ASSET: true,
+    COMMITTED_TO: true, FULFILLED_BY: true, WO_LINKS: true, CONCERNS: true, CONSIDERED: true, HAS_DOCUMENT: false, REFERENCES: false,
+    DOCUMENTS: false, PART_OF: false };
+  const relKey = (t) => (WO_LINKS.includes(t) ? 'WO_LINKS' : t === 'FULFILLED_BY' ? 'COMMITTED_TO' : t === 'CONSIDERED' ? 'CONCERNS'
+    : t === 'REFERENCES' || t === 'DOCUMENTS' ? 'HAS_DOCUMENT' : t);
+  const EQUIP = new Set(['Vessel', 'Valve', 'PipeSegment', 'Vent', 'Compressor', 'Flange']);
 
   let G = null, byId = new Map(), at = null, topRow = 0, selected = null, edgeSel = null, chart = null, picker = null, PAST = [], incStart = null;
   let showInc = null, incSets = {}, incList = [];
@@ -71,7 +82,7 @@
     };
     const linked = (id, type) => G.edges.filter((e) => e.type === type && (e.from === id || e.to === id))
       .map((e) => (e.from === id ? e.to : e.from)).filter((o) => pos.has(o)).map((o) => pos.get(o)[0]);
-    const order = ['EquipmentArea', 'Sensor', 'Camera', 'WorkOrder'];
+    const order = ['EquipmentArea', 'Sensor', 'Camera', 'WorkOrder', 'FieldReport', 'Commitment', 'Document', 'IncidentRecord'];
     G.nodes.map((n) => n.asset_id).filter((id) => !pos.has(id))
       .sort((a, b) => order.indexOf(typeOf(a)) - order.indexOf(typeOf(b))).forEach((id) => {
         const t = typeOf(id);
@@ -79,13 +90,17 @@
         else if (t === 'Sensor') pos.set(id, free(mean(linked(id, 'MONITORS'), left), top));
         else if (t === 'Camera') pos.set(id, free(mean(linked(id, 'CAN_OBSERVE'), left), top));
         else if (t === 'WorkOrder') pos.set(id, free(mean(linked(id, 'HAS_WORK_ORDER'), left), bottom));
+        else if (t === 'FieldReport') pos.set(id, free(mean(linked(id, 'ON_ASSET'), left), bottom + BAND));
+        else if (t === 'Commitment') pos.set(id, free(mean(linked(id, 'COMMITTED_TO'), left), bottom + 2 * BAND));
+        else if (t === 'Document') pos.set(id, free(mean(linked(id, 'HAS_DOCUMENT'), left), top - BAND));
+        else if (t === 'IncidentRecord') pos.set(id, free(mean(linked(id, 'CONCERNS'), left), top - 2 * BAND));
         else pos.set(id, free(left, bottom));
       });
     return { pos, top };
   }
 
   // ----- what is shown -----
-  const shownEdges = () => G.edges.map((e, i) => ({ e, i })).filter(({ e }) => on[e.type]);
+  const shownEdges = () => G.edges.map((e, i) => ({ e, i })).filter(({ e }) => on[relKey(e.type)]);
   function shownNodes() {
     if (showInc && incSets[showInc]) return new Set(incSets[showInc].nodes);
     if (focus && selected) {
@@ -249,7 +264,7 @@
         // Arrow = direction of flow / measurement / view; work orders and area links are plain.
         symbol: ['none', ['CONNECTED_TO', 'MONITORS', 'CAN_OBSERVE'].includes(e.type) ? 'arrow' : 'none'],
         lineStyle: {
-          color: i === edgeSel ? css('--accent') : css(EDGE_COLOR[e.type]),
+          color: i === edgeSel ? css('--accent') : css(EDGE_COLOR[e.type] || '--ink-faint'),
           width: i === edgeSel ? 2.6 : mine ? 2 : e.type === 'CONNECTED_TO' ? 1.6 : 1.1,
           type: e.type === 'MONITORS' ? 'dashed' : e.type === 'CAN_OBSERVE' ? 'dotted' : 'solid',
           opacity: !showInc && selected && !mine ? 0.22 : 1, curveness: route(e.from, e.to),
@@ -308,7 +323,13 @@
 
     const facts = [['Asset ID', n.asset_id], ['Type', TYPE_NAME[n.asset_type] || n.asset_type]];
     if (n.measures) facts.push(['Measures', n.measures]);
-    if (n.date) facts.push(['Date', n.date], ['Work type', n.work_type], ['Status', n.work_status]);
+    if (n.date && n.asset_type === 'WorkOrder') facts.push(['Date', n.date], ['Work type', n.work_type], ['Status', n.work_status]);
+    else if (n.date) facts.push(['Date', n.date]);
+    if (n.asset_type === 'Commitment') facts.push(['Status', (n.work_status || '').replace(/_/g, ' ')]);
+    if (n.finding) facts.push(['Finding', n.finding]);
+    if (n.follow_up) facts.push(['Follow-up', n.follow_up]);
+    if (n.author_role) facts.push(['Author', n.author_role]);
+    if (n.excerpt) facts.push(['Report', n.excerpt]);
     facts.push(['Source', n.source], ['Mapping version', n.mapping_version]);
 
     $('detail').innerHTML = `
@@ -323,6 +344,12 @@
       }), 'No maintenance records.')}
       ${group('Incidents', PAST.filter((h) => h.asset_id === selected).map((h) =>
         `<li><span class="dir">${esc(h.opened_utc.slice(0, 10))}</span><a class="linkish" href="incidents.html?id=${encodeURIComponent(h.incident_id)}">${esc(h.incident_id)}</a> · ${esc(h.outcome_label)}<br><span style="color:var(--ink-mute)">${esc(h.summary)}</span></li>`), 'No earlier incidents on this asset.')}
+      ${group('Field reports', of('ON_ASSET').filter((e) => typeOf(e.from) === 'FieldReport').map((e) => row(e.from === selected ? 'About' : 'Report', e)), 'No field reports.')}
+      ${group('Commitments', [...of('COMMITTED_TO'), ...of('FULFILLED_BY')].map((e) => row(e.type === 'FULFILLED_BY' ? (e.from === selected ? 'Fulfilled by' : 'Fulfils') : e.from === selected ? 'Committed to' : 'From',
+        e, typeOf(other(e)) === 'Commitment' ? ` · <b>${esc((byId.get(other(e)).work_status || '').replace(/_/g, ' '))}</b>` : '')), 'No commitments.')}
+      ${group('Work-order links', es.filter((e) => WO_LINKS.includes(e.type)).map((e) => row(e.type.replace(/_/g, ' ').toLowerCase(), e)), 'No linked work orders.')}
+      ${group('Incident memory', [...of('CONCERNS'), ...of('CONSIDERED')].map((e) => row(e.type === 'CONCERNS' ? 'Concluded' : 'Considered', e)), 'No closed incident references this asset.')}
+      ${group('Documents', [...of('HAS_DOCUMENT'), ...of('REFERENCES')].map((e) => row('Document', e)), 'No documents.')}
       ${group('Area', of('CONTAINS').map((e) => row(e.from === selected ? 'Contains' : 'Part of', e)), 'Not linked to an area.')}
       <h4>Asset details</h4><div class="kv">${facts.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v == null ? '<span style="color:var(--ink-dim)">Not available</span>' : esc(v)}</div>`).join('')}</div>
       ${es.length ? `<p class="src-note">Relationships from ${[...new Set(es.map(srcText))].map(esc).join('; ')}. Hover a row for its source.</p>` : ''}`;
@@ -348,7 +375,7 @@
   }
 
   function renderTools() {
-    const count = (t) => G.edges.filter((e) => e.type === t).length;
+    const count = (t) => G.edges.filter((e) => relKey(e.type) === t).length;
     $('rels').innerHTML = RELS.map(([t, label]) => `<button class="tg" data-rel="${t}" aria-pressed="${on[t]}">${label} <span class="n">${count(t)}</span></button>`).join('');
     $('rels').addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-rel]');

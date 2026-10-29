@@ -1,0 +1,22 @@
+{
+  "source_clip_id": "MOV_1242",
+  "source_sha256": "b7a125f5ab21572c1a11403b9d76528a54d95a73b1b007843ab084c6550da19f",
+  "file": "detection/previews/MOV_1242.h264.mp4",
+  "sha256": "90bfa8e51259db1724e18909364df974ac9ed6fe09ef5ea45a48274600b9b9a1",
+  "bytes": 16878445,
+  "codec": "h264",
+  "width": 320,
+  "height": 240,
+  "frame_count": 21861,
+  "time_base": "1/90000",
+  "duration_seconds": 1466.170667,
+  "source_time_offset_seconds": 0,
+  "purpose": "Browser-compatible display derivative only; inference uses original recording",
+  "timing_validation": {
+    "all_frames_compared": true,
+    "compared_frame_count": 21861,
+    "maximum_pts_deviation_ticks": 0,
+    "timescale": 90000
+  },
+  "conversion": "FFmpeg libx264 crf20 yuv420p fps_mode passthrough enc_time_base1/90000 track_timescale90000 no audio"
+}

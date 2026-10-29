@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);font-family:var(--sans);color:var(--ink);padding:16px;box-sizing:border-box}
+  .card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--radius-lg);padding:28px 28px 24px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px rgba(15,23,42,.06)}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .brand img{height:22px}
+  .brand span{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);border-left:1px solid var(--line-strong);padding-left:10px}
+  h1{font-size:19px;font-weight:600;margin:0 0 4px}
+  .sub{margin:0 0 20px;font-size:13px;color:var(--ink-mute);line-height:1.5}
+  label{display:block;font-size:12px;font-weight:500;color:var(--ink-mute);margin:0 0 5px}
+  input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--panel);color:var(--ink);margin-bottom:14px}
+  input:focus{outline:2px solid var(--accent-glow);border-color:var(--accent)}
+  button{width:100%;font:inherit;font-size:14px;font-weight:600;padding:10px;border:0;border-radius:var(--radius);background:var(--accent);color:#fff;cursor:pointer;margin-top:4px}
+  button:hover{background:var(--accent-strong)}
+  button:disabled{opacity:.6;cursor:default}
+  .err{min-height:18px;margin:10px 0 0;font-size:12.5px;color:var(--bad)}
+  .foot{margin:18px 0 0;font-size:11.5px;color:var(--ink-dim);line-height:1.5}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand"><img src="img/atelic-logo.png" alt="Atelic"><span>Methane incident intelligence</span></div>
+  <h1>Sign in</h1>
+  <p class="sub">Atelic × Dell × NVIDIA demo. Agents draft; people decide.</p>
+  <form id="f" novalidate>
+    <label for="u">Username</label>
+    <input id="u" name="username" autocomplete="username" required autofocus>
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+    <button id="go" type="submit">Sign in</button>
+    <p class="err" id="err" role="alert"></p>
+  </form>
+  <p class="foot">No physical control commands are enabled anywhere in this system.</p>
+</main>
+<script src="js/login.js?v=1"></script>
+</body>
+</html>

@@ -7,10 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=54">
-<script src="js/shell.js?v=54" defer></script>
-<script src="js/plan.js?v=13" defer></script>
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<link rel="stylesheet" href="css/story.css?v=101">
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/story.js?v=101" defer></script>
+<script src="js/plan.js?v=101" defer></script>
 <style>
   @keyframes lnin{from{opacity:0;transform:translateX(-6px)}}
   @media (prefers-reduced-motion:reduce){.rise,.reveal .ln{animation:none!important}}
@@ -241,6 +243,12 @@
         <div><div class="col-h"><h3>What remains uncertain</h3><span class="n" id="n-uncertain"></span></div><ul class="lines" id="sec-uncertain"></ul></div>
       </div>
     </details>
+  </section>
+
+  <div id="agent-banner"></div>
+  <section class="panel rise" id="inv-panel" aria-label="Investigation agent findings" hidden style="margin-bottom:18px">
+    <div class="panel-head"><h2>Investigation</h2><span class="meta" id="inv-meta"></span><span class="gb-slot" data-trace="investigation" data-trace-text="Agent trace"></span></div>
+    <div id="investigation" style="padding:14px 16px"></div>
   </section>
 
   <div class="p-grid">

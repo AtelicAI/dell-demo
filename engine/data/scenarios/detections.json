@@ -1,0 +1,70 @@
+[
+  {
+    "event_id": "DET-001",
+    "incident_id": "INC-001",
+    "scenario_id": "SCN-001",
+    "camera_id": "CAM-01",
+    "timestamp_utc": "2026-10-23T08:10:00Z",
+    "clip_time_seconds": null,
+    "mode": "synthetic_annotation_fixture",
+    "origin_polygon": [
+      [
+        0.51,
+        0.5
+      ],
+      [
+        0.64,
+        0.5
+      ],
+      [
+        0.64,
+        0.65
+      ],
+      [
+        0.51,
+        0.65
+      ]
+    ],
+    "provenance": {
+      "source_kind": "simulated",
+      "source_dataset": "atelic-synthetic-fixture",
+      "generator_version": "1.0",
+      "reference": "scenarios/detections.json#DET-001"
+    },
+    "confidence": null
+  },
+  {
+    "event_id": "DET-003",
+    "incident_id": "INC-003",
+    "scenario_id": "SCN-003",
+    "camera_id": "CAM-01",
+    "timestamp_utc": "2026-10-23T08:10:00Z",
+    "clip_time_seconds": null,
+    "mode": "synthetic_annotation_fixture",
+    "origin_polygon": [
+      [
+        0.51,
+        0.5
+      ],
+      [
+        0.64,
+        0.5
+      ],
+      [
+        0.64,
+        0.65
+      ],
+      [
+        0.51,
+        0.65
+      ]
+    ],
+    "provenance": {
+      "source_kind": "simulated",
+      "source_dataset": "atelic-synthetic-fixture",
+      "generator_version": "1.0",
+      "reference": "scenarios/detections.json#DET-003"
+    },
+    "confidence": null
+  }
+]

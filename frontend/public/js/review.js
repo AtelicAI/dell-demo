@@ -109,7 +109,7 @@
       <div class="steps-acc">${acc}</div>
       <div class="limits-line" aria-label="Procedure limitations"><span class="t">Procedure limitations</span>
         <span>No equipment action will be executed</span><span class="sep">·</span>
-        <span>${esc(W.generator.id)} ${esc(W.generator.version)}, no language model</span>
+        <span>${esc(W.generator.label)}${W.generator.kind === 'llm' ? ', advisory draft' : ', no language model'}</span>
         ${weak.length ? `<span class="sep">·</span><button type="button" id="btn-weak" aria-expanded="false">${plural(weak.length, 'line')} not backed by a procedure</button>` : ''}
       </div>
       <div class="limits-list" id="weak-list" hidden><ul class="plain">${weak.map(line).join('')}</ul></div>`;
@@ -177,7 +177,19 @@
   function renderAll() {
     evById = {};
     if (W && W.draft) W.draft.evidence.forEach((e) => (evById[e.id] = e));
-    renderBrief(); renderAttn(); renderDoc(); renderRail();
+    renderBrief(); renderAttn(); renderDoc(); renderRail(); renderStory();
+  }
+
+  function renderStory() {
+    const S = window.AtelicStory;
+    $('inv-panel').hidden = !(W && (W.investigation || (W.questions || []).length || W.agent));
+    if (!W) return;
+    $('agent-banner').innerHTML = S.agentBanner(W.agent);
+    $('investigation').innerHTML = S.investigation(W.investigation);
+    $('inv-meta').textContent = W.investigation ? `${W.investigation.findings.length} findings · ${(W.questions || []).length} questions` : '';
+    const draftText = $('qa-text') ? $('qa-text').value : '';
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask);
+    if ($('qa-text')) $('qa-text').value = draftText;
   }
 
   async function decide(decision, reason) {
@@ -196,6 +208,7 @@
       justDecided = true;
       renderAll();
       window.AtelicShell.refresh();
+      if (decision === 'request_changes') startPoll();
     } catch (e) {
       msg.classList.add('err'); msg.textContent = e.message;
     }
@@ -205,6 +218,13 @@
   const openModal = (title, html, okLabel, okClass, onOk) => window.AtelicShell.modal({ title, html, okLabel, okClass, onOk, requireText: true });
 
   document.addEventListener('input', (e) => { if (e.target.id === 'rv-name') syncButtons(); });
+  document.addEventListener('click', async (e) => {
+    if (e.target.id !== 'qa-send') return;
+    e.target.disabled = true;
+    const data = await window.AtelicStory.ask(INCIDENT_ID, ($('rv-name') && $('rv-name').value.trim()) || readName());
+    e.target.disabled = false;
+    if (data) { W = data; renderAll(); $('qa-msg').textContent = 'Sent. The answer appears here in about a minute.'; startPoll(); }
+  });
   document.addEventListener('click', (e) => {
     if (e.target.id === 'btn-weak') {
       const open = $('weak-list').hidden;
@@ -231,9 +251,22 @@
     }
   });
 
+  // Keep the page live while an agent works (answering, revising after Request changes).
+  const pending = (w) => w && ((w.agent && w.agent.status === 'running') || (w.questions || []).some((q) => q.status !== 'answered'));
+  let stopPoll = null;
+  function startPoll() {
+    if (stopPoll) stopPoll();
+    stopPoll = window.AtelicStory.poll(async () => {
+      if (document.activeElement && ['rv-name', 'qa-text', 'rv-reason'].includes(document.activeElement.id)) return W;
+      W = await get(`/incidents/${INCIDENT_ID}/work-order`);
+      renderAll();
+      return W;
+    }, pending, 4000);
+  }
   async function init() {
     try { W = await get(`/incidents/${INCIDENT_ID}/work-order`); } catch (e) { console.error(e); W = null; }
     renderAll();
+    if (W) startPoll();
   }
   init();
 })();

@@ -1,0 +1,380 @@
+[
+  {
+    "id": "V-101",
+    "name": "Inlet separator",
+    "kind": "separator",
+    "area": "Compression skid",
+    "position": [
+      2.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      2.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "P-101",
+    "name": "P-101",
+    "kind": "pipe",
+    "area": "Compression skid",
+    "position": [
+      5.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "XV-104",
+    "name": "XV-104",
+    "kind": "valve",
+    "area": "Compression skid",
+    "position": [
+      7.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "P-102",
+    "name": "P-102",
+    "kind": "pipe",
+    "area": "Compression skid",
+    "position": [
+      9.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "K-201",
+    "name": "Gas compressor",
+    "kind": "compressor",
+    "area": "Compression skid",
+    "position": [
+      12.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      2.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "MAN-K-201",
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "P-201",
+    "name": "P-201",
+    "kind": "pipe",
+    "area": "Compression skid",
+    "position": [
+      15.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "XV-2104",
+    "name": "Discharge isolation valve",
+    "kind": "valve",
+    "area": "Compression skid",
+    "position": [
+      18.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "DS-XV-2104",
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "F-205",
+    "name": "Discharge flange",
+    "kind": "flange",
+    "area": "Compression skid",
+    "position": [
+      20.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "DS-F-205",
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "P-202",
+    "name": "P-202",
+    "kind": "pipe",
+    "area": "Compression skid",
+    "position": [
+      22.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "XV-2110",
+    "name": "XV-2110",
+    "kind": "valve",
+    "area": "Compression skid",
+    "position": [
+      25.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "P-203",
+    "name": "P-203",
+    "kind": "pipe",
+    "area": "Compression skid",
+    "position": [
+      27.0,
+      6.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "XV-105",
+    "name": "XV-105",
+    "kind": "valve",
+    "area": "Compression skid",
+    "position": [
+      2.0,
+      10.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "P-105",
+    "name": "P-105",
+    "kind": "pipe",
+    "area": "Compression skid",
+    "position": [
+      6.0,
+      10.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "XV-2105",
+    "name": "XV-2105",
+    "kind": "valve",
+    "area": "Compression skid",
+    "position": [
+      18.0,
+      10.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "VENT-01",
+    "name": "VENT-01",
+    "kind": "vent",
+    "area": "Compression skid",
+    "position": [
+      21.0,
+      10.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002"
+    ],
+    "origin_type": "simulated"
+  },
+  {
+    "id": "XV-2111",
+    "name": "XV-2111",
+    "kind": "valve",
+    "area": "Compression skid",
+    "position": [
+      25.0,
+      10.0,
+      1.2
+    ],
+    "dimensions": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "pressure_class": "Synthetic design: PN40",
+    "document_ids": [
+      "PID-001",
+      "PROC-001",
+      "PROC-002",
+      "PROC-003"
+    ],
+    "origin_type": "simulated"
+  }
+]

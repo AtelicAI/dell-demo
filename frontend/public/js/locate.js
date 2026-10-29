@@ -53,6 +53,8 @@
       case 'Valve': return '<path class="sh" d="M-11 -7 L11 7 L11 -7 L-11 7 Z"/>';
       case 'PipeSegment': return '<rect class="sh" x="-17" y="-6" width="34" height="12" rx="6"/>';
       case 'Vent': return '<rect class="sh" x="-6" y="-17" width="12" height="34" rx="3"/>';
+      case 'Compressor': return '<circle class="sh" r="16"/><path class="sh" d="M-9 -9 L9 -4 L9 4 L-9 9 Z"/>';
+      case 'Flange': return '<rect class="sh" x="-4" y="-13" width="8" height="26" rx="1"/><rect class="sh" x="-12" y="-4" width="24" height="8" rx="2"/>';
       case 'Sensor': return '<circle class="sh" r="9"/>';
       case 'Camera': return '<rect class="sh" x="-12" y="-8" width="20" height="16" rx="3"/><path class="sh" d="M8 -4 L14 -7 L14 7 L8 4 Z"/>';
       default: return '<rect class="sh" x="-10" y="-10" width="20" height="20" rx="4"/>';
@@ -295,7 +297,16 @@
     // Closed incidents on this asset (GET /incidents history), newest first.
     const past = PAST.filter((h) => h.asset_id === id).map((h) => li('◷', 'miss',
       `<a class="id" href="incidents.html?id=${encodeURIComponent(h.incident_id)}">${esc(h.incident_id)}</a> · ${esc(h.opened_utc.slice(0, 10))} · ${esc(h.outcome_label)}<span class="src" style="color:var(--ink-mute)">${esc(h.summary)}</span>`));
+    // Field reports and work-order commitments from the knowledge graph: what the crew saw and what was promised.
+    const reports = G.edges.filter((e) => e.type === 'ON_ASSET' && e.to === id && (byId.get(e.from) || {}).asset_type === 'FieldReport')
+      .map((e) => byId.get(e.from)).sort((a, b) => String(a.date).localeCompare(String(b.date))).map((r) => li('✎', 'miss',
+        `<b class="id">${esc(r.asset_id)}</b> · ${esc(r.date || '')} · ${esc(r.author_role || '')}<span class="src" style="color:var(--ink-mute)">${esc(r.display_name)}</span>${r.excerpt ? `<span class="src">${esc(r.excerpt.slice(0, 220))}…</span>` : ''}`));
+    const promises = G.edges.filter((e) => e.type === 'COMMITTED_TO' && ids.includes(e.from)).map((e) => ({ wo: e.from, c: byId.get(e.to) }))
+      .filter((x) => x.c).map(({ wo, c }) => li(c.work_status === 'done' ? '✓' : '!', c.work_status === 'done' ? 'for' : 'against',
+        `<b class="id">${esc(c.asset_id)}</b> · from ${esc(wo)} · <b>${esc((c.work_status || '').replace(/_/g, ' '))}</b><span class="src" style="color:var(--ink-mute)">${esc(c.display_name)}</span>`));
     return `<h4>Related documents</h4>${list(recs, 'No maintenance records for this asset.')}
+      <h4>Commitments from those work orders</h4>${list(promises, 'No follow-up commitments recorded.')}
+      <h4>Field reports</h4>${list(reports, 'No field reports for this asset.')}
       <h4>Previous incidents</h4>${list(past, 'No earlier incidents on this asset.')}`;
   }
 

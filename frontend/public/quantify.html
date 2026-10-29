@@ -7,11 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=6">
-<link rel="stylesheet" href="css/shell.css?v=54">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<link rel="stylesheet" href="css/story.css?v=101">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=54" defer></script>
-<script src="js/quantify.js?v=17" defer></script>
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/story.js?v=101" defer></script>
+<script src="js/quantify.js?v=101" defer></script>
 <style>
 
   /* PRD Screen 4 (scrolling page): result card + sensor charts on the left, method/inputs/QC on the right
@@ -209,6 +211,18 @@
         </div>
       </section>
     </div>
+
+    <!-- sensors vs camera: every assumed source location fitted -->
+    <section class="panel" aria-label="Sensors versus camera" id="attr-panel" hidden style="margin-bottom:18px">
+      <div class="panel-head"><h2>Sensors vs camera</h2><span class="meta" id="attr-meta"></span></div>
+      <div style="padding:14px 16px" id="attr"></div>
+    </section>
+
+    <!-- 47 days of plant history before the alert -->
+    <section class="panel" aria-label="Plant history" id="hist-panel" hidden style="margin-bottom:18px">
+      <div class="panel-head"><h2>Plant history before the alert</h2><span class="meta" id="hist-meta"></span><span class="gb-slot" data-trace="investigation" data-trace-text="How the agent used it"></span></div>
+      <div style="padding:14px 16px"><div class="hist-facts" id="hist-facts"></div><div class="hist-chart" id="hist-chart"></div><p class="hist-note" id="hist-note"></p></div>
+    </section>
 
     <!-- assumptions (full width) -->
     <section class="panel assumptions" aria-label="Assumptions" id="assumptions-panel">
