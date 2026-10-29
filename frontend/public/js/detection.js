@@ -439,7 +439,7 @@
       const recent = m.samples.slice(Math.max(0, i - m.policy.window_samples + 1), i + 1).filter((x) => x.positive).length;
       const past = m.alert_t != null && t >= m.alert_t;
       if (past) revealCompare();
-      const text = past || raised ? '' : recent ? `Model: possible plume · ${recent} of ${m.policy.window_samples} recent samples` : 'Model watching';
+      const text = past || raised ? '' : recent ? `Model: possible plume · ${recent} of ${m.policy.window_samples} recent samples` : '';  // idle: the tile's "Watching" says it
       if (tag && !tag.classList.contains('ff') && text !== shown) {
         shown = text;
         tag.textContent = text;
