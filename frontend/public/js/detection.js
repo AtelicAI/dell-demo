@@ -417,7 +417,7 @@
   // Trigger plays the event to its alarm on this screen: fast-forward (recording and every clock running fast) up to
   // shortly before the release shows on camera, then near real time in the Atelic view while the fumes come out and the
   // model's samples turn positive. The alarm latches from those samples (wireMonitor) and raises the incident; the mask slides in.
-  const FF_RATE = 8, CLOCK_WARP = 40;
+  const FF_RATE = 8, RACE_MS = 2500;
   let monitor = null, alerted = false, ffOn = false;
   const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
   const ready = (el) => new Promise((ok) => (el.readyState >= 1 ? ok() : el.addEventListener('loadedmetadata', ok, { once: true })));
@@ -433,29 +433,33 @@
     const seen = (m.segments || []).find((x) => x.rate_g_h >= 100 && x.end > 0);
     const slowFrom = Math.max(0, (seen ? seen.start : 0) - 2);
     const slowRate = Math.min(2, Math.max(1, (m.alert_t - slowFrom) / 7));
-    let warp = CLOCK_WARP, last = performance.now();
+    // Clock: races from the quiet watch period to the recording's start, then follows the footage frame by frame, so
+    // every clock on screen shows the recorded time and the alarm lands on its real moment.
+    const shell = window.AtelicShell, clipStart = Date.parse(m.clip_start_utc);
+    const from = Math.min(shell.replayNow() ? shell.replayNow().getTime() : clipStart, clipStart), raced = performance.now();
+    let follow = false;
     const clock = (now) => {
-      if (g !== gen || !ffOn) return;
-      window.AtelicShell.advanceReplay((now - last) * (warp - 1));
-      last = now;
+      if (g !== gen || !ffOn || Number.isNaN(clipStart)) return;
+      const k = Math.min(1, (now - raced) / RACE_MS);
+      shell.setReplayNow(follow ? clipStart + v.currentTime * 1000 : from + (clipStart - from) * (1 - (1 - k) ** 2));
       tickWall();
       requestAnimationFrame(clock);
     };
     requestAnimationFrame(clock);
     say(`▶▶ Fast-forward ${FF_RATE}×`, 'ff');
     await Promise.all([ready(v), raw ? ready(raw) : null]);
-    // Release already running when the window opens: let time pass on the quiet view first.
-    if (slowFrom === 0 && q) { q.playbackRate = FF_RATE; await wait(2500); }
+    // Time passes on the quiet view while the clock catches up to the recording.
+    if (q) { q.playbackRate = FF_RATE; await wait(Math.max(0, RACE_MS - (performance.now() - raced))); }
     if (g !== gen) return;
     v.currentTime = 0;
     if (raw) raw.currentTime = 0;
     v.playbackRate = slowFrom > 0 ? FF_RATE : slowRate;
+    follow = true;
     v.play().catch(() => {});
     if (raw) { raw.playbackRate = v.playbackRate; raw.play().catch(() => {}); }
     if (q) q.remove();
     if (slowFrom > 0) await until(() => v.currentTime >= slowFrom, g);
     if (g !== gen) return;
-    warp = slowRate;
     v.playbackRate = slowRate;
     // Near real time the Atelic view takes the whole frame, so the plume colours in as the model tracks it; at the
     // alarm the slider slides in from the left with the original infrared (revealCompare).
@@ -581,6 +585,7 @@
     // All live incidents together, so the next run starts from a quiet site.
     if (ffOn) return;
     await Promise.all(live.map((l) => post(`/incidents/${l.incident_id}/reset`).catch((e) => console.error(e))));
+    window.AtelicShell.resetReplay();
     await load();
     window.AtelicShell.refresh();
   }

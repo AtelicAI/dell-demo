@@ -2,7 +2,8 @@
 // repair → verification → closure, and the answer key. Everything renders backend values; nothing is invented.
 (function () {
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const hm = (t) => (t ? `${t.slice(11, 16)} UTC` : '');
+  // Times of things done in this session (questions, notes, agent runs) on the replay clock, so they match the cameras.
+  const hm = (t) => (t ? `${window.AtelicShell.toReplay(t).toISOString().slice(11, 16)} UTC` : '');
   const KIND = { supporting: ['for', 'Supports'], contradiction: ['con', 'Contradiction'], gap: ['gap', 'Gap'], context: ['ctx', 'Context'] };
 
   // Live status of the engine's agents (orchestrator). Shown while they work, or when they failed.
@@ -14,9 +15,23 @@
     }
     if (agent.status !== 'running') return '';
     return `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>${esc(agent.text || 'Agents working')}</b>
-      <span>${agent.replayed ? 'Recorded NVIDIA Nemotron run, replayed with live read-only tools. Questions and research run live.'
+      ${trace(agent)}<span>${agent.replayed ? 'Recorded NVIDIA Nemotron run, replayed with live read-only tools. Questions and research run live.'
         : 'Live · NVIDIA Nemotron agents with read-only tools.'} This page updates by itself.</span></div>`;
   }
+
+  // The running agent's steps so far (tools read, model turns), then the model working, with a live timer.
+  const dur = (ms) => (ms >= 60000 ? `${Math.floor(ms / 60000)} m ${String(Math.round(ms % 60000 / 1000)).padStart(2, '0')} s` : `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`);
+  function trace(agent) {
+    const t = agent && agent.trace;
+    if (!t) return '';
+    const tools = t.done.filter((d) => !d.model && d.status === 'completed').map((d) => d.label);
+    const turns = t.done.filter((d) => d.model);
+    return `<ol class="ag-trace">
+      ${tools.length ? `<li class="ok">Read ${esc([...new Set(tools)].join(' · '))}</li>` : ''}
+      ${turns.map((d, i) => `<li class="ok">Nemotron turn ${i + 1} · ${dur(d.ms || 0)}</li>`).join('')}
+      <li class="now"><span class="ag-spin" aria-hidden="true"></span>${turns.length || tools.length ? 'Nemotron reasoning over the evidence' : 'Starting'} · <span data-since="${esc(t.last)}"></span></li></ol>`;
+  }
+  setInterval(() => document.querySelectorAll('[data-since]').forEach((el) => { el.textContent = dur(Math.max(0, Date.now() - Date.parse(el.dataset.since))); }), 1000);
 
   function cites(ids) {
     return (ids || []).length ? `<span class="st-cites">${ids.map((i) => `<code title="${esc(i)}">${esc(i.split(':').slice(1).join(':').split('#')[0] || i)}</code>`).join('')}</span>` : '';
@@ -45,7 +60,9 @@
     </div>`;
   }
 
-  function questions(list, canAsk) {
+  function questions(list, canAsk, agent) {
+    // The answer agent works the oldest unanswered question first; its live steps show there.
+    const working = agent && agent.current_step === 'answer' ? ((list || []).find((q) => q.status !== 'answered') || {}).id : null;
     const items = (list || []).slice().reverse().map((q) => `<li class="qa ${q.status}">
       <div class="qa-q"><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}<p>${esc(q.question)}</p></div>
       ${q.status === 'answered' && q.source_origin !== 'llm' ? `<div class="qa-a"><span class="lbl">Not answered</span>
@@ -56,7 +73,8 @@
           const t = typeof x === 'string' ? x : x.statement || JSON.stringify(x);
           return `<li>${esc(t)}${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}</li>`;
         }).join('')}</ul>` : ''}</div>`
-        : '<div class="qa-a pending"><span class="ag-spin"></span>The agent is reading the frozen evidence…</div>'}
+        : q.id === working ? `<div class="qa-a pending live">${trace(agent)}</div>`
+        : '<div class="qa-a pending"><span class="ag-spin"></span>Queued: the agent answers questions in order…</div>'}
     </li>`).join('');
     return `<div class="qa-box">
       <div class="qa-h"><span class="lbl">Ask the agent</span><span>Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.</span></div>

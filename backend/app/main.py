@@ -557,6 +557,7 @@ def event_timeline(profile):
         segs = [{"start": round(x["start_seconds"] - t0, 3), "end": round(x["end_seconds"] - t0, 3),
                  "rate_g_h": x.get("metered_rate_g_h"), "label": x.get("label")} for x in footage(profile).get("segments", [])]
         monitor = {"clip_start_seconds": t0, "clip_end_seconds": t1, "alert_t": round(alert_t, 3) if alert_t is not None else None,
+                   "clip_start_utc": at_seconds(mon["scenario_seconds_at_clip_start"]),
                    "samples": [{"t": round(p["pts_seconds"] - t0, 3), "positive": bool(p.get("prediction"))} for p in preds],
                    "policy": mon["alert_policy"], "segments": segs,
                    "note": "Executed detector samples on the recorded footage; the alarm latches when 3 of the last 5 are positive"}
@@ -1253,6 +1254,28 @@ AGENT_TEXT = {"detect": "Registering the camera alert", "locate": "Locating cand
               "reinvestigate": "Investigation agent researching again with the field notes and answers so far"}
 
 
+TOOL_TEXT = {"get_camera_candidates": "Camera candidates", "query_asset_graph": "Knowledge graph", "get_sensor_history": "Sensor history",
+             "search_maintenance": "Maintenance records", "retrieve_procedure": "Procedures", "estimate_emissions": "Emission estimate",
+             "get_long_term_history": "47-day plant history", "get_investigation_findings": "Investigation findings",
+             "get_field_notes": "Field notes", "get_previous_findings": "Earlier findings", "get_review_feedback": "Review feedback",
+             "get_current_draft": "Current draft", "get_post_repair_readings": "Post-repair readings",
+             "get_pre_incident_baseline": "Pre-incident baseline", "get_recovery_check": "Recovery check",
+             "get_approved_work_order": "Approved work order", "model_inference": "Nemotron reasoning",
+             "draft_validation": "Citation check"}
+
+
+def step_trace(orch):
+    """What the running step has done so far, from the orchestrator's live events (tools read, model turns)."""
+    evs, step = orch.get("events") or [], orch.get("current_step")
+    start = next((i for i in range(len(evs) - 1, -1, -1) if evs[i]["step"] == step and evs[i]["kind"] == "started"), None)
+    if start is None:
+        return None
+    done = [{"label": TOOL_TEXT.get(e["detail"].get("tool"), e["detail"].get("tool")),
+             "model": e["detail"].get("tool") == "model_inference", "status": e["detail"].get("status"),
+             "ms": e["detail"].get("elapsed_ms")} for e in evs[start + 1:] if e["kind"] == "agent_activity"]
+    return {"since": evs[start]["recorded_at"][:23] + "Z", "last": evs[-1]["recorded_at"][:23] + "Z", "done": done}
+
+
 def agent_status(s):
     orch = orchestration(s)
     if not orch:
@@ -1263,6 +1286,7 @@ def agent_status(s):
     recs = cached(("recordings",), lambda: engine.try_get("/model/recordings") or {}, ttl=30)
     replayed = running and f"{s['incident_id']}.{step}" in recs and not (step == "plan" and (record(s) or {}).get("draft_version"))
     return {"status": orch["status"], "current_step": step, "replayed": bool(replayed),
+            "trace": step_trace(orch) if running else None,
             "text": AGENT_TEXT.get(orch.get("current_step"), orch.get("current_step")) if running else None,
             "failed": orch["status"] in ("failed", "interrupted"), "detail": (orch.get("result") or {}).get("detail")}
 

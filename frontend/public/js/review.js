@@ -191,7 +191,7 @@
       notes ? `${notes} field note${notes === 1 ? '' : 's'}` : '', round > 1 ? `round ${round}` : ''].filter(Boolean).join(' · ') : '';
     // Keep anything typed but not sent across re-renders.
     const typed = ['qa-text', 'fn-text', 'rs-focus'].map((id) => [id, $(id) ? $(id).value : '']);
-    $('qa').innerHTML = S.questions(W.questions, W.can_ask) + S.research(W);
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask, W.agent) + S.research(W);
     typed.forEach(([id, v]) => { if ($(id)) $(id).value = v; });
   }
 

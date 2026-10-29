@@ -362,26 +362,36 @@
     tickReplay();
   }
 
-  // One replay clock for the whole app: incident start + real time elapsed since the first page of this
-  // browser session, so it keeps running across clip loops and page changes.
+  // One replay clock for the whole app, running in real time across clip loops and page changes. A session (and
+  // every Reset) starts in the quiet watch period QUIET_LEAD before the recorded incidents; Camera's Trigger then
+  // fast-forwards it to the event recording and follows the footage (setReplayNow), so the alarm shows its real time.
+  const QUIET_LEAD_MS = 20 * 60 * 1000;
   let replayStart = null, replayTimer = null;
   function replayT0() {
     try {
       const v = Number(sessionStorage.getItem('atelic.replayT0'));
       if (v) return v;
-      sessionStorage.setItem('atelic.replayT0', String(Date.now()));
+      sessionStorage.setItem('atelic.replayT0', String(T0));
     } catch (e) { /* storage blocked: clock restarts per page */ }
     return T0;
   }
-  let T0 = Date.now();
+  let T0 = Date.now() + QUIET_LEAD_MS;
   function replayNow() {
     return replayStart == null ? null : new Date(replayStart + (Date.now() - replayT0()));
   }
-  // Move the replay clock forward (Camera's fast-forward): every clock on screen jumps with it.
-  function advanceReplay(ms) {
-    if (!(ms > 0)) return;
-    try { sessionStorage.setItem('atelic.replayT0', String(replayT0() - ms)); } catch (e) { T0 -= ms; }
+  // Put the replay clock at a moment (ms since epoch); it runs on in real time from there.
+  function setReplayNow(ms) {
+    if (replayStart == null || !Number.isFinite(ms)) return;
+    T0 = Date.now() - (ms - replayStart);
+    try { sessionStorage.setItem('atelic.replayT0', String(T0)); } catch (e) { /* in-page only */ }
     sysPill();
+  }
+  // Back to the quiet watch period before the incidents (Reset).
+  const resetReplay = () => { if (replayStart != null) setReplayNow(replayStart - QUIET_LEAD_MS); };
+  // A real time (when something was done in this session) on the replay clock: the same distance back from replay now.
+  function toReplay(iso) {
+    const now = replayNow(), t = Date.parse(iso);
+    return now && !Number.isNaN(t) ? new Date(now.getTime() - (Date.now() - t)) : new Date(iso);
   }
   const fmtUtc = (d, withDate) => `${withDate ? `${d.toISOString().slice(0, 10)} ` : ''}${d.toISOString().slice(11, 19)} UTC`;
   function tickReplay() {
@@ -839,7 +849,7 @@
   }
 
   window.AtelicShell = {
-    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, advanceReplay, setIncident, fmtUtc, traceLink,
+    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, setReplayNow, resetReplay, toReplay, setIncident, fmtUtc, traceLink,
     BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow, confirmSwitch,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the
