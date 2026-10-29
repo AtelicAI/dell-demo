@@ -38,7 +38,7 @@ def _raw(frame, pixel_m):
 
 @lru_cache(maxsize=None)
 def gain(clip_id):
-    """kg/h per raw unit, from the reference release frames (median over the calibration span)."""
+    """kg/h per raw unit for the camera model, from the reference release frames (median over the calibration span)."""
     d = inputs(clip_id)
     lo, hi = d['calibration']['span_s']
     ratios = [d['calibration']['metered_rate_g_h'] / 1000 / r for f in d['frames'] if lo <= f[0] < hi and (r := _raw(f, d['pixel_m'])) > 0]
@@ -53,11 +53,14 @@ def estimate(camera_id, clip_id, clip_end_seconds):
     if camera is None or d is None:
         return {**base, 'reason': 'no_radiometric_stream'}
     delta_t = camera['background_apparent_c'] - camera['atmospheric_c']
+    # Past the end of the recorded footage the latest tracked window stands (the camera keeps watching the same plume).
+    held = clip_end_seconds > d['incident_span_s'][1]
+    clip_end_seconds = min(clip_end_seconds, d['incident_span_s'][1])
     window = (clip_end_seconds - WINDOW_S, clip_end_seconds)
     frames = [f for f in d['frames'] if window[0] <= f[0] <= window[1]]
     expected = WINDOW_S * d['fps']
-    rates = [gain(clip_id) * _raw(f, d['pixel_m']) for f in frames]
-    details = dict(window_clip_seconds=[round(window[0], 1), round(window[1], 1)], frames_used=len(frames),
+    rates = [gain(camera['calibration_clip']) * _raw(f, d['pixel_m']) for f in frames]
+    details = dict(window_clip_seconds=[round(window[0], 1), round(window[1], 1)], latest_window_held=held, frames_used=len(frames),
                    frames_in_window=round(expected), distance_m=d['distance_m'], pixel_size_mm=round(d['pixel_m'] * 1000, 1),
                    thermal_contrast_k=round(delta_t, 1), background_apparent_c=camera['background_apparent_c'],
                    atmospheric_c=camera['atmospheric_c'], reference_release=camera['reference_release'],

@@ -55,8 +55,8 @@
     }
     title.textContent = 'Emission-rate estimate';
     $('res-badges').innerHTML = badge(r.provenance, `Produced by ${r.model_version}`);
-    const qc = r.qc || {}, cc = r.cross_check, cam = r.primary_tool === 'qogi';
-    const ccLine = cc ? `<div class="sub cc ${cc.agrees ? 'ok' : 'no'}">${esc(METHOD_LABEL.bls || 'bLs')} cross-check: ${cc.rate_kg_h.toFixed(2)} kg/h (${cc.ratio.toFixed(2)}× the plume model) · ${cc.agrees ? 'agrees' : 'disagrees'}</div>` : '';
+    const qc = r.qc || {}, cam = r.primary_tool === 'qogi';
+    const ccLine = (r.cross_checks || []).map((c) => `<div class="sub cc ${c.agrees ? 'ok' : 'no'}">${esc(c.label)} check: ${c.rate_kg_h.toFixed(2)} kg/h (${c.ratio.toFixed(2)}× ${cam ? 'the camera' : 'the primary'}) · ${c.agrees ? 'agrees' : 'disagrees'}</div>`).join('');
     body.innerHTML = rateBlock(`<div class="num">≈ ${r.rate_kg_ch4_h.toFixed(2)}</div>`,
       `<div class="unit">kg CH₄/h · ${esc(METHOD_LABEL[r.primary_tool] || r.primary_tool)}</div><div class="sub">${r.attempts ? `Frozen at replay ${r.as_of_seconds} s after ${r.attempts.length} agent attempts · ${qc.samples_used} ${cam ? 'camera frames' : 'readings'}` : `Median of ${qc.samples_used} per-sample estimates`}</div>${ccLine}`) + gauge(r);
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -70,7 +70,8 @@
     fields.innerHTML =
       f('Uncertainty interval', iv ? `${iv.low.toFixed(2)} – ${iv.high.toFixed(2)}` : 'Not computed', iv ? `kg/h · ${esc(iv.basis)}` : '') +
       f('Tool chosen by the agent', esc(METHOD_LABEL[r.primary_tool] || r.primary_tool), `Source: ${esc(r.source_asset_id)} (hypothesis)`) +
-      f('Data window', `${hhmmss(w.start_utc)}–${hhmmss(w.end_utc)}`, cam ? `UTC · ${r.camera ? `clip ${r.camera.window_clip_seconds.join('–')} s` : ''}` : 'UTC · 60 s of sensor readings') +
+      f('Data window', cam && r.camera ? `clip ${r.camera.window_clip_seconds.join('–')} s` : `${hhmmss(w.start_utc)}–${hhmmss(w.end_utc)}`,
+        cam ? (r.camera && r.camera.latest_window_held ? 'Latest 90 s camera window the plume was tracked' : '90 s of camera frames') : 'UTC · 60 s of sensor readings') +
       f('Model version', esc(r.model_version), esc(r.model_note || '')) +
       f('Case read by the agent', cam ? 'Weather mast down' : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} sensors`,
         cam ? 'Camera sees the plume' : `${case_.camera_candidates} camera candidates · wind ${case_.wind_speed_m_s} m/s`) +
@@ -227,14 +228,22 @@
   }
 
   // ----- agent tools + inputs -----
-  // Every rate tool with the agent's decision for this incident; the button re-runs that choice at the frozen clock.
+  // Every rate tool with the agent's decision for this incident. Connected tools can be run on the frozen window.
   function renderMethods() {
     const ms = (Q && Q.methods) || [];
     ms.forEach((m) => { METHOD_LABEL[m.id] = m.label; });
-    const out = (m) => (m.output && m.output.rate_kg_h != null ? `<span class="t-out">${m.output.rate_kg_h.toFixed(3)} kg/h</span>` : '');
+    const frozen = Q && Q.result && Q.result.tools && Q.result.tools.length;
+    const out = (m) => (m.output && m.output.rate_kg_h != null ? `<span class="t-out">Agent run: ${m.output.rate_kg_h.toFixed(3)} kg/h</span>` : '');
+    const mine = (m) => {
+      const e = m.engineer_run;
+      if (!e) return '';
+      return `<span class="t-out mine">Your run: ${e.rate_kg_h != null ? `${e.rate_kg_h.toFixed(3)} kg/h${e.ratio_to_frozen ? ` (${e.ratio_to_frozen.toFixed(2)}× the frozen rate)` : ''}` : esc((e.reason || e.status).replace(/_/g, ' '))}</span>`;
+    };
     $('methods').innerHTML = ms.map((m) => `<div class="tool r-${esc(m.role)}">
         <div class="t-head"><b>${esc(m.label)}</b><span class="t-role">${esc(ROLE[m.role] || m.role)}</span></div>
-        <span class="t-why">${esc(m.reason)}</span>${out(m)}
+        <span class="t-why">${esc(m.reason)}</span>${out(m)}${mine(m)}
+        ${m.connected ? (frozen ? `<button class="t-run" data-tool="${esc(m.id)}">Run ${esc(m.label.split(' (')[0])}</button>` : '')
+          : '<span class="t-na">Not deployed on this edge box</span>'}
       </div>`).join('') || '<div class="note">No tools reported by the backend.</div>';
     const ran = Q && Q.result && Q.result.tools && Q.result.tools.length;
     $('btn-run').disabled = !ran;
@@ -377,18 +386,19 @@
     renderMethods(); renderHero(); renderInputs(); renderTraces(); renderLower(); renderConditions(); renderAttr(); renderCatalog(); renderHistory();
   }
 
-  async function run() {
+  async function run(tool) {
     const btn = $('btn-run'), msg = $('run-msg');
     btn.disabled = true;
     msg.className = 'run-msg'; msg.textContent = 'Running on the backend…';
     try {
       const r = await fetch(`${API}/incidents/${INCIDENT_ID}/quantify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'agent' }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: tool || 'agent' }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error((body.detail && body.detail.failure) || body.detail || r.status);
       Q = body;
-      msg.textContent = 'Re-ran the same tools at the frozen clock: same inputs, same result';
+      const label = tool ? METHOD_LABEL[tool] || tool : null;
+      msg.textContent = label ? `Ran ${label} on the frozen window; the frozen rate is unchanged` : 'Re-ran the same tools at the frozen clock: same inputs, same result';
       renderAll();
       window.AtelicShell.refresh();
     } catch (e) {
@@ -397,7 +407,9 @@
     }
   }
 
-  $('btn-run').addEventListener('click', run);
+  $('btn-run').addEventListener('click', () => run());
+  // Any connected tool can be run on the frozen window; the result shows next to the agent's.
+  $('methods').addEventListener('click', (e) => { const b = e.target.closest('.t-run'); if (b) { b.disabled = true; run(b.dataset.tool); } });
   $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
   window.addEventListener('resize', () => { [traces, qcChart, histChart, aChart].forEach((c) => c && c.resize()); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.

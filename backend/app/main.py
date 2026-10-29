@@ -34,7 +34,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "P
 
 STAGES = ["detect", "locate", "quantify", "plan", "approve", "report", "close"]
 OPERATOR = "Operator (not signed in)"
-AGENT_STEPS = ("investigate", "plan", "revise", "answer", "verify")
+AGENT_STEPS = ("investigate", "reinvestigate", "plan", "revise", "answer", "verify")
 SLOT_DEFAULTS = {"INC-001": {"camera_id": "CAM-01", "profile": "leak"},            # event 1: MOV_1237, SCN-001
                  "INC-002": {"camera_id": "CAM-02", "profile": "wind_outage"}}     # event 2: MOV_1239, SCN-003 (wind lost)
 REPORTED = ("reported", "repair_recorded", "verification_ready", "closed", "follow_up_required")
@@ -101,7 +101,7 @@ _lock = threading.RLock()
 
 def _blank(incident_id):
     return {"incident_id": incident_id, **SLOT_DEFAULTS[incident_id], "engine_id": None, "triggered_at": None,
-            "dismissal": None, "audit": [], "versions": [], "drafts": {}, "flags": {}, "submitted": None,
+            "dismissal": None, "audit": [], "versions": [], "drafts": {}, "flags": {}, "submitted": None, "tool_runs": {},
             "reviews": [], "exports": [], "names": {}, "seen_events": 0, "graph_memory": None}
 
 
@@ -193,8 +193,10 @@ def state_of(s):
     return rec["state"] if rec else None
 
 
-def evidence_for(rec):
-    return Evidence(rec, lambda aid: cached(("ctx", aid), lambda: engine.try_get(f"/assets/{aid}/context"), ttl=300))
+def evidence_for(rec, names=None):
+    ev = Evidence(rec, lambda aid: cached(("ctx", aid), lambda: engine.try_get(f"/assets/{aid}/context"), ttl=300))
+    ev.names = names or {}
+    return ev
 
 
 def scenario_start():
@@ -273,7 +275,7 @@ def stages_for(s):
     elif state == "rejected":
         st["plan"]["status"], st["approve"]["status"] = "completed", "blocked"
     elif "quantify" in done:
-        busy = status_ == "running" and cur in ("freeze", "investigate", "plan", "revise", "submit")
+        busy = status_ == "running" and cur in ("freeze", "investigate", "reinvestigate", "plan", "revise", "submit")
         st["plan"]["status"] = ("blocked" if failed else "ready_for_review" if s["submitted"] and not busy else "in_progress")
         st["approve"]["status"] = ("ready_for_review" if s["submitted"] else
                                    "blocked" if rv and rv["decision"] != "approve" else "not_started")
@@ -355,7 +357,8 @@ def all_audit():
 
 SYNC_EVENTS = {("detect", "completed"): ("agent_detect", "Atelic engine"), ("quantify", "completed"): ("quantification_run", "Atelic engine"),
                ("investigate", "completed"): ("agent_investigation", "Nemotron agent"), ("answer", "completed"): ("agent_answer", "Nemotron agent"),
-               ("verify", "completed"): ("agent_verification", "Nemotron agent")}
+               ("verify", "completed"): ("agent_verification", "Nemotron agent"),
+               ("reinvestigate", "completed"): ("agent_reinvestigation", "Nemotron agent")}
 
 
 def sync(s):
@@ -377,6 +380,7 @@ def sync(s):
                                  else f"Rate unavailable: {d.get('reason')}"),
                     "investigate": "Investigation agent reported findings",
                     "answer": "Agent answered an engineer question",
+                    "reinvestigate": f"Investigation agent finished research round {d.get('round')}",
                     "verify": f"Verifier recommends {d.get('recommendation')} ({d.get('recovery_check')})"}[e["step"]]
             audit(s, hit[0], hit[1], text, at=utc(e["recorded_at"]))
         s["seen_events"] = len(events)
@@ -385,12 +389,15 @@ def sync(s):
             dv = wo["version"]
             if str(dv) not in s["drafts"]:
                 changed = True
-                s["drafts"][str(dv)] = build_draft(rec, wo, evidence_for(rec))
+                s["drafts"][str(dv)] = build_draft(rec, wo, evidence_for(rec, s["names"]))
                 fields = default_fields(rec, wo)
                 prev = s["versions"][-1] if s["versions"] else None
                 if prev and prev["fields"].get("priority"):
                     fields["priority"] = prev["fields"]["priority"]
-                add_version(s, dv, fields, generator(rec)["author"], ["Revised by the planner after review"] if wo["plan"].get("revision_of") else ["Generated"])
+                rev = wo["plan"].get("revision_of") or {}
+                add_version(s, dv, fields, generator(rec)["author"],
+                            [f"Revised by the planner after research round {rev['research_round']}"] if rev.get("research_round")
+                            else ["Revised by the planner after review"] if rev else ["Generated"])
                 s["flags"] = {}
         if changed:
             save()
@@ -823,7 +830,7 @@ def get_candidates(incident_id: str):
     fits = {f["candidate_asset_id"]: f for f in q.get("candidate_fits", [])}
     inv = ((rec.get("investigation") or {}).get("findings") or {}).get("content") or {}
     assess = {a["asset_id"]: a for a in inv.get("candidate_assessment", [])}
-    ev = evidence_for(rec)
+    ev = evidence_for(rec, s["names"])
     sensors = sorted({x["sensor_id"] for x in snap.get("measurements", []) if x["sensor_id"].startswith("CH4")}) or ["CH4-01"]
     out = []
     for c in snap["candidates"]:
@@ -883,7 +890,7 @@ def quant_result(s):
             "source_asset_id": (q or {}).get("candidate_asset_id") or selected_asset(s),
             "run_at_utc": utc(done["recorded_at"]) if done else now_utc(),
             "attribution": src.get("telemetry_attribution"), "candidate_fits": (q or {}).get("candidate_fits", []),
-            "tools": (q or {}).get("tools", []), "case": (q or {}).get("case"), "cross_check": (q or {}).get("cross_check"),
+            "tools": (q or {}).get("tools", []), "case": (q or {}).get("case"), "cross_checks": (q or {}).get("cross_checks") or [],
             "camera": camera,
             "attempts": [{"t": at_seconds(a["as_of_seconds"]), "as_of_seconds": a["as_of_seconds"], "status": a["status"],
                           "reason": a.get("reason"), "rate_kg_ch4_h": a.get("rate_kg_h"), "attribution": a.get("attribution"),
@@ -924,26 +931,31 @@ def quant_result(s):
 
 TOOL_NOTE = {"gaussian_candidate_fit": "Plume model: one Gaussian fit per candidate location over every methane sensor and the measured wind",
              "bls": "Particle model through the measured turbulence and stability",
+             "gaussian_puff": "Puff model: puffs carried by each second's wind, fitted over every methane sensor",
              "qogi": "Camera: plume mass from the radiometric frame × plume speed from the footage; no anemometer"}
 RATE_REASON = {"missing_wind_or_methane": "Weather mast down and no camera plume to measure",
                "waiting_for_camera_window": "Weather mast down; the camera plume never held steady within the wait limit",
                "non_steady_plume": "Plume never became steady within the wait limit"}
 
 
+TOOL_SHORT = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera (QOGI)", "bls": "bLs", "gaussian_puff": "Gaussian puff"}
+
+
 def attempt_text(a):
     """One line per agent attempt for the activity log."""
     t, r = a.get("primary_tool"), a.get("reason")
-    label = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera (QOGI)", "bls": "bLs"}.get(t, t or "Gaussian plume")
+    label = TOOL_SHORT.get(t, t or "Gaussian plume")
+    mast_down = (a.get("tool_roles") or {}).get("gaussian_candidate_fit") == "blocked"
     if a["status"] == "estimated":
-        extra = ""
-        if a.get("cross_check"):
-            c = a["cross_check"]
-            extra = f"; bLs cross-check {c['rate_kg_h']:.3f} kg/h ({c['ratio']:.2f}×)"
+        extra = "".join(f"; {TOOL_SHORT.get(c['tool'], c['tool'])} {c['rate_kg_h']:.3f} kg/h ({c['ratio']:.2f}×, {'agrees' if c['agrees'] else 'disagrees'})"
+                        for c in a.get("cross_checks") or [])
         att = a.get("attribution")
         decided = "" if att in (None, "agrees_single", "not_assessed") else f", candidates {att.replace('_', ' ')}: keep going"
-        return f"{label}: {a['rate_kg_h']:.3f} kg/h{decided}{extra}"
+        decided = decided.replace("candidates", "sensors: candidates")
+        return f"{label}: {a['rate_kg_h']:.3f} kg/h{extra}{decided}"
     if r == "waiting_for_camera_window":
-        return f"Weather mast not reporting: switched to {label}; waiting for 90 s of steady plume footage"
+        return (f"Weather mast not reporting; {label} waiting for 90 s of steady plume footage" if mast_down
+                else f"{label} tracking the plume; waiting for 90 s of steady footage")
     return f"{label}: {(r or a['status']).replace('_', ' ')}"
 
 
@@ -971,7 +983,8 @@ def quant_methods(s):
     """Every rate tool with the agent's decision for this incident (or the catalog before it has run)."""
     q = quant_result(s)
     if q and q["tools"]:
-        return q["tools"]
+        runs = s.get("tool_runs") or {}
+        return [{**t, "engineer_run": runs.get(t["id"])} for t in q["tools"]]
     catalog = quantification_methods()["methods"]
     last = (q or {}).get("attempts") or []
     roles = {}
@@ -984,57 +997,62 @@ def quant_methods(s):
 
 
 def conditions(s, q):
-    """When the rate can be trusted at all: the checks behind the estimate (or the refusal), from the frozen window."""
+    """When the rate can be trusted: the chosen tool's conditions, the sensors' view and the cross-checks, from the frozen window."""
     if not q:
         return None
     case = q.get("case") or {}
-    if q.get("primary_tool") == "qogi":
+    camera_first = q.get("primary_tool") == "qogi"
+    rows = []
+    if camera_first:
         cam = q.get("camera") or {}
         steady = cam.get("steady_state_check") or {}
-        rows = [
-            {"id": "mast", "label": "Weather mast", "ok": False, "detail": "Not reporting: wind and sonic readings missing, so sensor-based tools cannot run"},
+        rows += [
             {"id": "tracked", "label": "Plume tracked by the camera", "ok": cam.get("frames_used", 0) >= .5 * (cam.get("frames_in_window") or 1),
              "detail": f"{cam.get('frames_used', 0)} of {cam.get('frames_in_window', 0)} frames carry the detector's plume mask"},
             {"id": "contrast", "label": "Thermal contrast", "ok": abs(cam.get("thermal_contrast_k") or 0) >= 2,
              "detail": f"{abs(cam.get('thermal_contrast_k') or 0):.1f} K between the background and the air (needs at least 2 K)"},
-            {"id": "steady", "label": "Plume steady", "ok": cam.get("status") == "estimated",
+            {"id": "steady", "label": "Camera plume steady", "ok": cam.get("status") == "estimated",
              "detail": (f"Early and late halves agree: {steady['early_half_rate_kg_h']:.3f} vs {steady['late_half_rate_kg_h']:.3f} kg/h" if steady else "Not assessed")},
             {"id": "geometry", "label": "Distance to the source", "ok": bool(cam.get("distance_m")),
-             "detail": f"{cam.get('distance_m', '—')} m from CAM-02 to XV-2104 (camera geometry)"},
+             "detail": f"{cam.get('distance_m', '—')} m from {cam.get('camera_id', 'the camera')} to {q.get('source_asset_id')} (camera geometry)"},
         ]
+    if case.get("wind") != "available":
+        rows.append({"id": "mast", "label": "Weather mast", "ok": False,
+                     "detail": "Not reporting: wind and sonic readings missing, so the sensor models cannot check the camera"})
         return {"rows": rows, "all_ok": all(r["ok"] for r in rows if r["id"] != "mast"),
-                "note": "With the mast down the agent quantifies from the camera alone; the sensors return when the mast does"}
+                "note": "With the mast down the agent quantifies from the camera alone; the sensor checks return when the mast does"}
     w = q.get("data_window") or {}
     fits = q.get("candidate_fits") or []
     detected = max([f.get("detected_locations") or 0 for f in fits] or [0])
-    steady = (q.get("qc") or {}).get("steady_state") or {}
     att = q.get("attribution") or {}
     end = w.get("end_utc")
     local = f"{(int(end[11:13]) + 3) % 24:02d}:{end[14:16]}" if end else None  # Saudi Arabia, UTC+3
     sonic = case.get("sonic") or {}
-    cc = q.get("cross_check")
     spread = case.get("wind_direction_spread_deg")
-    rows = [
+    rows += [
         {"id": "wind", "label": "Steady wind", "ok": bool(case.get("wind_steady")),
-         "detail": (f"{case.get('wind_speed_m_s')} m/s, direction spread {spread}° (needs at least 1 m/s, at most 30°)" if spread is not None
-                    else "No wind readings in the window: the weather mast is down")},
+         "detail": f"{case.get('wind_speed_m_s')} m/s, direction spread {spread}° (needs at least 1 m/s, at most 30°)"},
         {"id": "sensors", "label": "Sensors downwind with signal", "ok": detected >= 2,
          "detail": f"{detected} methane sensors above their detection limit" if fits else "Not assessed"},
-        {"id": "steady", "label": "Plume steady", "ok": bool(steady) and abs((steady.get("late_half_rate_kg_h") or 0) - (steady.get("early_half_rate_kg_h") or 0))
-                <= (steady.get("max_relative_change") or 0.3) * max(steady.get("early_half_rate_kg_h") or 1e-9, 1e-9),
-         "detail": (f"Early and late halves of the window agree: {steady['early_half_rate_kg_h']:.3f} vs {steady['late_half_rate_kg_h']:.3f} kg/h" if steady
-                    else "Not assessed")},
         {"id": "stability", "label": "Stability measured", "ok": bool(sonic.get("obukhov_m")),
          "detail": (f"Sonic anemometer: {case.get('stability', '').replace('_', ' ')} air, L = {sonic['obukhov_m']:+.0f} m, u* = {sonic.get('ustar_m_s', 0):.2f} m/s"
                     + (f" at {local} local time" if local else "") if sonic.get("obukhov_m") else "No sonic readings")},
-        {"id": "attribution", "label": "Candidates told apart", "ok": att.get("status") == "agrees_single",
-         "detail": (att.get("status") or "not assessed").replace("_", " ")},
+        {"id": "attribution", "label": "Sensors single out the source", "ok": att.get("status") == "agrees_single",
+         "detail": (f"Only {att.get('best_fit_asset_id')} explains the readings" if att.get("status") == "agrees_single"
+                    else (att.get("status") or "not assessed").replace("_", " "))},
     ]
-    if cc:
-        rows.append({"id": "cross_check", "label": "Second tool agrees", "ok": bool(cc.get("agrees")),
-                     "detail": f"bLs {cc['rate_kg_h']:.3f} kg/h vs Gaussian {cc['primary_rate_kg_h']:.3f} kg/h ({cc['ratio']:.2f}×; agreement means within 0.67–1.5×)"})
+    if not camera_first:
+        steady = (q.get("qc") or {}).get("steady_state") or {}
+        rows.append({"id": "steady", "label": "Plume steady", "ok": bool(steady) and abs((steady.get("late_half_rate_kg_h") or 0) - (steady.get("early_half_rate_kg_h") or 0))
+                     <= (steady.get("max_relative_change") or 0.3) * max(steady.get("early_half_rate_kg_h") or 1e-9, 1e-9),
+                     "detail": (f"Early and late halves agree: {steady['early_half_rate_kg_h']:.3f} vs {steady['late_half_rate_kg_h']:.3f} kg/h" if steady else "Not assessed")})
+    lead = "the camera" if camera_first else "the primary tool"
+    for c in q.get("cross_checks") or []:
+        rows.append({"id": f"check_{c['tool']}", "label": f"{c['label']} agrees", "ok": bool(c["agrees"]),
+                     "detail": f"{c['rate_kg_h']:.3f} kg/h, {c['ratio']:.2f}× {lead} (agreement: 0.67–1.5×)"})
     return {"rows": rows, "all_ok": all(r["ok"] for r in rows),
-            "note": "Each tool runs only inside the conditions it was built for; outside them the agent changes tool or gives no number"}
+            "note": "The camera gives the rate; the sensor models check it and pin the source. Each tool runs only inside the conditions it was built for"
+                    if camera_first else "Each tool runs only inside the conditions it was built for; outside them the agent changes tool or gives no number"}
 
 
 @app.get("/quantification/methods")
@@ -1072,10 +1090,16 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
         if not rec:
             raise HTTPException(status_code=409, detail={"failure": "The quantify agent is still running", "missing": ["Wait for the frozen estimate"]})
         snap = rec["snapshot"]
-        # Re-runs the engine calculation at the frozen clock; the frozen record never changes.
+        tool = None if method == "agent" else method
+        # Runs the agent's choice, or the tool the engineer picked, at the frozen clock; the frozen record never changes.
         res = engine.post(f"/incidents/{s['engine_id']}/quantify",
-                          {"candidate_asset_id": snap["candidate_asset_id"], "as_of_seconds": snap["clock"]["scenario_seconds"]})
-        audit(s, "quantification_run", OPERATOR, f"Re-ran the agent's tool choice ({res.get('primary_tool')}) at the frozen clock: {res['status']}"
+                          {"candidate_asset_id": snap["candidate_asset_id"], "as_of_seconds": snap["clock"]["scenario_seconds"], "tool": tool})
+        frozen = snap["quantification"].get("rate_kg_h")
+        run = {"tool": res.get("primary_tool"), "status": res["status"], "reason": res.get("reason"), "rate_kg_h": res.get("rate_kg_h"),
+               "ratio_to_frozen": round(res["rate_kg_h"] / frozen, 3) if res.get("rate_kg_h") and frozen else None,
+               "run_at_utc": now_utc(), "by": OPERATOR}
+        s.setdefault("tool_runs", {})[res.get("primary_tool") or method] = run
+        audit(s, "quantification_run", OPERATOR, f"Ran {TOOL_SHORT.get(run['tool'], run['tool'])} at the frozen clock: {res['status']}"
               + (f", {res['rate_kg_h']:.3f} kg CH₄/h (model estimated)" if res.get("rate_kg_h") is not None else ""))
         save()
     return get_quantification(incident_id)
@@ -1190,13 +1214,17 @@ def default_fields(rec, wo):
             "required_permits": [p for p in prereq if "permit" in p.lower()]}
 
 
-def investigation_view(rec):
+def investigation_view(rec, names=None):
     inv = (rec or {}).get("investigation")
     if not inv:
         return None
     f = inv["findings"]
     c = f.get("content") or {}
-    return {"summary": c.get("summary"), "findings": c.get("findings", []), "open_questions": c.get("open_questions", []),
+    req = inv.get("research_request") or {}
+    return {"round": inv.get("round", 1), "changes": c.get("changes", []), "focus": req.get("focus") or None,
+            "requested_by": (names or {}).get(req.get("id"), "Engineer") if req else None,
+            "earlier_rounds": len(rec.get("investigation_history", [])),
+            "summary": c.get("summary"), "findings": c.get("findings", []), "open_questions": c.get("open_questions", []),
             "candidate_assessment": c.get("candidate_assessment", []), "source_origin": f.get("source_origin"),
             "model": f.get("model"), "deployment": f.get("deployment"), "recorded_at": utc(inv.get("recorded_at")),
             "tools": [a["tool"] for a in f.get("activity", []) if a["tool"] != "model_inference"]}
@@ -1206,7 +1234,8 @@ AGENT_TEXT = {"detect": "Registering the camera alert", "locate": "Locating cand
               "quantify": "Waiting for a steady plume to estimate the rate", "freeze": "Freezing the evidence snapshot",
               "investigate": "Investigation agent reading the graph, sensors, 47-day history, maintenance and procedures",
               "plan": "Planner drafting the work order", "submit": "Submitting the draft", "answer": "Agent answering a question",
-              "revise": "Planner revising the draft after review", "verify": "Verifier checking post-repair readings"}
+              "revise": "Planner revising the draft", "verify": "Verifier checking post-repair readings",
+              "reinvestigate": "Investigation agent researching again with the field notes and answers so far"}
 
 
 def agent_status(s):
@@ -1217,6 +1246,22 @@ def agent_status(s):
     return {"status": orch["status"], "current_step": orch.get("current_step"),
             "text": AGENT_TEXT.get(orch.get("current_step"), orch.get("current_step")) if running else None,
             "failed": orch["status"] in ("failed", "interrupted"), "detail": (orch.get("result") or {}).get("detail")}
+
+
+def field_notes_view(s, rec):
+    return [{"id": n["evidence_id"], "text": n["text"], "recorded_by": s["names"].get(n["id"], "Engineer"),
+             "recorded_at": utc(n.get("recorded_at"))} for n in (rec or {}).get("field_notes", [])]
+
+
+def research_view(s, rec):
+    """Whether another research round can start, or one is under way."""
+    if not rec:
+        return None
+    req = rec.get("research_request")
+    return {"requested": bool(req), "round": req and req["round"], "focus": req and req["focus"],
+            "requested_by": req and s["names"].get(req["id"], "Engineer"),
+            "can_request": rec["state"] == "pending_review" and not req and bool(s["submitted"]),
+            "next_round": len(rec.get("investigation_history", [])) + 2}
 
 
 def questions_view(s, rec):
@@ -1265,8 +1310,9 @@ def work_order_view(s):
     rv = latest_review(s)
     base = {"generator": generator(rec), "can_draft": False, "missing": [] if s["engine_id"] else ["No alert raised yet (Detect screen)"],
             "inputs": draft_inputs(s, rec), "nvidia_inference": nvidia_status(), "agent": agent_status(s),
-            "investigation": investigation_view(rec), "questions": questions_view(s, rec),
+            "investigation": investigation_view(rec, s["names"]), "questions": questions_view(s, rec),
             "can_ask": bool(rec) and rec["state"] in ("pending_review", "verification_ready"),
+            "field_notes": field_notes_view(s, rec), "research": research_view(s, rec),
             "engine_state": rec and rec["state"], "engine_incident_id": s["engine_id"], "agent_activity": agent_activity(rec)}
     if not s["versions"]:
         return {**base, "draft": None, "versions": [], "flags": {}, "submitted": None, "stale": False, "review": None, "reviews": s["reviews"]}
@@ -1441,6 +1487,50 @@ def post_question(incident_id: str, body: dict = Body(...)):
     if qid:
         s["names"][qid] = by
     audit(s, "question_asked", by, question[:200])
+    forget(s)
+    save()
+    return work_order_view(s)
+
+
+@app.post("/incidents/{incident_id}/field-notes")
+def post_field_note(incident_id: str, body: dict = Body(...)):
+    """An engineer's field observation, added beside the frozen evidence. Agents read it from then on."""
+    s = slot_or_404(incident_id)
+    text, by = (body.get("text") or "").strip()[:3000], (body.get("recorded_by") or "").strip()[:80] or "Engineer"
+    if not text:
+        raise HTTPException(status_code=400, detail="Type the field note")
+    rec = record(s)
+    if not rec or rec["state"] not in ("pending_review", "verification_ready"):
+        raise HTTPException(status_code=409, detail="Field notes can be added while a draft awaits review, or before closure")
+    res = engine.post(f"/incidents/{s['engine_id']}/field-notes",
+                      {"text": text, "expected_version": rec["version"], "idempotency_key": engine.key("note")}, human=True)
+    note = (res.get("field_notes") or [None])[-1]
+    if note:
+        s["names"][note["id"]] = by
+    audit(s, "field_note_added", by, text[:200])
+    forget(s)
+    save()
+    return work_order_view(s)
+
+
+@app.post("/incidents/{incident_id}/research")
+def post_research(incident_id: str, body: dict = Body(...)):
+    """Another research round: the investigator reruns with the field notes and answers so far, then the planner
+    revises the draft. The draft under review is withdrawn until the revision arrives, and needs approval again."""
+    s = slot_or_404(incident_id)
+    focus, by = (body.get("focus") or "").strip()[:2000], (body.get("requested_by") or "").strip()[:80] or "Engineer"
+    rec = record(s)
+    if not rec or rec["state"] != "pending_review" or not s["submitted"]:
+        raise HTTPException(status_code=409, detail="A research round can start while a draft awaits review")
+    if rec.get("research_request"):
+        raise HTTPException(status_code=409, detail="A research round is already running")
+    res = engine.post(f"/incidents/{s['engine_id']}/research",
+                      {"focus": focus, "expected_version": rec["version"], "idempotency_key": engine.key("research")}, human=True)
+    req = res.get("research_request") or {}
+    if req.get("id"):
+        s["names"][req["id"]] = by
+    s["submitted"] = None
+    audit(s, "research_requested", by, f"Research round {req.get('round')}" + (f": {focus[:180]}" if focus else ""))
     forget(s)
     save()
     return work_order_view(s)
@@ -1659,7 +1749,7 @@ STEP_REASON = {"camera_event": "No alert yet. Trigger the event on the Detect sc
                "investigation": "Runs after the estimate is frozen.", "procedure_passages": "Retrieved by the agents through retrieve_procedure.",
                "work_order": "Runs after the investigation.", "answer": "No question asked yet. Ask one on Approve.",
                "verification": "Runs after a repair is recorded on Report."}
-HUMAN_EVENT = {"review": None, "question": "question_asked", "report_issued": "report_issued", "repair_recorded": "repair_recorded", "closure": "incident_closed"}
+HUMAN_EVENT = {"review": None, "question": "question_asked", "research": "research_requested", "report_issued": "report_issued", "repair_recorded": "repair_recorded", "closure": "incident_closed"}
 
 
 def agent_runs(s):
@@ -1695,7 +1785,8 @@ def agent_runs(s):
                  ok=d["status"] == "estimated", evidence=[{"label": "Telemetry window", "path": f"InfluxDB · 300 s to replay {d['as_of_seconds']} s", "screen": "quantify.html"}])
         elif kind == "agent_activity" and st in AGENT_STEPS:
             tool = d.get("tool")
-            target = {"investigate": "investigation", "plan": "work_order", "revise": "work_order", "answer": "answer", "verify": "verification"}[st]
+            target = {"investigate": "investigation", "reinvestigate": "investigation", "plan": "work_order", "revise": "work_order",
+                      "answer": "answer", "verify": "verification"}[st]
             if tool in ("retrieve_procedure", "search_documents"):
                 target = "procedure_passages"
             model = tool == "model_inference"
@@ -1708,7 +1799,8 @@ def agent_runs(s):
             d = e["detail"]
             human.append({"event": f"review_{d.get('decision')}" if e["kind"] == "review" else HUMAN_EVENT.get(e["kind"], e["kind"]),
                           "actor": "Engineer (authenticated)", "at": utc(e["recorded_at"]), "version": d.get("draft_version"),
-                          "detail": d.get("rationale") or d.get("question") or d.get("work_performed") or d.get("decision") or ""})
+                          "detail": d.get("rationale") or d.get("question") or d.get("work_performed") or d.get("decision")
+                                    or (f"Research round {d['round']}" + (f": {d['focus']}" if d.get("focus") else "") if e["kind"] == "research" else "")})
     human += [{k: e[k] for k in ("event", "actor", "at", "version", "detail")} for e in s["audit"] if e["event"] == "submitted_for_review"]
     human.sort(key=lambda x: x["at"] or "")
     st = rec and rec["state"]

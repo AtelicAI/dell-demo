@@ -199,7 +199,7 @@ a.step:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* Badges: plain small caps with a square marker; only OK / approved states carry colour. */
 .badge{border:0;background:none;padding:0;color:var(--ink-mute)}
 .badge::before{border-radius:1px;background:var(--ink-dim)}
-.badge.observed,.badge.provider_reported,.badge.experimental_setpoint,.badge.model_estimated,.badge.manual_annotation{background:none;color:var(--ink-mute)}
+.badge.observed,.badge.provider_reported,.badge.experimental_setpoint,.badge.model_estimated,.badge.manual_annotation,.badge.field_note{background:none;color:var(--ink-mute)}
 .badge.observed,.badge.approved{color:var(--good);background:none}
 .badge.observed::before,.badge.approved::before{background:var(--good)}
 .badge.pending,.badge.hypothesis{color:var(--ink-dim)}

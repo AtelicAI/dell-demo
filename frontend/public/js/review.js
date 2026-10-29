@@ -186,10 +186,13 @@
     if (!W) return;
     $('agent-banner').innerHTML = S.agentBanner(W.agent);
     $('investigation').innerHTML = S.investigation(W.investigation);
-    $('inv-meta').textContent = W.investigation ? `${W.investigation.findings.length} findings · ${(W.questions || []).length} questions` : '';
-    const draftText = $('qa-text') ? $('qa-text').value : '';
-    $('qa').innerHTML = S.questions(W.questions, W.can_ask);
-    if ($('qa-text')) $('qa-text').value = draftText;
+    const notes = (W.field_notes || []).length, round = W.investigation && W.investigation.round;
+    $('inv-meta').textContent = W.investigation ? [`${W.investigation.findings.length} findings`, `${(W.questions || []).length} questions`,
+      notes ? `${notes} field note${notes === 1 ? '' : 's'}` : '', round > 1 ? `round ${round}` : ''].filter(Boolean).join(' · ') : '';
+    // Keep anything typed but not sent across re-renders.
+    const typed = ['qa-text', 'fn-text', 'rs-focus'].map((id) => [id, $(id) ? $(id).value : '']);
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask) + S.research(W);
+    typed.forEach(([id, v]) => { if ($(id)) $(id).value = v; });
   }
 
   async function decide(decision, reason) {
@@ -219,6 +222,26 @@
 
   document.addEventListener('input', (e) => { if (e.target.id === 'rv-name') syncButtons(); });
   document.addEventListener('click', async (e) => {
+    const who = ($('rv-name') && $('rv-name').value.trim()) || readName();
+    const ask = e.target.closest('[data-ask]');
+    if (ask && $('qa-text')) { $('qa-text').value = ask.dataset.ask; $('qa-text').focus(); return; }
+    if (e.target.id === 'fn-send' || e.target.id === 'rs-send') {
+      const note = e.target.id === 'fn-send';
+      const text = (note ? $('fn-text') : $('rs-focus')).value.trim();
+      if (note && !text) return;
+      e.target.disabled = true;
+      const data = await window.AtelicStory.send(`/incidents/${INCIDENT_ID}/${note ? 'field-notes' : 'research'}`,
+        note ? { text, recorded_by: who } : { focus: text, requested_by: who }, note ? 'fn-msg' : 'rs-msg');
+      e.target.disabled = false;
+      if (data) {
+        W = data;
+        if ($(note ? 'fn-text' : 'rs-focus')) $(note ? 'fn-text' : 'rs-focus').value = '';
+        renderAll();
+        window.AtelicShell.refresh();
+        startPoll();
+      }
+      return;
+    }
     if (e.target.id !== 'qa-send') return;
     e.target.disabled = true;
     const data = await window.AtelicStory.ask(INCIDENT_ID, ($('rv-name') && $('rv-name').value.trim()) || readName());
@@ -252,12 +275,13 @@
   });
 
   // Keep the page live while an agent works (answering, revising after Request changes).
-  const pending = (w) => w && ((w.agent && w.agent.status === 'running') || (w.questions || []).some((q) => q.status !== 'answered'));
+  const pending = (w) => w && ((w.agent && w.agent.status === 'running') || (w.research && w.research.requested)
+    || (w.questions || []).some((q) => q.status !== 'answered'));
   let stopPoll = null;
   function startPoll() {
     if (stopPoll) stopPoll();
     stopPoll = window.AtelicStory.poll(async () => {
-      if (document.activeElement && ['rv-name', 'qa-text', 'rv-reason'].includes(document.activeElement.id)) return W;
+      if (document.activeElement && ['rv-name', 'qa-text', 'rv-reason', 'fn-text', 'rs-focus'].includes(document.activeElement.id)) return W;
       W = await get(`/incidents/${INCIDENT_ID}/work-order`);
       renderAll();
       return W;

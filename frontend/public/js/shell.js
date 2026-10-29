@@ -546,7 +546,7 @@
     observed: 'Observed', provider_reported: 'Provider reported', experimental_setpoint: 'Experimental setpoint',
     model_estimated: 'Model estimated', simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
     hypothesis: 'Hypothesis', approved: 'Approved', pending: 'Pending', gap: 'Gap',
-    human_decision: 'Human decision', system: 'System status', agent_drafted: 'Agent drafted',
+    human_decision: 'Human decision', system: 'System status', agent_drafted: 'Agent drafted', field_note: 'Field note',
   };
   const escAttr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function badge(p, title) {

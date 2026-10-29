@@ -27,9 +27,12 @@
     const fs = (inv.findings || []).slice().sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const n = (k) => fs.filter((f) => f.kind === k).length;
     return `<div class="inv">
-      <div class="inv-h"><span class="lbl">Investigation agent</span>
+      <div class="inv-h"><span class="lbl">Investigation agent${inv.round > 1 ? ` · research round ${inv.round}` : ''}</span>
         <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
         <span class="inv-n">${n('contradiction')} contradiction${n('contradiction') === 1 ? '' : 's'} · ${n('gap')} gap${n('gap') === 1 ? '' : 's'} · ${n('supporting')} supporting</span></div>
+      ${inv.round > 1 ? `<div class="inv-ch"><span class="lbl">What changed since round ${inv.round - 1}</span>
+        ${inv.focus ? `<p>Focus from ${esc(inv.requested_by || 'the engineer')}: “${esc(inv.focus)}”</p>` : ''}
+        <ul>${(inv.changes || []).map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
       <p class="inv-sum">${esc(inv.summary)}</p>
       <ul class="inv-f">${fs.map((f) => {
         const [cls, label] = KIND[f.kind] || ['ctx', f.kind];
@@ -45,15 +48,46 @@
       <div class="qa-q"><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}<p>${esc(q.question)}</p></div>
       ${q.status === 'answered' ? `<div class="qa-a"><span class="lbl">${esc(q.source_origin === 'llm' ? 'Agent answer · Nemotron' : 'Answer')}</span><p>${esc(q.answer)}</p>
         ${q.cannot_determine ? `<p class="qa-cd"><b>Cannot determine from the evidence:</b> ${esc(Array.isArray(q.cannot_determine) ? q.cannot_determine.join('; ') : q.cannot_determine)}</p>` : ''}
-        ${(q.suggested_follow_up || []).length ? `<ul class="qa-fu">${q.suggested_follow_up.map((x) => `<li>${esc(typeof x === 'string' ? x : x.statement || JSON.stringify(x))}</li>`).join('')}</ul>` : ''}</div>`
+        ${(q.suggested_follow_up || []).length ? `<ul class="qa-fu">${q.suggested_follow_up.map((x) => {
+          const t = typeof x === 'string' ? x : x.statement || JSON.stringify(x);
+          return `<li>${esc(t)}${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}</li>`;
+        }).join('')}</ul>` : ''}</div>`
         : '<div class="qa-a pending"><span class="ag-spin"></span>The agent is reading the frozen evidence…</div>'}
     </li>`).join('');
     return `<div class="qa-box">
-      <div class="qa-h"><span class="lbl">Ask the agent</span><span>Answers come only from the frozen evidence and never change the draft.</span></div>
+      <div class="qa-h"><span class="lbl">Ask the agent</span><span>Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.</span></div>
       ${canAsk ? `<div class="qa-form"><textarea id="qa-text" rows="2" placeholder="e.g. WO-009 says the gland was re-torqued. Why is XV-2104 still the leading candidate?"></textarea>
         <button class="btn sm" id="qa-send" type="button">Ask</button><span class="qa-msg" id="qa-msg" role="status"></span></div>`
         : '<p class="qa-off">Questions open while a draft awaits review, and before closure.</p>'}
       ${items ? `<ul class="qa-list">${items}</ul>` : ''}</div>`;
+  }
+
+  // Further research before approval: field notes the engineer adds, and another investigation round that the
+  // planner turns into a revised draft (which then needs approval again).
+  function research(W) {
+    const notes = W.field_notes || [], r = W.research || {};
+    const canNote = W.can_ask;
+    const list = notes.length ? `<ul class="fn-list">${notes.map((n) => `<li><code>${esc(n.id.split(':')[1])}</code><span><b>${esc(n.recorded_by)}</b> · ${hm(n.recorded_at)}<p>${esc(n.text)}</p></span></li>`).join('')}</ul>` : '';
+    const running = r.requested ? `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>Research round ${esc(r.round)} under way</b>
+      <span>The investigator re-reads the evidence with ${notes.length} field note${notes.length === 1 ? '' : 's'} and the answers so far; the planner then revises the draft. Approval waits for the new draft.</span></div>` : '';
+    return `<div class="rs-box">
+      <div class="qa-h"><span class="lbl">Field notes</span><span>What you or the crew saw on site. Added beside the frozen evidence, labelled as unverified human observations; agents read them from then on.</span></div>
+      ${list}
+      ${canNote ? `<div class="qa-form"><textarea id="fn-text" rows="2" placeholder="e.g. Soap test on F-205 flange: no bubbles. Hissing heard near the XV-2104 stem."></textarea>
+        <button class="btn sm" id="fn-send" type="button">Add field note</button><span class="qa-msg" id="fn-msg" role="status"></span></div>` : ''}
+      ${running || (r.can_request ? `<div class="rs-go"><div class="qa-h"><span class="lbl">Research again</span><span>The investigator runs round ${esc(r.next_round)} with your field notes and the answers so far, shows what changed, and the planner revises the draft. The current draft is withdrawn until then.</span></div>
+        <div class="qa-form"><textarea id="rs-focus" rows="2" placeholder="Optional focus, e.g. Recheck F-205 against the soap test and the K-201 load change."></textarea>
+        <button class="btn sm" id="rs-send" type="button">Research again</button><span class="qa-msg" id="rs-msg" role="status"></span></div></div>` : '')}
+    </div>`;
+  }
+
+  async function send(path, body, msgId) {
+    const msg = document.getElementById(msgId);
+    if (msg) msg.textContent = 'Sending…';
+    const r = await fetch(`${window.AtelicShell.API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) { if (msg) msg.textContent = typeof data.detail === 'string' ? data.detail : 'Could not send'; return null; }
+    return data;
   }
 
   async function ask(incidentId, name) {
@@ -128,5 +162,5 @@
       <p class="ak-src">${esc(f.camera || '')} · ${esc(f.recorded_date || '')} · ${esc(f.release_location || '')} · ${esc(f.source || '')}</p></div>`;
   }
 
-  window.AtelicStory = { agentBanner, investigation, questions, ask, poll, followUp, answerKey, esc };
+  window.AtelicStory = { agentBanner, investigation, questions, research, send, ask, poll, followUp, answerKey, esc };
 })();

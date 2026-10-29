@@ -6,7 +6,8 @@ labelled as unresolved, never dropped or invented.
 
 
 def provenance_of(kind):
-    return {"quantification": "model_estimated", "detection": "model_estimated", "history": "simulated"}.get(kind, "simulated")
+    return {"quantification": "model_estimated", "detection": "model_estimated", "history": "simulated",
+            "field_note": "field_note"}.get(kind, "simulated")
 
 
 class Evidence:
@@ -27,6 +28,9 @@ class Evidence:
             r = m.get("record", m)
             self.maintenance[r["id"]] = r
         self.candidates = [c["asset_id"] for c in snap.get("candidates", [])]
+        # Engineers' field notes sit beside the snapshot (added after it was frozen).
+        self.notes = {n["evidence_id"]: n for n in rec.get("field_notes", [])}
+        self.names = {}
 
     def _work_order(self, wid):
         if wid in self.maintenance:
@@ -50,6 +54,11 @@ class Evidence:
             r = self.reports.get(rest, {})
             return dict(kind="field_report", group=f"Field report · {rest}", label=r.get("title") or rest,
                         excerpt=(r.get("body") or "")[:360] or None, date=r.get("date"))
+        if kind == "field_note":
+            n = self.notes.get(eid, {})
+            who = self.names.get(n.get("id"), "Engineer")
+            return dict(kind="field_note", group=f"Field note · {rest}", label=f"{who}: {n.get('text', rest)}"[:200],
+                        excerpt=f"Recorded {str(n.get('recorded_at', ''))[:16].replace('T', ' ')} UTC after the evidence was frozen; not verified by the system")
         if kind == "maintenance":
             r = self._work_order(rest) or {}
             return dict(kind="maintenance", group=f"Maintenance · {rest}", label=f"{r.get('date', '')} {r.get('issue') or rest}".strip(),

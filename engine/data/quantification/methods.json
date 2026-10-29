@@ -1,39 +1,106 @@
 {
   "schema_version": "2.0",
-  "headline": "The quantify agent reads the case (wind, stability, sensors, candidate sources, camera) and picks the tool built for it.",
-  "site": {"surface_roughness_m": 0.03, "surface_basis": "Flat gravel pad in open desert; equipment is an open skid, no enclosure",
-           "receptor_height_m": 1.2, "enclosed": false},
+  "headline": "Camera first: the quantify agent reads the rate from the plume the camera sees, then checks it with the sensor models the case allows.",
+  "site": {
+    "surface_roughness_m": 0.03,
+    "surface_basis": "Flat gravel pad in open desert; equipment is an open skid, no enclosure",
+    "receptor_height_m": 1.2,
+    "enclosed": false
+  },
   "methods": [
-    {"id": "gaussian_candidate_fit", "label": "Gaussian plume", "family": "Plume model", "connected": true,
-     "how": "For each candidate location, a steady Gaussian plume predicts what every methane sensor should read per kg/h in the measured wind. A non-negative least-squares fit gives the rate and how well that location explains the readings.",
-     "needs": ["Methane sensors downwind", "Wind speed and direction", "Steady wind (direction spread at most 30 degrees)"],
-     "best_when": "Several sensors, a few candidate sources, steady wind",
-     "where": "engine/backend/app/quantification.py"},
-    {"id": "bls", "label": "Backward Lagrangian stochastic (bLs)", "family": "Particle model", "connected": true,
-     "how": "Releases tens of thousands of virtual particles backward in time from the sensors through the measured turbulence (WindTrax-style). The time they spend over the source gives the concentration per kg/h.",
-     "needs": ["Sonic anemometer: friction velocity and stability (Obukhov length)", "One source singled out", "Sensors within about 50 m"],
-     "best_when": "One known source, sensors close by, stability measured (night or day)",
-     "where": "engine/backend/app/bls.py, bls_footprint.py"},
-    {"id": "gaussian_puff", "label": "Gaussian puff", "family": "Puff model", "connected": false,
-     "how": "Tracks a train of small puffs, each carried by the wind of its own minute, so the plume can bend as the wind turns.",
-     "needs": ["Wind speed and direction", "Methane sensors downwind"],
-     "best_when": "Wind direction changing during the window"},
-    {"id": "pyelq", "label": "pyELQ (plume + Bayesian)", "family": "Bayesian inversion", "connected": false,
-     "how": "Shell's open-source inversion: Gaussian plume physics with Bayesian sampling over where sources are and how big.",
-     "needs": ["Continuous sensor network", "Wind", "Hours of data"],
-     "best_when": "Many sensors, several leaks at once, steady wind"},
-    {"id": "mdlq", "label": "MDLQ (puff + Bayesian)", "family": "Bayesian inversion", "connected": false,
-     "how": "Detects, locates and quantifies from a continuous network: Gaussian puffs with a spike-and-slab Bayesian model that gives each source a leak probability and a rate range.",
-     "needs": ["Ring of sensors around the site", "Wind", "Hours of data"],
-     "best_when": "Many sensors, several leaks at once, changing wind"},
-    {"id": "qogi", "label": "Camera quantification (QOGI)", "family": "Optical", "connected": true,
-     "how": "Reads the methane column in every plume pixel from the radiometric infrared frame (thermal contrast against the background), sums it into the plume mass and multiplies by the plume speed measured between frames. Needs no anemometer.",
-     "needs": ["Radiometric camera stream", "Plume mask from the detector", "Thermal contrast of at least 2 K", "Distance to the source"],
-     "best_when": "One visible plume, no usable wind data",
-     "where": "engine/backend/app/qogi.py"},
-    {"id": "cfd", "label": "CFD + inversion", "family": "Flow solver", "connected": false,
-     "how": "Solves the airflow around buildings and equipment, then inverts the readings through it.",
-     "needs": ["3-D site model", "Hours of compute per case"],
-     "best_when": "Enclosed or built-up areas where air flows around obstacles"}
+    {
+      "id": "qogi",
+      "label": "Camera quantification (QOGI)",
+      "family": "Optical",
+      "connected": true,
+      "how": "Reads the methane column in every plume pixel from the radiometric infrared frame (thermal contrast against the background), sums it into the plume mass and multiplies by the plume speed measured between frames. Needs no anemometer.",
+      "needs": [
+        "Radiometric camera stream",
+        "Plume mask from the detector",
+        "Thermal contrast of at least 2 K",
+        "Distance to the source"
+      ],
+      "best_when": "A visible plume; with or without wind data",
+      "where": "engine/backend/app/qogi.py"
+    },
+    {
+      "id": "gaussian_candidate_fit",
+      "label": "Gaussian plume",
+      "family": "Plume model",
+      "connected": true,
+      "how": "For each candidate location, a steady Gaussian plume predicts what every methane sensor should read per kg/h in the measured wind. A non-negative least-squares fit gives the rate and how well that location explains the readings.",
+      "needs": [
+        "Methane sensors downwind",
+        "Wind speed and direction",
+        "Steady wind (direction spread at most 30 degrees)"
+      ],
+      "best_when": "Several sensors, a few candidate sources, steady wind",
+      "where": "engine/backend/app/quantification.py"
+    },
+    {
+      "id": "bls",
+      "label": "Backward Lagrangian stochastic (bLs)",
+      "family": "Particle model",
+      "connected": true,
+      "how": "Releases tens of thousands of virtual particles backward in time from the sensors through the measured turbulence (WindTrax-style). The time they spend over the source gives the concentration per kg/h.",
+      "needs": [
+        "Sonic anemometer: friction velocity and stability (Obukhov length)",
+        "One source singled out",
+        "Sensors within about 50 m"
+      ],
+      "best_when": "One known source, sensors close by, stability measured (night or day)",
+      "where": "engine/backend/app/bls.py, bls_footprint.py"
+    },
+    {
+      "id": "gaussian_puff",
+      "label": "Gaussian puff",
+      "family": "Puff model",
+      "connected": true,
+      "how": "Tracks a train of small puffs, released every quarter second and each carried by the wind of its own second, so the plume can bend as the wind turns.",
+      "needs": [
+        "Wind speed and direction",
+        "Methane sensors downwind"
+      ],
+      "best_when": "Wind direction changing during the window",
+      "where": "engine/backend/app/puff.py"
+    },
+    {
+      "id": "pyelq",
+      "label": "pyELQ (plume + Bayesian)",
+      "family": "Bayesian inversion",
+      "connected": false,
+      "how": "Shell's open-source inversion: Gaussian plume physics with Bayesian sampling over where sources are and how big.",
+      "needs": [
+        "Continuous sensor network",
+        "Wind",
+        "Hours of data"
+      ],
+      "best_when": "Many sensors, several leaks at once, steady wind"
+    },
+    {
+      "id": "mdlq",
+      "label": "MDLQ (puff + Bayesian)",
+      "family": "Bayesian inversion",
+      "connected": false,
+      "how": "Detects, locates and quantifies from a continuous network: Gaussian puffs with a spike-and-slab Bayesian model that gives each source a leak probability and a rate range.",
+      "needs": [
+        "Ring of sensors around the site",
+        "Wind",
+        "Hours of data"
+      ],
+      "best_when": "Many sensors, several leaks at once, changing wind"
+    },
+    {
+      "id": "cfd",
+      "label": "CFD + inversion",
+      "family": "Flow solver",
+      "connected": false,
+      "how": "Solves the airflow around buildings and equipment, then inverts the readings through it.",
+      "needs": [
+        "3-D site model",
+        "Hours of compute per case"
+      ],
+      "best_when": "Enclosed or built-up areas where air flows around obstacles"
+    }
   ]
 }

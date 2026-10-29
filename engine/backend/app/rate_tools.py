@@ -11,7 +11,7 @@ import numpy as np
 from .bls import SurfaceLayer, ppm_per_kg_h, wind_frame
 from .bls_footprint import footprint
 from .data import DATA
-from . import qogi
+from . import puff, qogi
 
 WINDOW_S = 60
 STEADY_SPREAD_DEG = 30.
@@ -122,17 +122,31 @@ def bls_fit(facility, rows, asset_id, end, case):
                                                          kind='obukhov_length_halved_and_doubled_not_confidence_interval')}
 
 
-def decide(case, gaussian):
-    """Role and reason for every registered tool. Primary: the tool whose number the incident uses."""
+CAMERA_WAIT_REASONS = ('plume_not_tracked', 'camera_plume_not_steady')
+AGREE = (.67, 1.5)
+GAUSSIAN_ASSUMPTIONS_TAG = 'Steady open-terrain reflected Gaussian'
+
+
+def decide(case, camera):
+    """Role and reason for every registered tool. Camera first: the plume it sees gives the rate; sensor models check it."""
     wind_ok = case['wind'] == 'available'
     single = case['attribution'] == 'agrees_single'
     stable_txt = {'stable': 'stable night air', 'unstable': 'unstable daytime air', 'near_neutral': 'near-neutral air'}.get(case['stability'])
     spread = case['wind_direction_spread_deg']
+    cam_ok = case['camera_radiometric'] and camera is not None and camera.get('reason') not in ('no_radiometric_stream', 'no_footage_at_this_time', 'low_thermal_contrast')
     d = {}
+    if not case['camera_radiometric']:
+        d['qogi'] = ('blocked', 'Camera does not stream radiometric frames')
+    elif not cam_ok:
+        d['qogi'] = ('blocked', (camera or {}).get('reason', 'no footage').replace('_', ' '))
+    else:
+        d['qogi'] = ('primary', 'The camera sees the plume and streams radiometric frames: rate straight from the image (plume mass × plume speed)'
+                     + ('. The only tool that runs without the weather mast' if not wind_ok else ', independent of the wind'))
     if wind_ok:
-        d['gaussian_candidate_fit'] = ('primary', f"{case['methane_sensors_reporting']} methane sensors reporting, "
-                                       f"{case['camera_candidates']} candidate locations from the camera and steady wind "
-                                       f"(direction spread {spread:.1f}°): fit every candidate and keep the ones the readings support")
+        role = 'cross_check' if cam_ok else 'primary'
+        d['gaussian_candidate_fit'] = (role, f"{case['methane_sensors_reporting']} methane sensors and steady wind (direction spread {spread:.1f}°): "
+                                       + ("checks the camera's number and tells which candidate the readings support" if cam_ok else
+                                          f"fit all {case['camera_candidates']} camera candidates and keep the ones the readings support"))
     else:
         d['gaussian_candidate_fit'] = ('blocked', 'Needs wind speed and direction; the weather mast is not reporting')
     if not wind_ok or not case['sonic']:
@@ -141,51 +155,76 @@ def decide(case, gaussian):
         d['bls'] = ('waiting', 'Runs once the readings single out one source; candidates are still being separated')
     else:
         d['bls'] = ('cross_check', f"One source left, sensors within {BLS_REACH_M:.0f} m and {stable_txt} measured by the sonic "
-                                   f"(L = {case['sonic']['obukhov_m']:+.0f} m): particle model checks the plume model's rate")
-    d['gaussian_puff'] = (('not_needed', f'Wind direction steady (spread {spread:.1f}°, 30° allowed); a single plume shape holds')
+                                   f"(L = {case['sonic']['obukhov_m']:+.0f} m): particle model checks the rate through the measured turbulence")
+    d['gaussian_puff'] = (('not_needed', f'Wind direction steady (spread {spread:.1f}°, 30° allowed): puffs would trace the same plume as the Gaussian')
                           if wind_ok and case['wind_steady'] else
-                          ('not_needed', 'No wind readings to carry puffs') if not wind_ok else
-                          ('recommended', f'Wind turning (spread {spread:.0f}°): puffs follow the changing direction'))
+                          ('blocked', 'Needs wind to carry the puffs; the weather mast is not reporting') if not wind_ok else
+                          ('cross_check', f'Wind turning (spread {spread:.0f}°): puffs follow the changing direction'))
     many = 'several sources leaking at once, over hours of network data'
     d['pyelq'] = ('not_needed', f"Built for {many}; the camera alarm narrowed this to {case['camera_candidates']} candidates in one window")
     d['mdlq'] = ('not_needed', f"Built for {many} and changing wind; one camera-flagged release here")
-    if not case['camera_radiometric']:
-        d['qogi'] = ('blocked', 'Camera does not stream radiometric frames')
-    elif wind_ok:
-        d['qogi'] = ('not_needed', 'Sensors and wind give a rate tied to one source; the camera stays on detection')
-    else:
-        d['qogi'] = ('primary', 'No wind data, but the camera sees the plume: mass from the radiometric frame, speed from the footage')
     d['cfd'] = ('not_needed', 'Open skid on a desert pad, no enclosure; air flows freely around the equipment')
     return d
 
 
-def run(facility, rows, end, gaussian, attribution, candidates, camera_id, clip_id, clip_seconds, candidate_asset_id):
-    """Gaussian result in, incident result out: primary tool's number plus every tool's decision and outputs."""
+def _camera(camera_id, clip_id, clip_seconds):
+    if not clip_id:
+        return dict(method=qogi.METHOD, status='rate_unavailable', rate_kg_h=None, reason='no_footage_at_this_time')
+    # The replay clock runs past the recorded clip (it maps to no clip time); the camera keeps its latest tracked window.
+    return qogi.estimate(camera_id, clip_id, clip_seconds if clip_seconds is not None else math.inf)
+
+
+def run(facility, rows, end, gaussian, attribution, candidates, camera_id, clip_id, clip_seconds, candidate_asset_id, tool=None):
+    """Gaussian result in, incident result out: the primary tool's number, every tool's decision, and the cross-checks.
+
+    tool: run this one as primary (an engineer's request) instead of the agent's choice; the agent's roles are still reported.
+    """
     case = assess(facility, rows, end, attribution, candidates, camera_id)
-    decisions = decide(case, gaussian)
-    outputs = {'gaussian_candidate_fit': {k: gaussian.get(k) for k in ('status', 'reason', 'rate_kg_h', 'sensitivity_kg_h', 'residual_rms_ppm')}}
-    if decisions['bls'][0] == 'cross_check' and gaussian['status'] == 'estimated':
+    camera = _camera(camera_id, clip_id, clip_seconds) if case['camera_radiometric'] else None
+    decisions = decide(case, camera)
+    outputs = {'gaussian_candidate_fit': {k: gaussian.get(k) for k in ('method', 'status', 'reason', 'rate_kg_h', 'sensitivity_kg_h', 'residual_rms_ppm')}}
+    if camera is not None:
+        outputs['qogi'] = camera
+    wind_ok = case['wind'] == 'available'
+    if (decisions['bls'][0] == 'cross_check' or tool == 'bls') and wind_ok:
         outputs['bls'] = bls_fit(facility, rows, candidate_asset_id, end, case)
-    if decisions['qogi'][0] == 'primary':
-        outputs['qogi'] = qogi.estimate(camera_id, clip_id, clip_seconds) if clip_seconds is not None else \
-            dict(method=qogi.METHOD, status='rate_unavailable', rate_kg_h=None, reason='no_footage_at_this_time')
-    primary = next((t for t, (role, _) in decisions.items() if role == 'primary'), None)
+    if (decisions['gaussian_puff'][0] == 'cross_check' or tool == 'gaussian_puff') and wind_ok:
+        outputs['gaussian_puff'] = puff.fit(facility, rows, candidate_asset_id, end)
+    agent_primary = next((t for t, (role, _) in decisions.items() if role == 'primary'), None)
+    primary = tool or agent_primary
+    known = {m['id']: m for m in registry()['methods']}
+    if tool and (tool not in known or not known[tool]['connected']):
+        out = dict(status='rate_unavailable', rate_kg_h=None, reason='tool_not_deployed_on_this_edge_box')
+    else:
+        out = outputs.get(primary) or dict(status='rate_unavailable', rate_kg_h=None, reason=decisions.get(primary, ('', 'not run'))[1])
     tools = [dict(id=m['id'], label=m['label'], connected=m['connected'], role=decisions[m['id']][0], reason=decisions[m['id']][1],
                   output=outputs.get(m['id'])) for m in registry()['methods']]
-    result = {**gaussian, 'case': case, 'tools': tools, 'primary_tool': primary}
+    result = {**gaussian, 'case': case, 'tools': tools, 'primary_tool': primary, 'agent_primary_tool': agent_primary,
+              'requested_tool': tool}
+    if primary != 'gaussian_candidate_fit':
+        result.update(method=out.get('method', primary), status=out['status'], rate_kg_h=out['rate_kg_h'],
+                      sensitivity_kg_h=out.get('sensitivity_kg_h'), steady_state_check=out.get('steady_state_check'),
+                      reason=out.get('reason'))
     if primary == 'qogi':
-        q = outputs['qogi']
-        result.update(method=q['method'], status=q['status'], rate_kg_h=q['rate_kg_h'], sensitivity_kg_h=q.get('sensitivity_kg_h'),
-                      camera_window_clip_seconds=q.get('window_clip_seconds'), steady_state_check=q.get('steady_state_check'),
+        result.update(camera_window_clip_seconds=out.get('window_clip_seconds'),
                       assumptions=['Integrated mass enhancement from the radiometric plume frame; no anemometer',
                                    'Plume speed from phase correlation of consecutive frames inside the detector mask',
-                                   'Radiometric gain from a metered reference release recorded by the same camera',
-                                   'Steady plume required: early/late half-window rates must agree within 30%'])
+                                   'One radiometric gain for the camera model, from a metered reference release',
+                                   'Steady plume required: early/late half-window rates must agree within 30%',
+                                   'Past the end of the recorded footage, the latest tracked window stands'])
         # Camera still waiting for a steady, fully tracked window: retry as the clock advances.
-        result['reason'] = None if q['status'] == 'estimated' else (
-            'waiting_for_camera_window' if q['reason'] in ('plume_not_tracked', 'camera_plume_not_steady') else gaussian['reason'])
-    if outputs.get('bls', {}).get('status') == 'estimated' and gaussian.get('rate_kg_h'):
-        b = outputs['bls']['rate_kg_h']
-        result['cross_check'] = dict(tool='bls', rate_kg_h=b, primary_rate_kg_h=gaussian['rate_kg_h'],
-                                     ratio=round(b / gaussian['rate_kg_h'], 3), agrees=.67 <= b / gaussian['rate_kg_h'] <= 1.5)
+        if out['status'] != 'estimated':
+            result['reason'] = 'waiting_for_camera_window' if out.get('reason') in CAMERA_WAIT_REASONS else gaussian['reason']
+    # Other tools' numbers against the primary: the sensors and models say whether the camera's rate holds.
+    p = result['rate_kg_h']
+    checks = []
+    for tid in ('gaussian_candidate_fit', 'bls', 'gaussian_puff', 'qogi'):
+        o = outputs.get(tid)
+        if tid == primary or not o or o.get('status') != 'estimated' or not p:
+            continue
+        if decisions[tid][0] != 'cross_check' and tid != agent_primary:
+            continue
+        ratio = o['rate_kg_h'] / p
+        checks.append(dict(tool=tid, label=known[tid]['label'], rate_kg_h=o['rate_kg_h'], ratio=round(ratio, 3), agrees=AGREE[0] <= ratio <= AGREE[1]))
+    result['cross_checks'] = checks
     return result
