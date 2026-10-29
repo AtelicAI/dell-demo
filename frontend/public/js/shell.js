@@ -3,13 +3,18 @@
 // Everything is rendered from backend state; nothing is hard-coded.
 // A page opts in with <body data-page="overview"> and empty #rail / #topbar / #incident-strip / #stepper.
 (function () {
-  // The UI API sits behind the same origin at /api (nginx/Caddy proxy). Local dev without a proxy: ?api=http://host:port once.
+  // The UI API sits behind the same origin at /api (Caddy proxy). Local development without the proxy only: a page
+  // served from localhost may point at a loopback API with ?api=http://127.0.0.1:<port> (never stored, never remote).
   const API = (() => {
-    try {
-      const q = new URLSearchParams(location.search).get('api');
-      if (q) sessionStorage.setItem('atelic.api', q);
-      return sessionStorage.getItem('atelic.api') || '/api';
-    } catch (e) { return '/api'; }
+    const local = /^(localhost|127\.0\.0\.1)$/;
+    const q = new URLSearchParams(location.search).get('api');
+    if (q && local.test(location.hostname)) {
+      try {
+        const u = new URL(q);
+        if (u.protocol === 'http:' && local.test(u.hostname) && u.pathname === '/') return u.origin;
+      } catch (e) { /* not a URL: ignore */ }
+    }
+    return '/api';
   })();
   // Incident this tab is working on. The link decides (?inc=); without one, the last incident used in this
   // tab (sessionStorage, so two booth screens never change each other); else INC-001.
