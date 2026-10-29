@@ -1,0 +1,9 @@
+{
+  "_comment": "Ground truth of the SIMULATED INC-002 release (XV-101 stem packing) used to generate sensors.csv. For checking the quantification method only; never show as measured.",
+  "local_incident_id": "INC-002",
+  "source_asset_id": "XV-101",
+  "detector_id": "GD-02",
+  "release_start_utc": "2026-01-15T06:15:00Z",
+  "rate_kg_ch4_h": 4.5,
+  "provenance": "synthetic"
+}

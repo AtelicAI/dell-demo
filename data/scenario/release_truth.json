@@ -1,0 +1,8 @@
+{
+  "_comment": "Ground truth of the SIMULATED release used to generate sensors.csv. For checking the quantification method only; never show as measured.",
+  "local_incident_id": "INC-001",
+  "source_asset_id": "VENT-01",
+  "release_start_utc": "2026-01-15T06:20:00Z",
+  "rate_kg_ch4_h": 2.0,
+  "provenance": "synthetic"
+}

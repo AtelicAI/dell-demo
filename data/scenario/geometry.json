@@ -1,0 +1,12 @@
+{
+  "_comment": "DRAFT for team review. Assumed geometry for the interim Gaussian plume estimate (Screen 4). Metres in a local skid frame: x east, y north, z above grade. Not a survey. GD-01 sits 15 m from VENT-01 at bearing 70 deg (downwind of the prevailing 250 deg wind).",
+  "status": "draft",
+  "provenance": "synthetic",
+  "mapping_version": "geometry-v0.1-draft",
+  "assets": {
+    "VENT-01": { "x_m": 0.0,   "y_m": 0.0,  "z_m": 3.0 },
+    "GD-01":   { "x_m": 14.10, "y_m": 5.13, "z_m": 2.0 }
+  },
+  "stability_class": "D",
+  "stability_note": "Pasquill-Gifford class D (neutral), Briggs rural dispersion coefficients"
+}

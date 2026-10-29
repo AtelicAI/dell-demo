@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Atelic x Dell methane demo - one Graviton host running the full stack in Docker Compose.
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t4g.large
+  AdminCidr:
+    Type: String
+    Description: CIDR allowed to SSH (deploy machine)
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+
+Resources:
+  KeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Sub '${AWS::StackName}-key'
+      Tags: [{Key: Project, Value: atelic-dell-demo}]
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Atelic Dell demo web + admin SSH
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: !Ref AdminCidr}
+      Tags: [{Key: Project, Value: atelic-dell-demo}]
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      SecurityGroupIds: [!GetAtt SecurityGroup.GroupId]
+      MetadataOptions: {HttpTokens: required}
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: {VolumeSize: 40, VolumeType: gp3, Encrypted: true, DeleteOnTermination: true}
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf install -y docker rsync
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          curl -fsSL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-aarch64 \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+          curl -fsSL https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-arm64 \
+            -o /usr/local/lib/docker/cli-plugins/docker-buildx
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+          systemctl enable --now docker
+          usermod -aG docker ec2-user
+          mkdir -p /opt/atelic && chown ec2-user:ec2-user /opt/atelic
+          touch /var/run/atelic-ready
+      Tags:
+        - {Key: Name, Value: atelic-dell-demo}
+        - {Key: Project, Value: atelic-dell-demo}
+
+Outputs:
+  PublicIp:
+    Description: Instance public IP (kept while the instance runs; changes after a stop/start)
+    Value: !GetAtt Instance.PublicIp
+  Hostname:
+    Description: TLS hostname (sslip.io resolves the dashed IP back to the instance)
+    Value: !Join ['', [!Join ['-', !Split ['.', !GetAtt Instance.PublicIp]], '.sslip.io']]
+  KeyPairId:
+    Value: !GetAtt KeyPair.KeyPairId
+  InstanceId:
+    Value: !Ref Instance

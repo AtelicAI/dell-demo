@@ -1,0 +1,1451 @@
+{
+ "origin": "derived from public plant history by app.history.analyze",
+ "evidence_id": "history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00",
+ "episodes": [
+  {
+   "episode_id": "EP-20260915-0615",
+   "evidence_id": "history-episode:EP-20260915-0615",
+   "start_utc": "2026-09-15T06:15:00+00:00",
+   "duration_minutes": 45,
+   "max_peak_excess_ppm": 1.612,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.45,
+   "mean_wind_from_degrees": 331.1,
+   "testable": true,
+   "consistent_location_count": 8,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-105",
+    "P-201",
+    "P-202",
+    "XV-2104",
+    "XV-2105"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 15
+  },
+  {
+   "episode_id": "EP-20260915-0715",
+   "evidence_id": "history-episode:EP-20260915-0715",
+   "start_utc": "2026-09-15T07:15:00+00:00",
+   "duration_minutes": 35,
+   "max_peak_excess_ppm": 1.111,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.6,
+   "mean_wind_from_degrees": 348.2,
+   "testable": true,
+   "consistent_location_count": 3,
+   "consistent_locations": [
+    "F-205",
+    "VENT-01",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 75
+  },
+  {
+   "episode_id": "EP-20260915-1805",
+   "evidence_id": "history-episode:EP-20260915-1805",
+   "start_utc": "2026-09-15T18:05:00+00:00",
+   "duration_minutes": 60,
+   "max_peak_excess_ppm": 0.565,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.58,
+   "mean_wind_from_degrees": 34.2,
+   "testable": true,
+   "consistent_location_count": 9,
+   "consistent_locations": [
+    "F-205",
+    "P-201",
+    "P-202",
+    "P-203",
+    "VENT-01",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 35
+  },
+  {
+   "episode_id": "EP-20260916-0605",
+   "evidence_id": "history-episode:EP-20260916-0605",
+   "start_utc": "2026-09-16T06:05:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.37,
+   "sensors_above_threshold": [
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 2.17,
+   "mean_wind_from_degrees": 10.6,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 5
+  },
+  {
+   "episode_id": "EP-20260916-0640",
+   "evidence_id": "history-episode:EP-20260916-0640",
+   "start_utc": "2026-09-16T06:40:00+00:00",
+   "duration_minutes": 25,
+   "max_peak_excess_ppm": 0.612,
+   "sensors_above_threshold": [
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 3.0,
+   "mean_wind_from_degrees": 10.6,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 40
+  },
+  {
+   "episode_id": "EP-20260916-1830",
+   "evidence_id": "history-episode:EP-20260916-1830",
+   "start_utc": "2026-09-16T18:30:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 0.194,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 3.61,
+   "mean_wind_from_degrees": 101.7,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 60
+  },
+  {
+   "episode_id": "EP-20260917-1750",
+   "evidence_id": "history-episode:EP-20260917-1750",
+   "start_utc": "2026-09-17T17:50:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.753,
+   "sensors_above_threshold": [
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 1.35,
+   "mean_wind_from_degrees": 339.4,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 20
+  },
+  {
+   "episode_id": "EP-20260917-1810",
+   "evidence_id": "history-episode:EP-20260917-1810",
+   "start_utc": "2026-09-17T18:10:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 0.228,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.48,
+   "mean_wind_from_degrees": 97.3,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 40
+  },
+  {
+   "episode_id": "EP-20260918-0610",
+   "evidence_id": "history-episode:EP-20260918-0610",
+   "start_utc": "2026-09-18T06:10:00+00:00",
+   "duration_minutes": 25,
+   "max_peak_excess_ppm": 0.294,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 1.85,
+   "mean_wind_from_degrees": 345.1,
+   "testable": true,
+   "consistent_location_count": 15,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-101",
+    "P-102",
+    "P-105",
+    "P-201",
+    "P-202",
+    "P-203",
+    "V-101",
+    "VENT-01",
+    "XV-104",
+    "XV-105",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20260918-0645",
+   "evidence_id": "history-episode:EP-20260918-0645",
+   "start_utc": "2026-09-18T06:45:00+00:00",
+   "duration_minutes": 45,
+   "max_peak_excess_ppm": 0.8,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.3,
+   "mean_wind_from_degrees": 44.1,
+   "testable": true,
+   "consistent_location_count": 11,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "P-203",
+    "VENT-01",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 45
+  },
+  {
+   "episode_id": "EP-20260918-1740",
+   "evidence_id": "history-episode:EP-20260918-1740",
+   "start_utc": "2026-09-18T17:40:00+00:00",
+   "duration_minutes": 110,
+   "max_peak_excess_ppm": 0.853,
+   "sensors_above_threshold": [
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 2.28,
+   "mean_wind_from_degrees": 356.6,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20260919-1815",
+   "evidence_id": "history-episode:EP-20260919-1815",
+   "start_utc": "2026-09-19T18:15:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.553,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02"
+   ],
+   "mean_wind_speed_m_s": 2.28,
+   "mean_wind_from_degrees": 279.6,
+   "testable": true,
+   "consistent_location_count": 4,
+   "consistent_locations": [
+    "F-205",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 45
+  },
+  {
+   "episode_id": "EP-20260920-1735",
+   "evidence_id": "history-episode:EP-20260920-1735",
+   "start_utc": "2026-09-20T17:35:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 0.164,
+   "sensors_above_threshold": [
+    "CH4-01"
+   ],
+   "mean_wind_speed_m_s": 6.56,
+   "mean_wind_from_degrees": 270.1,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 5
+  },
+  {
+   "episode_id": "EP-20260920-1855",
+   "evidence_id": "history-episode:EP-20260920-1855",
+   "start_utc": "2026-09-20T18:55:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.166,
+   "sensors_above_threshold": [
+    "CH4-01"
+   ],
+   "mean_wind_speed_m_s": 6.26,
+   "mean_wind_from_degrees": 267.3,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 85
+  },
+  {
+   "episode_id": "EP-20260921-0610",
+   "evidence_id": "history-episode:EP-20260921-0610",
+   "start_utc": "2026-09-21T06:10:00+00:00",
+   "duration_minutes": 20,
+   "max_peak_excess_ppm": 0.553,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.34,
+   "mean_wind_from_degrees": 98.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20260921-0730",
+   "evidence_id": "history-episode:EP-20260921-0730",
+   "start_utc": "2026-09-21T07:30:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.228,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.17,
+   "mean_wind_from_degrees": 14.7,
+   "testable": true,
+   "consistent_location_count": 3,
+   "consistent_locations": [
+    "P-202",
+    "VENT-01",
+    "XV-2105"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 90
+  },
+  {
+   "episode_id": "EP-20260925-0605",
+   "evidence_id": "history-episode:EP-20260925-0605",
+   "start_utc": "2026-09-25T06:05:00+00:00",
+   "duration_minutes": 40,
+   "max_peak_excess_ppm": 0.436,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02"
+   ],
+   "mean_wind_speed_m_s": 3.84,
+   "mean_wind_from_degrees": 262.1,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 5
+  },
+  {
+   "episode_id": "EP-20260925-1730",
+   "evidence_id": "history-episode:EP-20260925-1730",
+   "start_utc": "2026-09-25T17:30:00+00:00",
+   "duration_minutes": 35,
+   "max_peak_excess_ppm": 0.234,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 3.73,
+   "mean_wind_from_degrees": 91.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261006-0615",
+   "evidence_id": "history-episode:EP-20261006-0615",
+   "start_utc": "2026-10-06T06:15:00+00:00",
+   "duration_minutes": 55,
+   "max_peak_excess_ppm": 1.95,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.64,
+   "mean_wind_from_degrees": 306.2,
+   "testable": true,
+   "consistent_location_count": 13,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-101",
+    "P-102",
+    "P-105",
+    "P-201",
+    "P-202",
+    "V-101",
+    "VENT-01",
+    "XV-104",
+    "XV-105",
+    "XV-2104",
+    "XV-2105"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 15
+  },
+  {
+   "episode_id": "EP-20261006-0725",
+   "evidence_id": "history-episode:EP-20261006-0725",
+   "start_utc": "2026-10-06T07:25:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 1.31,
+   "sensors_above_threshold": [
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.65,
+   "mean_wind_from_degrees": 341.4,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 85
+  },
+  {
+   "episode_id": "EP-20261006-0750",
+   "evidence_id": "history-episode:EP-20261006-0750",
+   "start_utc": "2026-10-06T07:50:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 0.753,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.98,
+   "mean_wind_from_degrees": 355.5,
+   "testable": true,
+   "consistent_location_count": 1,
+   "consistent_locations": [
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261006-1745",
+   "evidence_id": "history-episode:EP-20261006-1745",
+   "start_utc": "2026-10-06T17:45:00+00:00",
+   "duration_minutes": 20,
+   "max_peak_excess_ppm": 0.652,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.74,
+   "mean_wind_from_degrees": 359.8,
+   "testable": true,
+   "consistent_location_count": 3,
+   "consistent_locations": [
+    "VENT-01",
+    "XV-2105",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 15
+  },
+  {
+   "episode_id": "EP-20261006-1815",
+   "evidence_id": "history-episode:EP-20261006-1815",
+   "start_utc": "2026-10-06T18:15:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 1.316,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.86,
+   "mean_wind_from_degrees": 5.7,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 45
+  },
+  {
+   "episode_id": "EP-20261007-0630",
+   "evidence_id": "history-episode:EP-20261007-0630",
+   "start_utc": "2026-10-07T06:30:00+00:00",
+   "duration_minutes": 80,
+   "max_peak_excess_ppm": 2.501,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.78,
+   "mean_wind_from_degrees": 350.4,
+   "testable": true,
+   "consistent_location_count": 16,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-101",
+    "P-102",
+    "P-105",
+    "P-201",
+    "P-202",
+    "P-203",
+    "V-101",
+    "VENT-01",
+    "XV-104",
+    "XV-105",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 30
+  },
+  {
+   "episode_id": "EP-20261007-1750",
+   "evidence_id": "history-episode:EP-20261007-1750",
+   "start_utc": "2026-10-07T17:50:00+00:00",
+   "duration_minutes": 50,
+   "max_peak_excess_ppm": 1.616,
+   "sensors_above_threshold": [
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 1.25,
+   "mean_wind_from_degrees": 350.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 20
+  },
+  {
+   "episode_id": "EP-20261008-1755",
+   "evidence_id": "history-episode:EP-20261008-1755",
+   "start_utc": "2026-10-08T17:55:00+00:00",
+   "duration_minutes": 35,
+   "max_peak_excess_ppm": 0.233,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.66,
+   "mean_wind_from_degrees": 104.6,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 25
+  },
+  {
+   "episode_id": "EP-20261009-0705",
+   "evidence_id": "history-episode:EP-20261009-0705",
+   "start_utc": "2026-10-09T07:05:00+00:00",
+   "duration_minutes": 50,
+   "max_peak_excess_ppm": 1.334,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.56,
+   "mean_wind_from_degrees": 18.6,
+   "testable": true,
+   "consistent_location_count": 9,
+   "consistent_locations": [
+    "K-201",
+    "P-201",
+    "P-202",
+    "P-203",
+    "VENT-01",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 65
+  },
+  {
+   "episode_id": "EP-20261010-0605",
+   "evidence_id": "history-episode:EP-20261010-0605",
+   "start_utc": "2026-10-10T06:05:00+00:00",
+   "duration_minutes": 105,
+   "max_peak_excess_ppm": 0.721,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 2.26,
+   "mean_wind_from_degrees": 284.1,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 5
+  },
+  {
+   "episode_id": "EP-20261010-1905",
+   "evidence_id": "history-episode:EP-20261010-1905",
+   "start_utc": "2026-10-10T19:05:00+00:00",
+   "duration_minutes": 45,
+   "max_peak_excess_ppm": 0.789,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 3.56,
+   "mean_wind_from_degrees": 279.8,
+   "testable": true,
+   "consistent_location_count": 5,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261011-0600",
+   "evidence_id": "history-episode:EP-20261011-0600",
+   "start_utc": "2026-10-11T06:00:00+00:00",
+   "duration_minutes": 85,
+   "max_peak_excess_ppm": 1.358,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02"
+   ],
+   "mean_wind_speed_m_s": 2.83,
+   "mean_wind_from_degrees": 275.9,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261011-1740",
+   "evidence_id": "history-episode:EP-20261011-1740",
+   "start_utc": "2026-10-11T17:40:00+00:00",
+   "duration_minutes": 45,
+   "max_peak_excess_ppm": 1.293,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02"
+   ],
+   "mean_wind_speed_m_s": 2.79,
+   "mean_wind_from_degrees": 283.0,
+   "testable": true,
+   "consistent_location_count": 2,
+   "consistent_locations": [
+    "P-201",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20261012-0600",
+   "evidence_id": "history-episode:EP-20261012-0600",
+   "start_utc": "2026-10-12T06:00:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 2.126,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 1.52,
+   "mean_wind_from_degrees": 265.1,
+   "testable": true,
+   "consistent_location_count": 4,
+   "consistent_locations": [
+    "F-205",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261012-0635",
+   "evidence_id": "history-episode:EP-20261012-0635",
+   "start_utc": "2026-10-12T06:35:00+00:00",
+   "duration_minutes": 55,
+   "max_peak_excess_ppm": 1.139,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 3.19,
+   "mean_wind_from_degrees": 278.3,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 35
+  },
+  {
+   "episode_id": "EP-20261012-1740",
+   "evidence_id": "history-episode:EP-20261012-1740",
+   "start_utc": "2026-10-12T17:40:00+00:00",
+   "duration_minutes": 115,
+   "max_peak_excess_ppm": 1.687,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 3.22,
+   "mean_wind_from_degrees": 269.1,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20261013-0640",
+   "evidence_id": "history-episode:EP-20261013-0640",
+   "start_utc": "2026-10-13T06:40:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 1.281,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02"
+   ],
+   "mean_wind_speed_m_s": 2.21,
+   "mean_wind_from_degrees": 282.1,
+   "testable": true,
+   "consistent_location_count": 4,
+   "consistent_locations": [
+    "F-205",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 40
+  },
+  {
+   "episode_id": "EP-20261013-0705",
+   "evidence_id": "history-episode:EP-20261013-0705",
+   "start_utc": "2026-10-13T07:05:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.231,
+   "sensors_above_threshold": [
+    "CH4-01"
+   ],
+   "mean_wind_speed_m_s": 1.98,
+   "mean_wind_from_degrees": 291.8,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 65
+  },
+  {
+   "episode_id": "EP-20261014-0640",
+   "evidence_id": "history-episode:EP-20261014-0640",
+   "start_utc": "2026-10-14T06:40:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 1.814,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.42,
+   "mean_wind_from_degrees": 65.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 40
+  },
+  {
+   "episode_id": "EP-20261014-1750",
+   "evidence_id": "history-episode:EP-20261014-1750",
+   "start_utc": "2026-10-14T17:50:00+00:00",
+   "duration_minutes": 45,
+   "max_peak_excess_ppm": 2.42,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.22,
+   "mean_wind_from_degrees": 107.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 20
+  },
+  {
+   "episode_id": "EP-20261015-0610",
+   "evidence_id": "history-episode:EP-20261015-0610",
+   "start_utc": "2026-10-15T06:10:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 4.15,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.73,
+   "mean_wind_from_degrees": 50.0,
+   "testable": true,
+   "consistent_location_count": 1,
+   "consistent_locations": [
+    "F-205"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20261015-0635",
+   "evidence_id": "history-episode:EP-20261015-0635",
+   "start_utc": "2026-10-15T06:35:00+00:00",
+   "duration_minutes": 35,
+   "max_peak_excess_ppm": 2.42,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.76,
+   "mean_wind_from_degrees": 53.7,
+   "testable": true,
+   "consistent_location_count": 10,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-105",
+    "P-201",
+    "P-202",
+    "VENT-01",
+    "XV-105",
+    "XV-2104",
+    "XV-2105",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 35
+  },
+  {
+   "episode_id": "EP-20261015-0745",
+   "evidence_id": "history-episode:EP-20261015-0745",
+   "start_utc": "2026-10-15T07:45:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 5.494,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.56,
+   "mean_wind_from_degrees": 296.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261015-1730",
+   "evidence_id": "history-episode:EP-20261015-1730",
+   "start_utc": "2026-10-15T17:30:00+00:00",
+   "duration_minutes": 65,
+   "max_peak_excess_ppm": 0.555,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.63,
+   "mean_wind_from_degrees": 102.5,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261016-0600",
+   "evidence_id": "history-episode:EP-20261016-0600",
+   "start_utc": "2026-10-16T06:00:00+00:00",
+   "duration_minutes": 150,
+   "max_peak_excess_ppm": 2.549,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 3.56,
+   "mean_wind_from_degrees": 276.8,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261016-1735",
+   "evidence_id": "history-episode:EP-20261016-1735",
+   "start_utc": "2026-10-16T17:35:00+00:00",
+   "duration_minutes": 85,
+   "max_peak_excess_ppm": 2.605,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.05,
+   "mean_wind_from_degrees": 60.3,
+   "testable": true,
+   "consistent_location_count": 9,
+   "consistent_locations": [
+    "F-205",
+    "P-201",
+    "P-202",
+    "P-203",
+    "VENT-01",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 5
+  },
+  {
+   "episode_id": "EP-20261017-0610",
+   "evidence_id": "history-episode:EP-20261017-0610",
+   "start_utc": "2026-10-17T06:10:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 4.212,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.68,
+   "mean_wind_from_degrees": 33.0,
+   "testable": true,
+   "consistent_location_count": 3,
+   "consistent_locations": [
+    "F-205",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20261017-0655",
+   "evidence_id": "history-episode:EP-20261017-0655",
+   "start_utc": "2026-10-17T06:55:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 1.613,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.25,
+   "mean_wind_from_degrees": 259.4,
+   "testable": true,
+   "consistent_location_count": 7,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-105",
+    "P-201",
+    "P-202",
+    "XV-2104",
+    "XV-2105"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 55
+  },
+  {
+   "episode_id": "EP-20261017-1730",
+   "evidence_id": "history-episode:EP-20261017-1730",
+   "start_utc": "2026-10-17T17:30:00+00:00",
+   "duration_minutes": 50,
+   "max_peak_excess_ppm": 0.84,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.2,
+   "mean_wind_from_degrees": 85.7,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261017-1850",
+   "evidence_id": "history-episode:EP-20261017-1850",
+   "start_utc": "2026-10-17T18:50:00+00:00",
+   "duration_minutes": 25,
+   "max_peak_excess_ppm": 0.3,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 3.39,
+   "mean_wind_from_degrees": 119.9,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 80
+  },
+  {
+   "episode_id": "EP-20261017-1945",
+   "evidence_id": "history-episode:EP-20261017-1945",
+   "start_utc": "2026-10-17T19:45:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 0.572,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.53,
+   "mean_wind_from_degrees": 107.9,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261018-1740",
+   "evidence_id": "history-episode:EP-20261018-1740",
+   "start_utc": "2026-10-18T17:40:00+00:00",
+   "duration_minutes": 65,
+   "max_peak_excess_ppm": 0.454,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 4.05,
+   "mean_wind_from_degrees": 104.9,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20261019-0635",
+   "evidence_id": "history-episode:EP-20261019-0635",
+   "start_utc": "2026-10-19T06:35:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.793,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02"
+   ],
+   "mean_wind_speed_m_s": 2.59,
+   "mean_wind_from_degrees": 288.3,
+   "testable": true,
+   "consistent_location_count": 3,
+   "consistent_locations": [
+    "F-205",
+    "P-201",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 35
+  },
+  {
+   "episode_id": "EP-20261019-1745",
+   "evidence_id": "history-episode:EP-20261019-1745",
+   "start_utc": "2026-10-19T17:45:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 1.507,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.82,
+   "mean_wind_from_degrees": 68.6,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "P-202",
+    "P-203",
+    "VENT-01",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 15
+  },
+  {
+   "episode_id": "EP-20261019-1825",
+   "evidence_id": "history-episode:EP-20261019-1825",
+   "start_utc": "2026-10-19T18:25:00+00:00",
+   "duration_minutes": 40,
+   "max_peak_excess_ppm": 1.716,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.08,
+   "mean_wind_from_degrees": 69.2,
+   "testable": true,
+   "consistent_location_count": 5,
+   "consistent_locations": [
+    "F-205",
+    "P-202",
+    "P-203",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 55
+  },
+  {
+   "episode_id": "EP-20261020-0600",
+   "evidence_id": "history-episode:EP-20261020-0600",
+   "start_utc": "2026-10-20T06:00:00+00:00",
+   "duration_minutes": 25,
+   "max_peak_excess_ppm": 2.337,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 1.01,
+   "mean_wind_from_degrees": 309.4,
+   "testable": true,
+   "consistent_location_count": 3,
+   "consistent_locations": [
+    "F-205",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261020-0635",
+   "evidence_id": "history-episode:EP-20261020-0635",
+   "start_utc": "2026-10-20T06:35:00+00:00",
+   "duration_minutes": 40,
+   "max_peak_excess_ppm": 3.305,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 1.22,
+   "mean_wind_from_degrees": 322.3,
+   "testable": true,
+   "consistent_location_count": 16,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-101",
+    "P-102",
+    "P-105",
+    "P-201",
+    "P-202",
+    "P-203",
+    "V-101",
+    "VENT-01",
+    "XV-104",
+    "XV-105",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 35
+  },
+  {
+   "episode_id": "EP-20261021-0805",
+   "evidence_id": "history-episode:EP-20261021-0805",
+   "start_utc": "2026-10-21T08:05:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 5.875,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03"
+   ],
+   "mean_wind_speed_m_s": 1.18,
+   "mean_wind_from_degrees": 270.3,
+   "testable": true,
+   "consistent_location_count": 6,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261022-0610",
+   "evidence_id": "history-episode:EP-20261022-0610",
+   "start_utc": "2026-10-22T06:10:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 0.56,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.53,
+   "mean_wind_from_degrees": 71.0,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 10
+  },
+  {
+   "episode_id": "EP-20261022-0635",
+   "evidence_id": "history-episode:EP-20261022-0635",
+   "start_utc": "2026-10-22T06:35:00+00:00",
+   "duration_minutes": 50,
+   "max_peak_excess_ppm": 1.434,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.23,
+   "mean_wind_from_degrees": 76.5,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 35
+  },
+  {
+   "episode_id": "EP-20261022-0735",
+   "evidence_id": "history-episode:EP-20261022-0735",
+   "start_utc": "2026-10-22T07:35:00+00:00",
+   "duration_minutes": 70,
+   "max_peak_excess_ppm": 3.422,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.51,
+   "mean_wind_from_degrees": 80.9,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261022-1745",
+   "evidence_id": "history-episode:EP-20261022-1745",
+   "start_utc": "2026-10-22T17:45:00+00:00",
+   "duration_minutes": 65,
+   "max_peak_excess_ppm": 3.898,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-03",
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 1.81,
+   "mean_wind_from_degrees": 52.9,
+   "testable": true,
+   "consistent_location_count": 11,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-102",
+    "P-201",
+    "P-202",
+    "P-203",
+    "VENT-01",
+    "XV-2104",
+    "XV-2105",
+    "XV-2110",
+    "XV-2111"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 15
+  },
+  {
+   "episode_id": "EP-20261022-1925",
+   "evidence_id": "history-episode:EP-20261022-1925",
+   "start_utc": "2026-10-22T19:25:00+00:00",
+   "duration_minutes": 45,
+   "max_peak_excess_ppm": 0.711,
+   "sensors_above_threshold": [
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 2.57,
+   "mean_wind_from_degrees": 106.9,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": null
+  },
+  {
+   "episode_id": "EP-20261023-0600",
+   "evidence_id": "history-episode:EP-20261023-0600",
+   "start_utc": "2026-10-23T06:00:00+00:00",
+   "duration_minutes": 30,
+   "max_peak_excess_ppm": 0.513,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.88,
+   "mean_wind_from_degrees": 277.5,
+   "testable": true,
+   "consistent_location_count": 11,
+   "consistent_locations": [
+    "F-205",
+    "K-201",
+    "P-101",
+    "P-102",
+    "P-105",
+    "P-201",
+    "P-202",
+    "V-101",
+    "XV-104",
+    "XV-105",
+    "XV-2104"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 0
+  },
+  {
+   "episode_id": "EP-20261023-0640",
+   "evidence_id": "history-episode:EP-20261023-0640",
+   "start_utc": "2026-10-23T06:40:00+00:00",
+   "duration_minutes": 10,
+   "max_peak_excess_ppm": 0.452,
+   "sensors_above_threshold": [
+    "CH4-04",
+    "CH4-05"
+   ],
+   "mean_wind_speed_m_s": 0.51,
+   "mean_wind_from_degrees": 40.5,
+   "testable": false,
+   "consistent_location_count": 0,
+   "consistent_locations": [],
+   "focus_assets": {},
+   "minutes_after_load_change": 40
+  },
+  {
+   "episode_id": "EP-20261023-0725",
+   "evidence_id": "history-episode:EP-20261023-0725",
+   "start_utc": "2026-10-23T07:25:00+00:00",
+   "duration_minutes": 15,
+   "max_peak_excess_ppm": 0.327,
+   "sensors_above_threshold": [
+    "CH4-01",
+    "CH4-02",
+    "CH4-04"
+   ],
+   "mean_wind_speed_m_s": 0.92,
+   "mean_wind_from_degrees": 306.2,
+   "testable": true,
+   "consistent_location_count": 1,
+   "consistent_locations": [
+    "F-205"
+   ],
+   "focus_assets": {},
+   "minutes_after_load_change": 85
+  }
+ ]
+}

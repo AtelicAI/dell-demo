@@ -1,15 +1,18 @@
-/* Atelic KG demo — shared theme tokens.
-   Superset of every page's :root block, so individual pages can drop their own :root. */
+/* Atelic — shared theme tokens.
+   Cool slate palette (greys with a slight blue undertone, so the UI reads crisp rather than grey).
+   One steel blue marks everything interactive and the main data series; charts and diagrams use a
+   small steel-blue/slate family. Red / amber / green are reserved for state: alarm, unconfirmed /
+   needs attention, done / approved. */
 :root{
   /* surfaces */
-  --bg:#F6F8FB;
+  --bg:#F5F7FA;
   --panel:#FFFFFF;
-  --panel-2:#F1F4F9;
-  --panel-3:#E6EBF2;
-  --panel-hi:#DDE4EE;
+  --panel-2:#F7F9FC;
+  --panel-3:#EDF1F6;
+  --panel-hi:#E2E8F0;
 
   /* lines */
-  --line:rgba(15,23,42,.07);
+  --line:rgba(15,23,42,.08);
   --line-strong:rgba(15,23,42,.14);
 
   /* ink */
@@ -18,42 +21,42 @@
   --ink-dim:#94A3B8;
   --ink-faint:#CBD5E1;
 
-  /* brand accent */
-  --accent:#0284C7;
-  --accent-strong:#0369A1;
-  --accent-glow:rgba(2,132,199,.18);
+  /* interactive (links, primary buttons, selection, focus): medium steel blue */
+  --accent:#2E6399;
+  --accent-strong:#24507D;
+  --accent-glow:rgba(46,99,153,.10);
 
-  /* semantic */
-  --good:#059669;
-  --good-glow:rgba(5,150,105,.14);
-  --warn:#D97706;
-  --warn-glow:rgba(217,119,6,.14);
-  --bad:#DC2626;
-  --bad-glow:rgba(220,38,38,.16);
+  /* state */
+  --good:#2F7D4F;
+  --good-glow:rgba(47,125,79,.12);
+  --warn:#B5650B;
+  --warn-glow:rgba(181,101,11,.12);
+  --bad:#C62828;
+  --bad-glow:rgba(198,40,40,.12);
 
-  /* categorical */
-  --violet:#7C3AED;
-  --pink:#DB2777;
-  --blue:#2563EB;
+  /* data: a small steel-blue / slate family (no rainbow) */
+  --violet:#2E6399;
+  --pink:#475569;
+  --blue:#2E6399;
 
-  /* graph node palette (station.html) */
-  --n-station:#7C3AED;
-  --n-well:#0284C7;
-  --n-equip:#2563EB;
-  --n-tag:#DB2777;
-  --n-wt:#059669;
-  --n-sap:#D97706;
+  /* graph node and sensor-series palette */
+  --n-station:#475569;
+  --n-well:#2E6399;
+  --n-equip:#5B83AD;
+  --n-tag:#64748B;
+  --n-wt:#7A8FA8;
+  --n-sap:#64748B;
 
   /* type */
-  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  --sans:'IBM Plex Sans',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;
 
   /* layout */
   --rail:224px;
   --slide:460px;
-  --radius:10px;
-  --radius-sm:6px;
-  --radius-lg:14px;
+  --radius:4px;
+  --radius-sm:3px;
+  --radius-lg:6px;
 
   /* motion */
   --t:160ms cubic-bezier(.2,.7,.3,1);

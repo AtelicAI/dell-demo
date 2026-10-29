@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incidents — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/incidents.js?v=101" defer></script>
+<style>
+  .inc-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start;margin-top:14px}
+  .inc-grid > div{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+  /* incident tables */
+  table.inc{width:100%;border-collapse:collapse;font-size:12.5px}
+  .inc th{padding:8px 12px;text-align:left;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--line);white-space:nowrap}
+  .inc td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+  .inc tr:last-child td{border-bottom:0}
+  .inc tbody tr{cursor:pointer;transition:background var(--t)}
+  .inc tbody tr:hover{background:var(--panel-2)}
+  .inc tbody tr[aria-selected=true]{background:var(--accent-glow);box-shadow:inset 2px 0 0 var(--accent)}
+  .inc tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .inc .id{font-family:var(--mono);font-weight:600;white-space:nowrap}
+  .cur-tag{margin-left:8px;padding:1px 6px;border:1px solid var(--accent);border-radius:3px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--panel);vertical-align:2px}
+  .inc .mono{font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+  .inc .mute{color:var(--ink-mute)}
+  .inc .dim{color:var(--ink-dim)}
+  .inc td .badge{margin-left:6px;vertical-align:1px}
+  .inc .go{font-weight:600;color:var(--accent);white-space:nowrap;text-decoration:none}
+  .inc .go:hover{text-decoration:underline}
+  .empty-row{padding:16px;font-size:12.5px;color:var(--ink-mute)}
+
+  /* stage + outcome chips (state colour only) */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;color:var(--ink-mute)}
+  .chip i{width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+  .chip.warn{color:var(--warn)} .chip.warn i{background:var(--warn)}
+  .chip.bad{color:var(--bad)} .chip.bad i{background:var(--bad)}
+  .chip.good{color:var(--good)} .chip.good i{background:var(--good)}
+  .chip.live i{animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 4px var(--warn-glow)}}
+  @media (prefers-reduced-motion:reduce){.chip.live i{animation:none}}
+
+  /* detail panel */
+  .detail-p{position:sticky;top:64px}
+  .d-head{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+  .d-head .d-id{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em}
+  .d-head .d-sub{margin-top:6px}
+  .d-body{padding:4px 16px 14px;font-size:12.5px}
+  .d-body p{margin:10px 0 0;line-height:1.5;color:var(--ink)}
+  .d-body h4{margin:14px 0 4px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .kv{display:grid;grid-template-columns:auto 1fr;font-size:12px}
+  .kv .k{padding:5px 12px 5px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px dashed var(--line)}
+  .kv .v{padding:5px 0;color:var(--ink);border-bottom:1px dashed var(--line);text-align:right;min-width:0;overflow-wrap:anywhere}
+  .kv .v a{font-family:var(--mono);font-weight:600;color:var(--accent);text-decoration:none}
+  .kv .v a:hover{text-decoration:underline}
+  .tl{list-style:none;margin:0;padding:0}
+  .tl li{position:relative;padding:0 0 10px 18px;line-height:1.45}
+  .tl li::before{content:"";position:absolute;left:3px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+  .tl li:not(:last-child)::after{content:"";position:absolute;left:6px;top:15px;bottom:-2px;width:1px;background:var(--line-strong)}
+  .tl li:last-child::before{background:var(--ink-mute)}
+  .tl small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .d-empty{padding:18px 16px;font-size:12.5px;color:var(--ink-mute)}
+  .d-acts{display:flex;gap:8px;padding:0 16px 14px}
+  .d-acts .btn{flex:1;justify-content:center;padding:8px 12px}
+  .d-foot{padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-dim);line-height:1.45}
+
+  @media (max-width:1100px){.inc-grid{grid-template-columns:1fr}.detail-p{position:static}}
+</style>
+</head>
+<body data-page="incidents">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide">
+  <div class="page-head">
+    <h1 title="Every camera alert at the site and where it stands. Open incidents are worked on this edge server; closed ones are kept as records.">Incidents</h1>
+    <span class="sub" id="counts"></span>
+  </div>
+
+  <div class="inc-grid">
+    <div>
+      <section class="panel" aria-label="Open incidents">
+        <div class="panel-head"><h2>Open</h2><span class="meta" id="open-meta"></span></div>
+        <div id="open"><div class="empty-row">Loading…</div></div>
+      </section>
+      <section class="panel" aria-label="Closed incidents">
+        <div class="panel-head"><h2>Closed</h2><span class="meta" id="closed-meta"></span></div>
+        <div id="closed"><div class="empty-row">Loading…</div></div>
+      </section>
+    </div>
+    <aside class="panel detail-p" id="detail" aria-label="Incident details" aria-live="polite">
+      <div class="d-empty">Select an incident to see what happened.</div>
+    </aside>
+  </div>
+</main>
+
+</body>
+</html>

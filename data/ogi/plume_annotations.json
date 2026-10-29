@@ -1,0 +1,26 @@
+{
+  "_comment": "Plume region for the 5 s enhanced-visibility MOV_2566 clip. The colourised plume is visible in every frame (0-74), so one range covers the whole clip; the box is the union of the colourised pixels across all frames, origin at the stack top. One region applies to every frame in each range (start_frame..end_frame, inclusive). Coordinates are normalized 0..1 of the video frame (640x480). Per-frame entries go in \"frames\". Leave confidence null unless a detector supplied it.",
+  "ogi_clip_id": "MOV_2566",
+  "provenance": "manual_annotation",
+  "annotator": "Claude (draft)",
+  "ranges": [
+    {
+      "start_frame": 0,
+      "end_frame": 74,
+      "source_time": null,
+      "bbox_normalized": [
+        0.519,
+        0.004,
+        0.475,
+        0.65
+      ],
+      "origin_normalized": [
+        0.53,
+        0.563
+      ],
+      "confidence": null
+    }
+  ],
+  "frames": [],
+  "reviewed_by": null
+}

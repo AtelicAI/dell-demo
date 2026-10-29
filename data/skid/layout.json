@@ -1,0 +1,22 @@
+{
+  "_comment": "2D schematic positions for the Equipment layout tab. Grid units 0-100, not a survey.",
+  "mapping_version": "layout-v0.1-draft",
+  "provenance": "synthetic",
+  "positions": {
+    "P-100":   { "x": 5,  "y": 50 },
+    "XV-101":  { "x": 18, "y": 50 },
+    "V-101":   { "x": 35, "y": 50 },
+    "P-101":   { "x": 58, "y": 50 },
+    "XV-104":  { "x": 75, "y": 50 },
+    "PSV-102": { "x": 45, "y": 28 },
+    "BDV-103": { "x": 30, "y": 28 },
+    "P-102":   { "x": 50, "y": 14 },
+    "VENT-01": { "x": 68, "y": 10 },
+    "PT-101":  { "x": 35, "y": 70 },
+    "GD-01":   { "x": 78, "y": 22 },
+    "WS-01":   { "x": 92, "y": 8 },
+    "GD-02":   { "x": 12, "y": 30 },
+    "CAM-01":  { "x": 92, "y": 85 },
+    "CAM-02":  { "x": 8,  "y": 85 }
+  }
+}

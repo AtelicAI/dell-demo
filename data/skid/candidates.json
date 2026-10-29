@@ -1,0 +1,68 @@
+{
+  "_comment": "MOCK source candidates for Screen 3 until the Graph agent and Neo4j exist. status 'sample' -> UI shows Simulated + 'Sample values'. Order = rank; no scores on purpose (no fake confidence). Every asset_id and source_id must exist in skid/*.json or maintenance/history.json (backend checks). assessment.result: 'likely_source' (needs asset_id) or 'unresolved'.",
+  "status": "sample",
+  "provenance": "simulated",
+  "local_incident_id": "INC-001",
+  "method": "Manual ranking",
+  "assessment": { "result": "likely_source", "asset_id": "VENT-01" },
+  "candidates": [
+    {
+      "asset_id": "VENT-01",
+      "status": "candidate",
+      "rationale": [
+        "Listed in the CAM-01 camera mapping.",
+        "Point methane detector GD-01 is mounted at this vent.",
+        "A small release was found at the vent base before."
+      ],
+      "supporting": [
+        { "id": "EV-1", "source_id": "CAM-01", "label": "CAM-01 can observe VENT-01 (manually configured mapping)", "provenance": "synthetic" },
+        { "id": "EV-2", "source_id": "GD-01", "label": "GD-01 point methane detector monitors VENT-01", "provenance": "synthetic" },
+        { "id": "EV-3", "source_id": "WO-2025-0412", "label": "Flange gasket replaced at vent base after an OGI survey found a small release (Sep 2025)", "provenance": "synthetic" },
+        { "id": "EV-4", "source_id": "P-102", "label": "Vent header P-102 routes PSV-102 and BDV-103 discharge to VENT-01", "provenance": "synthetic" }
+      ],
+      "contradicting": [
+        { "id": "EV-5", "source_id": "CAM-01", "label": "No ROI polygon is drawn for VENT-01, so the plume cannot be matched to it in the image", "provenance": "synthetic" }
+      ],
+      "missing": [
+        "GD-01 reading at the alert time (Quantify stage)",
+        "Field confirmation by an operator"
+      ]
+    },
+    {
+      "asset_id": "XV-104",
+      "status": "candidate",
+      "rationale": [
+        "Listed in the CAM-01 camera mapping.",
+        "Packing was adjusted on this valve before."
+      ],
+      "supporting": [
+        { "id": "EV-6", "source_id": "CAM-01", "label": "CAM-01 can observe XV-104 (manually configured mapping)", "provenance": "synthetic" },
+        { "id": "EV-7", "source_id": "WO-2025-0301", "label": "Stem packing adjusted (May 2025)", "provenance": "synthetic" }
+      ],
+      "contradicting": [
+        { "id": "EV-8", "source_id": "WO-2025-0301", "label": "Retest after the packing adjustment found no leak", "provenance": "synthetic" },
+        { "id": "EV-9", "source_id": "XV-104", "label": "No gas detector monitors XV-104", "provenance": "synthetic" }
+      ],
+      "missing": [
+        "Valve position and packing inspection"
+      ]
+    },
+    {
+      "asset_id": "P-101",
+      "status": "candidate",
+      "rationale": [
+        "Listed in the CAM-01 camera mapping."
+      ],
+      "supporting": [
+        { "id": "EV-10", "source_id": "CAM-01", "label": "CAM-01 can observe P-101 (manually configured mapping)", "provenance": "synthetic" }
+      ],
+      "contradicting": [
+        { "id": "EV-11", "source_id": "P-101", "label": "No maintenance or leak history for P-101", "provenance": "synthetic" },
+        { "id": "EV-12", "source_id": "P-101", "label": "No gas detector monitors P-101", "provenance": "synthetic" }
+      ],
+      "missing": [
+        "Flange and joint inventory for P-101"
+      ]
+    }
+  ]
+}

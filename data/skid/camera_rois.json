@@ -1,0 +1,12 @@
+{
+  "_comment": "DRAFT for team review. Declares which assets CAM-01 can see (drives CAN_OBSERVE). Polygons stay empty until they are drawn on the approved OGI clip; drawing them now would be invented.",
+  "mapping_version": "rois-v0.1-draft",
+  "camera_id": "CAM-01",
+  "clip_id": null,
+  "mapping_method": "manual_illustrative",
+  "regions": [
+    { "asset_id": "VENT-01", "polygon_normalized": [] },
+    { "asset_id": "XV-104",  "polygon_normalized": [] },
+    { "asset_id": "P-101",   "polygon_normalized": [] }
+  ]
+}

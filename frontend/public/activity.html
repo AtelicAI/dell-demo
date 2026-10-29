@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Investigation activity — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/story.js?v=101" defer></script>
+<script src="js/activity.js?v=101" defer></script>
+<style>
+
+  /* PRD Screen 8 (scrolling page): the seven investigation steps as a chronological trace, each
+     real span expandable to its tool details; a small hardware panel on the right. Steps that did
+     not run say why. No span is shown for a call that did not happen. */
+  .a-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+
+  .bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line-strong);flex-wrap:wrap}
+  .chips{display:inline-flex;border:1px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--panel)}
+  .chips button{border:0;border-right:1px solid var(--line-strong);background:none;padding:5px 12px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-mute);cursor:pointer;transition:all var(--t)}
+  .chips button:last-child{border-right:0}
+  .chips button:hover{color:var(--accent);background:var(--accent-glow)}
+  .chips button[aria-pressed=true]{background:var(--accent);color:#fff}
+  .chips .n{opacity:.7;margin-left:4px}
+  .bar .sum{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .btn.sm{padding:5px 12px;font-size:12px}
+  .notice-ln{margin:12px 16px 0;padding:9px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12.5px;font-weight:500;color:var(--ink)}
+
+  /* ----- trace ----- */
+  .trace{list-style:none;margin:0;padding:8px 16px 14px;position:relative}
+  .st{position:relative;display:grid;grid-template-columns:86px 22px minmax(0,1fr);gap:0 10px;padding:10px 0}
+  .st + .st{border-top:1px dashed var(--line)}
+  /* the step another screen linked to */
+  .st.focus{background:var(--accent-glow);box-shadow:-16px 0 0 var(--accent-glow),16px 0 0 var(--accent-glow);border-radius:2px}
+  .st.focus .st-h h3{color:var(--accent-strong)}
+  .focus-bar{position:sticky;top:58px;z-index:5;box-shadow:0 6px 16px -10px rgba(15,23,42,.25);display:flex;align-items:center;gap:14px;margin:12px 16px 0;padding:9px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--accent);font-size:12.5px;color:var(--ink-mute);background:var(--panel)}
+  .focus-bar b{color:var(--ink);font-weight:600}
+  .focus-bar a{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);white-space:nowrap}
+  .focus-bar button{border:0;background:none;padding:0;font-family:var(--mono);font-size:11px;color:var(--ink-dim);cursor:pointer;white-space:nowrap}
+  .focus-bar button:hover{color:var(--ink)}
+  .focus-bar a + button{margin-left:0}
+  .focus-bar span + button{margin-left:auto}
+  .st-h .shown{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);white-space:nowrap}
+  .st-h .shown:hover{color:var(--accent)}
+  .st::before{content:"";position:absolute;left:106px;top:0;bottom:0;width:1.5px;background:var(--line-strong)}
+  .st:first-child::before{top:18px}
+  .st:last-child::before{bottom:calc(100% - 18px)}
+  .st .tm{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);padding-top:3px;text-align:right;white-space:nowrap}
+  .st .nd{width:12px;height:12px;margin:4px 0 0 5px;border-radius:2px;border:2px solid var(--ink-faint);background:var(--panel);position:relative;z-index:1}
+  .st.ran .nd{border-color:var(--accent);background:var(--accent)}
+  .st.not_run .nd{border-style:dashed}
+  .st.approved .nd{border-color:var(--good);background:var(--good)}
+  .st.waiting .nd{border-color:var(--warn)}
+  .st.returned .nd{border-color:var(--bad);background:var(--bad)}
+  .st-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .st-h h3{margin:0;font-size:13.5px;font-weight:600}
+  .st.not_run .st-h h3{color:var(--ink-mute)}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;line-height:1.6;color:var(--ink-mute)}
+  .chip::before{content:"";width:5px;height:5px;border-radius:1px;background:currentColor}
+  .chip.ran{color:var(--accent)}
+  .chip.not_run,.chip.not_reached{color:var(--ink-dim)}
+  .chip.not_run::before,.chip.not_reached::before{background:none;box-shadow:inset 0 0 0 1px currentColor}
+  .chip.approved{color:var(--good)}
+  .chip.waiting{color:var(--warn)}
+  .chip.returned,.chip.blocked{color:var(--bad)}
+  .chip.manual{color:var(--ink)}
+  .st.manual .nd{border-color:var(--ink-mute);background:var(--ink-mute)}
+  .why{margin:4px 0 0;font-size:12px;color:var(--ink-mute);line-height:1.5}
+  .rule{margin:4px 0 0;font-size:11.5px;color:var(--ink-mute)}
+  .rule b{color:var(--ink);font-weight:600}
+
+  /* one real span */
+  .sp{margin-top:8px;border:1px solid var(--line-strong);border-radius:4px;background:var(--panel);overflow:hidden;transition:border-color var(--t),box-shadow var(--t)}
+  .sp.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .sp > button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) 120px auto;gap:10px;align-items:center;padding:8px 12px;cursor:pointer;font-size:12.5px}
+  .sp > button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .sp .id{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-dim)}
+  .sp .tl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sp .tl b{font-weight:600}
+  .sp .tl span{color:var(--ink-mute)}
+  .dur{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--ink-mute);justify-content:flex-end}
+  .dur i{display:block;height:4px;border-radius:2px;background:var(--accent);min-width:2px}
+  .sp .cv{font-size:10px;color:var(--ink-dim);transition:transform var(--t)}
+  .sp.open .cv{transform:rotate(90deg)}
+  .det{display:none;border-top:1px solid var(--line);padding:8px 12px 10px}
+  .sp.open .det{display:block}
+  .kv{width:100%;border-collapse:collapse;font-size:12px}
+  .kv td{padding:4px 0;vertical-align:top;border-bottom:1px dashed var(--line)}
+  .kv tr:last-child td{border-bottom:0}
+  .kv td:first-child{width:150px;color:var(--ink-mute)}
+  .kv .m{font-family:var(--mono);font-size:11.5px}
+  .kv a{color:var(--accent)}
+  .kv .path{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .hm{list-style:none;margin:6px 0 0;padding:0;font-size:12px}
+  .hm li{display:grid;grid-template-columns:118px minmax(0,1fr);gap:8px;padding:4px 0}
+  .hm .m{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);padding-top:1px}
+
+  /* ----- hardware panel ----- */
+  .side{position:sticky;top:64px;display:flex;flex-direction:column;gap:14px}
+  .hw{list-style:none;margin:0;padding:6px 14px 10px}
+  .hw li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12px}
+  .hw li:last-child{border-bottom:0}
+  .hw .k{color:var(--ink-mute)}
+  .hw .v{font-family:var(--mono);font-size:11px;font-weight:600;text-align:right}
+  .hw .v.off{color:var(--ink-dim)}
+  .hw .v.ok{color:var(--good)}
+  .hw .d{grid-column:1/-1;font-size:11px;color:var(--ink-dim);line-height:1.4}
+  .safety{display:flex;gap:8px;align-items:flex-start;padding:12px 14px;font-size:12.5px;font-weight:500;line-height:1.45}
+  .safety svg{flex-shrink:0;margin-top:2px;color:var(--good)}
+
+  @media (max-width:1240px){.a-grid{grid-template-columns:minmax(0,1fr) 270px}.sp > button{grid-template-columns:auto minmax(0,1fr) 90px auto}}
+  @media (max-width:980px){.a-grid{grid-template-columns:1fr}.side{position:static}.st{grid-template-columns:62px 22px minmax(0,1fr)}.st::before{left:82px}}
+</style>
+</head>
+<body data-page="activity" data-stage="activity">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide">
+  <div class="page-head">
+    <h1 title="Review the models, tools and evidence used during this incident.">Investigation activity</h1>
+  </div>
+
+  <div class="stepper compact" id="stepper"></div>
+
+  <div class="a-grid">
+    <section class="panel rise" aria-label="Investigation trace">
+      <div class="panel-head"><h2>Trace</h2><span class="meta"><span data-inc></span> · investigation order · backend times</span></div>
+      <div class="bar">
+        <div class="chips" role="group" aria-label="Filter steps" id="chips"></div>
+        <button class="btn sm" id="btn-replay" disabled>Replay</button>
+        <span class="sum" id="sum">—</span>
+      </div>
+      <div class="focus-bar" id="focus-bar" hidden></div>
+      <p class="notice-ln" id="nvidia-line" hidden>NVIDIA inference not connected in this run.</p>
+      <ol class="trace" id="trace"><li class="why" style="padding:14px 0">Loading…</li></ol>
+    </section>
+
+    <aside class="side rise" style="animation-delay:80ms">
+      <section class="panel" aria-label="Hardware and services">
+        <div class="panel-head"><h2>Hardware</h2><span class="meta">From backend status</span></div>
+        <ul class="hw" id="hw"></ul>
+      </section>
+      <section class="panel safety" aria-label="Safety">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5 2.5 3.5v4c0 3.3 2.3 5.8 5.5 7 3.2-1.2 5.5-3.7 5.5-7v-4z"/><path d="m5.5 8 1.8 1.8L10.8 6.3"/></svg>
+        <span id="safety">No physical control commands are enabled.</span>
+      </section>
+    </aside>
+  </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "_comment": "PLACEHOLDER. INC-002 needs a CAM-02 recording that shows a plume. data/ogi/cam02_MOV_2571.mp4 is the segment the team picked because it has NO plume, so it is only used as CAM-02's normal-operations view (clip_before). Fill this in (scripts/ogi_inspect.py) when the team supplies a leak segment as data/incidents/INC-002/clip.mp4; licence is the same open question as MOV_2566.",
+  "status": "pending",
+  "ogi_clip_id": null,
+  "origin": "METEC",
+  "source_url": null,
+  "recording_date": null,
+  "camera_type": null,
+  "resolution": null,
+  "frame_rate": null,
+  "duration_s": null,
+  "license_status": "pending",
+  "provenance": "experimental_setpoint",
+  "experimental_setpoint": { "rate": null, "unit": null, "source": null },
+  "detection_mode": null,
+  "model_version": null,
+  "variable_frame_rate": false,
+  "frame_count": null,
+  "source_segment": null
+}

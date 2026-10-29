@@ -19,3 +19,14 @@ node_modules/
 CLAUDE.md
 .claude/
 .mcp.json
+
+# Playwright MCP screenshots/logs
+.playwright-mcp/
+
+# OGI / video files (download separately, never commit)
+data/ogi/*.mp4
+.deploy/
+.run/
+.ui-state/
+!data/ogi/cam01_mov1242_before.mp4
+!data/ogi/cam01_mov1242_leak.mp4

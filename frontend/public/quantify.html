@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quantify emissions — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<link rel="stylesheet" href="css/story.css?v=101">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/story.js?v=101" defer></script>
+<script src="js/quantify.js?v=101" defer></script>
+<style>
+
+  /* PRD Screen 4 (scrolling page): result card + sensor charts on the left, method/inputs/QC on the right
+     (stretched to the same height), assumptions full width below */
+  .q-layout{display:flex;flex-direction:column;gap:18px}
+  .top{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:stretch}
+  .q-col{display:flex;flex-direction:column;gap:18px;min-width:0}
+  .q-col .traces{flex:1;display:flex;flex-direction:column}
+  .q-col .traces .time-rd{margin-top:auto}
+  .q-layout .panel{overflow:hidden;animation:rise var(--t-slow) both}
+  .side{animation-delay:60ms}
+  .traces{animation-delay:100ms}
+  @media (prefers-reduced-motion:reduce){.q-layout .panel{animation:none}.band{transition:none}}
+  .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+  .note{font-size:12.5px;color:var(--ink-mute);line-height:1.55}
+  .caveat{margin:0;padding:7px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.45;background:var(--panel)}
+
+  /* ----- result card: a calc sheet ----- */
+  .hero{background:var(--panel)}
+  .hero-head{display:flex;align-items:flex-start;gap:12px;padding:16px 20px 0}
+  .hero-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
+  .hero-head .gb-slot{padding-top:2px}
+  .hero-head h2{margin:3px 0 0;font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .hero-body{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;padding:14px 20px 18px;align-items:center}
+  .rate .num{font-family:var(--mono);font-size:58px;font-weight:600;letter-spacing:-.04em;line-height:1;color:var(--ink);margin-top:6px}
+  .rate .num.none{font-size:32px;color:var(--ink-faint)}
+  .rate .unit{font-family:var(--mono);font-size:12px;color:var(--ink-mute);margin-top:6px}
+  .rate .sub{font-size:11.5px;color:var(--ink-dim);margin-top:2px}
+
+  /* interval gauge: every per-sample estimate on the kg/h scale */
+  .g-track{position:relative;height:74px;margin:0 6px}
+  .g-axis{position:absolute;left:0;right:0;top:46px;height:1px;background:var(--ink-faint)}
+  .g-tick{position:absolute;top:46px;width:1px;height:6px;background:var(--ink-faint)}
+  .g-tick span{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9.5px;color:var(--ink-dim)}
+  .band{position:absolute;top:8px;height:30px;border-radius:4px;background:rgba(46,99,153,.10);border:1px solid rgba(46,99,153,.38);transform-origin:left;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+  .band.pre{transform:scaleX(0)}
+  .g-dot{position:absolute;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:var(--accent);opacity:.6}
+  .med{position:absolute;top:2px;height:42px;width:2px;margin-left:-1px;background:var(--accent);border-radius:1px}
+  .ref{position:absolute;top:0;height:46px;border-left:1.5px dashed var(--warn)}
+  .g-legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:16px 6px 0;font-family:var(--mono);font-size:10px;color:var(--ink-mute)}
+  .g-legend span{display:flex;align-items:center;gap:6px}
+  .g-legend i{display:inline-block}
+  .g-legend .lb{width:14px;height:9px;border-radius:3px;background:rgba(46,99,153,.10);border:1px solid rgba(46,99,153,.38)}
+  .g-legend .ld{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.6}
+  .g-legend .lm{width:2px;height:11px;background:var(--accent)}
+  .g-legend .lr{width:0;height:11px;border-left:1.5px dashed var(--warn)}
+  .hero-empty{font-size:13px;color:var(--ink-mute);line-height:1.6;max-width:520px}
+  .hero-empty ul{margin:6px 0 0;padding-left:18px;color:var(--ink-mute);font-size:12.5px}
+
+  .fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line-strong);background:var(--panel)}
+  .fields .f{padding:11px 14px 12px;min-width:0;border-left:1px solid var(--line)}
+  .fields .f:nth-child(3n+1){border-left:0;padding-left:20px}
+  .fields .f:nth-child(n+4){border-top:1px solid var(--line)}
+  .fields .v{font-family:var(--mono);font-size:12.5px;color:var(--ink);margin-top:4px;line-height:1.35;overflow-wrap:anywhere}
+  .fields .v small{display:block;margin-top:2px;font-family:var(--sans);font-size:11px;color:var(--ink-dim);line-height:1.35}
+  .fields a{color:var(--accent);text-decoration:none}
+  .fields a:hover{text-decoration:underline}
+
+  /* ----- sensor traces: stacked recorder strips on one time axis ----- */
+  .traces-sub{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .traces-sub .caveat{flex:1 1 360px}
+  .t-legend{display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:var(--ink-mute)}
+  .t-legend span{display:flex;align-items:center;gap:6px}
+  .t-legend .lw{width:14px;height:10px;background:var(--accent-glow);border-radius:2px}
+  .t-legend .lu{width:7px;height:7px;border-radius:50%;background:var(--n-well)}
+  .t-legend .lx{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-dim)}
+  .strips{display:grid;grid-template-columns:190px minmax(0,1fr)}
+  .labels{border-right:1px solid var(--line)}
+  .lab{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 14px 0 16px;border-bottom:1px dashed var(--line)}
+  .lab:last-child{border-bottom:0}
+  .lab .nm{font-size:12.5px;font-weight:600;line-height:1.3}
+  .lab .row{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .lab .rd{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--ink);letter-spacing:-.02em;margin-top:2px}
+  .lab .rd small{font-size:10.5px;font-weight:500;color:var(--ink-dim);margin-left:4px;letter-spacing:0}
+  #traces{min-width:0}
+  .traces-empty{padding:40px;text-align:center;font-size:13px;color:var(--ink-dim)}
+  .time-rd{padding:6px 16px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);text-align:right}
+
+  /* ----- assumptions (full width, two columns) + QC (right panel) ----- */
+  .assumptions{animation-delay:140ms}
+  .assume{margin:0;padding:6px 20px 12px;list-style:none;counter-reset:a;display:grid;grid-template-columns:1fr 1fr;column-gap:36px}
+  .assume li{counter-increment:a;display:grid;grid-template-columns:24px 1fr;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.5px;color:var(--ink);line-height:1.5}
+  .assume li:nth-last-child(-n+2){border-bottom:0}
+  .assume li::before{content:counter(a,decimal-leading-zero);font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink-dim);padding-top:2px}
+  .side .qc{flex:1;display:flex;flex-direction:column}
+  #qc{flex:1;display:flex;flex-direction:column}
+  .qc-body{flex:1;display:flex;flex-direction:column;padding-top:4px}
+  .kv{display:grid;grid-template-columns:auto 1fr}
+  .kv .k{padding:5px 12px 5px 0;font-size:11.5px;white-space:nowrap;color:var(--ink-mute);border-bottom:1px dashed var(--line)}
+  .kv .v{padding:5px 0;font-family:var(--mono);font-size:11px;color:var(--ink);border-bottom:1px dashed var(--line);text-align:right;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px 6px}
+  .qc-chart-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:14px 0 2px}
+  .qc-chart-h b{font-size:12.5px;font-weight:600}
+  .qc-chart-h span{font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  #qc-chart{flex:1;min-height:170px;margin:0 -6px}
+  .pending-box{padding:22px 16px;font-size:12.5px;color:var(--ink-dim)}
+  .side .pending-box{padding:8px 0}
+
+  /* ----- method + inputs ----- */
+  .side{display:flex;flex-direction:column}
+  .side .body{flex:1;display:flex;flex-direction:column}
+  .side .sec:last-child{border-bottom:0}
+  .side .lbl{display:block}
+  .side .sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+  .meth{display:grid;grid-template-columns:16px 1fr;gap:1px 9px;padding:7px 10px;margin-top:6px;border:1px solid var(--line-strong);border-radius:4px;cursor:pointer;transition:border-color var(--t),background var(--t)}
+  .meth:hover{border-color:var(--accent)}
+  .meth.sel{border-color:var(--accent);background:var(--accent-glow)}
+  .meth.off{cursor:not-allowed;background:var(--panel-2);border-style:dashed}
+  .meth.off:hover{border-color:var(--line-strong)}
+  .meth input{margin:2px 0 0;accent-color:var(--accent)}
+  .meth b{font-size:12.5px;font-weight:600}
+  .meth.off b{color:var(--ink-mute)}
+  .meth .nt{grid-column:2;font-size:11px;color:var(--ink-dim)}
+  .meth .why{grid-column:2;font-size:11px;color:var(--ink-dim);line-height:1.4}
+  .run{width:100%;justify-content:center;margin-top:10px}
+  .run-msg{margin-top:6px;font-size:11px;color:var(--ink-dim);text-align:center;min-height:15px}
+  .run-msg.err{color:var(--bad)}
+  .inputs ul{margin:6px 0 0;padding:0;list-style:none}
+  .inputs li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
+  .inputs li:last-child{border-bottom:0}
+  .inputs .id{font-family:var(--mono);font-weight:600;color:var(--ink);font-size:11.5px}
+  .inputs .t{min-width:0;color:var(--ink-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ----- next step bar ----- */
+  .next{position:sticky;bottom:14px;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 14px 12px 20px;border-radius:4px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 14px 34px -16px rgba(15,23,42,.35);animation-delay:180ms}
+  .next .txt{flex:1;min-width:0}
+  .next .txt b{display:block;font-size:13.5px;font-weight:600}
+  .next .txt span{font-size:12px;color:var(--ink-mute)}
+
+  @media (max-width:1100px){.top,.assume{grid-template-columns:1fr}.next{flex-wrap:wrap}.hero-body{grid-template-columns:1fr}.assume li:nth-last-child(2){border-bottom:1px dashed var(--line)}}
+</style>
+</head>
+<body data-page="quantify" data-stage="quantify">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide">
+  <div class="page-head">
+    <h1 title="Quantification depends on available measurements and the assumptions of the selected method.">Estimate methane emissions</h1>
+  </div>
+
+  <div class="stepper compact" id="stepper"></div>
+
+  <div class="q-layout">
+    <div class="top">
+      <div class="q-col">
+        <!-- result card -->
+        <section class="panel hero" aria-label="Emission-rate result">
+          <div class="hero-head">
+            <div><span class="lbl">Result · <span data-inc></span></span><h2 id="res-title">Emission rate not estimated yet</h2></div>
+            <span class="badges" id="res-badges"></span><span class="gb-slot" data-trace="emission_estimate"></span>
+          </div>
+          <div class="hero-body" id="hero-body"><div class="note">Loading…</div></div>
+          <div class="fields" id="fields" hidden></div>
+        </section>
+
+        <!-- time-aligned sensor charts -->
+        <section class="panel traces" aria-label="Sensor traces">
+          <div class="panel-head">
+            <h2>Sensor traces</h2>
+            <span class="meta" id="series-meta">—</span>
+          </div>
+          <div class="traces-sub">
+            <div class="t-legend" id="t-legend" hidden>
+              <span><i class="lw"></i>Data window</span>
+              <span><i class="lu"></i>Used sample</span>
+              <span><i class="lx"></i>Excluded (off plume axis)</span>
+            </div>
+          </div>
+          <div class="strips">
+            <div class="labels" id="labels"></div>
+            <div id="traces"></div>
+          </div>
+          <div class="time-rd" id="time-rd">Hover the traces to read values</div>
+        </section>
+      </div>
+
+      <!-- method + inputs -->
+      <section class="panel side" aria-label="Method and inputs">
+        <div class="panel-head"><h2>Method &amp; inputs</h2></div>
+        <div class="body">
+          <div class="sec">
+            <span class="lbl">Method</span>
+            <div id="methods" role="radiogroup" aria-label="Quantification method"></div>
+            <button class="btn primary run" id="btn-run" disabled>Run estimate</button>
+            <div class="run-msg" id="run-msg" role="status" aria-live="polite"></div>
+          </div>
+          <div class="sec inputs">
+            <span class="lbl">Inputs</span>
+            <ul id="inputs"><li><span class="t">Loading…</span></li></ul>
+          </div>
+          <div class="sec qc">
+            <span class="lbl">Quality control</span>
+            <div id="qc"><div class="pending-box">Shown after an estimate runs.</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- sensors vs camera: every assumed source location fitted -->
+    <section class="panel" aria-label="Sensors versus camera" id="attr-panel" hidden style="margin-bottom:18px">
+      <div class="panel-head"><h2>Sensors vs camera</h2><span class="meta" id="attr-meta"></span></div>
+      <div style="padding:14px 16px" id="attr"></div>
+    </section>
+
+    <!-- 47 days of plant history before the alert -->
+    <section class="panel" aria-label="Plant history" id="hist-panel" hidden style="margin-bottom:18px">
+      <div class="panel-head"><h2>Plant history before the alert</h2><span class="meta" id="hist-meta"></span><span class="gb-slot" data-trace="investigation" data-trace-text="How the agent used it"></span></div>
+      <div style="padding:14px 16px"><div class="hist-facts" id="hist-facts"></div><div class="hist-chart" id="hist-chart"></div><p class="hist-note" id="hist-note"></p></div>
+    </section>
+
+    <!-- assumptions (full width) -->
+    <section class="panel assumptions" aria-label="Assumptions" id="assumptions-panel">
+      <div class="panel-head"><h2>Assumptions</h2><span class="meta" id="assume-meta"></span></div>
+      <div id="assumptions"><div class="pending-box">Shown after an estimate runs.</div></div>
+    </section>
+
+    <!-- next step -->
+    <section class="panel next" aria-label="Next step">
+      <div class="txt"><b>Next: plan the engineering response</b><span id="next-note">Run an estimate first.</span></div>
+      <a class="btn primary" id="btn-plan" href="plan.html" aria-disabled="true">Prepare engineering response →</a>
+    </section>
+  </div>
+</main>
+
+</body>
+</html>

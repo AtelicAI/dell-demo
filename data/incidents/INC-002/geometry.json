@@ -1,0 +1,12 @@
+{
+  "_comment": "DRAFT for team review. Assumed geometry for the INC-002 Gaussian plume estimate. Same local skid frame as scenario/geometry.json (x east, y north, z above grade, metres; VENT-01 at the origin). Not a survey. GD-02 sits 15 m from XV-101 at bearing 70 deg (downwind of the prevailing 250 deg wind).",
+  "status": "draft",
+  "provenance": "synthetic",
+  "mapping_version": "geometry-v0.1-draft",
+  "assets": {
+    "XV-101": { "x_m": -24.0, "y_m": 2.0,  "z_m": 1.5 },
+    "GD-02":  { "x_m": -9.90, "y_m": 7.13, "z_m": 2.0 }
+  },
+  "stability_class": "D",
+  "stability_note": "Pasquill-Gifford class D (neutral), Briggs rural dispersion coefficients"
+}

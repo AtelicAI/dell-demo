@@ -1,0 +1,10 @@
+{
+  "_comment": "Synthetic maintenance records for the representative skid. Replace with team-authored history (open question 5).",
+  "provenance": "synthetic",
+  "records": [
+    { "record_id": "WO-2025-0412", "asset_id": "VENT-01", "date": "2025-09-03", "type": "Corrective", "summary": "Flange gasket replaced at vent base after OGI survey found a small release.", "status": "Closed" },
+    { "record_id": "WO-2025-0388", "asset_id": "PSV-102", "date": "2025-07-21", "type": "Inspection", "summary": "Set-pressure test passed. Seat leakage within limits.", "status": "Closed" },
+    { "record_id": "WO-2025-0301", "asset_id": "XV-104", "date": "2025-05-10", "type": "Preventive", "summary": "Stem packing adjusted. No leak found on retest.", "status": "Closed" },
+    { "record_id": "WO-2024-1120", "asset_id": "V-101", "date": "2024-12-02", "type": "Inspection", "summary": "Annual external visual inspection. No findings.", "status": "Closed" }
+  ]
+}

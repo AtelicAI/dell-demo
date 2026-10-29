@@ -1,0 +1,9 @@
+{
+  "facility": "simulated",
+  "telemetry": "simulated; Gaussian forward + solved steady process baseline",
+  "detector": "synthetic_annotation_fixture",
+  "video": "recorded GasVid metadata ready; annotations pending; independent scene",
+  "runtime": "local development; Dell deployment not verified",
+  "physics": "idealized Gaussian open-terrain forward model, not validated skid CFD",
+  "recovery": "post-1200s counterfactual validation only; not served by interactive replay"
+}

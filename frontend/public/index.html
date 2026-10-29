@@ -3,189 +3,158 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Methane Incident Intelligence — Atelic</title>
+<title>Methane observations — Atelic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<script src="js/shell.js?v=103" defer></script>
+<script src="vendor/leaflet/leaflet.js" defer></script>
+<script src="js/overview.js?v=101" defer></script>
 <style>
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;padding-left:var(--rail)}
-  a{color:inherit;text-decoration:none}
-  code,.mono{font-family:var(--mono)}
+  /* PRD Screen 1: 65% map / 35% source details */
+  .ov-grid{display:grid;grid-template-columns:65fr 35fr;gap:14px;margin-top:14px;align-items:stretch}
+  .ov-grid > .panel{min-height:0}
+  .ov-grid.fill{flex:0 1 auto;height:100%;max-height:700px}
+  main.fit .lede{margin-bottom:12px}
+  .inc-count{margin-left:auto;color:var(--accent);text-decoration:none}
+  .inc-count:hover{text-decoration:underline}
 
-  /* ----- left rail ----- */
-  .rail{position:fixed;top:0;left:0;width:var(--rail);height:100vh;z-index:50;
-    background:#EEF2F7;border-right:1px solid rgba(15,23,42,.07);
-    display:flex;flex-direction:column;padding:20px 14px;gap:28px;color:#0F172A}
-  .rail .brand{display:flex;align-items:center;gap:10px;padding:4px 6px 10px;border-bottom:1px solid rgba(15,23,42,.07)}
-  .rail .brand .mk{height:26px;width:auto;flex-shrink:0}
-  .rail .brand .tg{color:#94A3B8;font-size:10.5px;margin-left:auto;text-transform:uppercase;letter-spacing:.1em;font-family:var(--mono)}
-  .rail .nv{display:flex;flex-direction:column;gap:1px}
-  .rail .nv .sec{padding:14px 10px 6px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
-  .rail .nv a{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;color:#475569;font-weight:500;font-size:13px;transition:color 160ms, background 160ms}
-  .rail .nv a:hover{color:#0F172A;background:rgba(15,23,42,.03)}
-  .rail .nv a[aria-current=page]{color:#0F172A;background:rgba(2,132,199,.08)}
-  .rail .nv a[aria-current=page] .nd{background:var(--accent)}
-  .rail .nv a[aria-disabled=true]{color:var(--ink-faint);cursor:default}
-  .rail .nv a[aria-disabled=true]:hover{background:transparent}
-  .rail .nv .nd{width:5px;height:5px;border-radius:50%;background:#CBD5E1;justify-self:end;margin-right:4px}
-  .rail .nv .ic{color:#94A3B8;display:grid;place-items:center}
-  .rail .nv a[aria-current=page] .ic{color:var(--accent)}
-  .rail .ft{margin-top:auto;padding:12px 6px 2px;border-top:1px solid rgba(15,23,42,.07);display:flex;align-items:center;gap:10px;color:#94A3B8;font-size:11px}
-  .rail .ft .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0284C7,#7C3AED);display:grid;place-items:center;color:#fff;font-size:10.5px;font-weight:700;flex-shrink:0}
-  .rail .ft b{color:#0F172A;font-weight:600;font-size:12px;display:block}
+  /* ----- satellite map (Leaflet) ----- */
+  .map-panel{overflow:hidden;display:flex;flex-direction:column}
+  /* isolation keeps Leaflet's pane z-indexes (400-1000) inside the map, below the top bar's popovers and dialogs */
+  .map-wrap{position:relative;flex:1;min-height:0;background:var(--panel-3);isolation:isolate}
+  .map-wrap .leaflet-container{position:absolute;inset:0;background:var(--panel-3);font-family:var(--sans)}
+  /* Muted basemap so the plume reads first (as on the Carbon Mapper portal). */
+  .map-wrap .basemap{filter:grayscale(.85) brightness(1.08) contrast(.92)}
+  .map-wrap .plume-img{transition:opacity var(--t-slow)}
+  .map-wrap .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8)}
+  .map-wrap .leaflet-bar a{color:var(--ink)}
+  .origin-pin{position:relative}
+  .origin-pin .core{position:absolute;inset:6px;border-radius:50%;background:#fff;border:2px solid var(--pink);box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+  .origin-pin .dot{position:absolute;inset:11px;border-radius:50%;background:var(--pink)}
+  .origin-pin .ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);opacity:0}
+  .origin-pin.selected .ring{opacity:1;animation:pin-pulse 2.4s ease-out infinite}
+  @keyframes pin-pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+  .origin-tag{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);background:rgba(255,255,255,.88);border:1px solid var(--line-strong);border-radius:4px;padding:1px 6px;box-shadow:none}
+  .origin-tag::before{display:none}
 
-  /* ----- top bar ----- */
-  .topbar{display:flex;align-items:center;gap:16px;padding:10px 20px;border-bottom:1px solid var(--line-strong);background:rgba(255,255,255,.82);backdrop-filter:blur(14px);position:sticky;top:0;z-index:30}
-  .crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-mute)}
-  .crumb .sep{color:var(--ink-dim)}
-  .crumb .cur{color:var(--ink);font-weight:600}
-  .right-controls{margin-left:auto;display:flex;align-items:center;gap:14px}
-  .status-pill{font-family:var(--mono);font-size:11px;color:var(--ink-mute);display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line-strong);border-radius:999px}
-  .status-pill .dot{width:6px;height:6px;border-radius:50%}
-  .status-pill.ok .dot{background:var(--good);box-shadow:0 0 0 3px var(--good-glow)}
-  .status-pill.off .dot{background:var(--ink-faint)}
+  .legend{position:absolute;left:10px;bottom:24px;z-index:500;padding:8px 10px;border-radius:4px;border:1px solid var(--line-strong);background:rgba(255,255,255,.9);font-size:10.5px;color:var(--ink-mute);line-height:1.35}
+  .legend .t{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+  .legend .bar{width:120px;height:8px;border-radius:4px;margin:5px 0 3px;background:linear-gradient(90deg,#ffffb2,#fecc5c,#fd8d3c,#f03b20,#bd0026)}
+  .legend .ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px}
+  .map-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--ink-mute);font-size:13px;padding:24px;z-index:600}
+  .map-tools{display:flex;align-items:center;gap:14px;padding:9px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-mute)}
+  .map-tools label{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+  .map-tools input{accent-color:var(--accent)}
+  .map-tools .link{background:none;border:0;padding:0;cursor:pointer;color:var(--accent);font-weight:600;font-size:12.5px;white-space:nowrap}
 
-  /* ----- main ----- */
-  main{max-width:1100px;margin:0 auto;padding:32px 28px 80px}
-  .page-head{display:flex;align-items:baseline;gap:14px;margin-bottom:4px}
-  .page-head h1{font-size:24px;margin:0;letter-spacing:-.01em}
-  .page-head .sub{font-size:12.5px;color:var(--ink-mute);font-family:var(--mono)}
-  .lede{color:var(--ink-mute);font-size:13.5px;max-width:720px;margin-bottom:28px}
+  /* ----- source details ----- */
+  .src-panel{display:flex;flex-direction:column;transition:border-color var(--t), box-shadow var(--t)}
+  .src-panel.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .src-panel .panel-head .badge{margin-left:auto}
+  #src-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+  .sample-flag{margin:14px 18px 0;color:var(--ink-dim);font-size:11.5px;line-height:1.45}
+  .sample-flag b{color:var(--warn);font-weight:600}
 
-  .section-label{display:block;padding:22px 0 10px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  /* hero: the rate is the key number */
+  .rate{padding:10px 18px 16px;border-bottom:1px solid var(--line)}
+  .rate .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .rate .num{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+  .rate .num b{font-size:clamp(34px,4.4vh,60px);font-weight:700;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .rate .num span{font-family:var(--mono);font-size:13px;color:var(--ink-mute)}
+  .rate .unc{font-family:var(--mono);font-size:12px;color:var(--ink-mute);margin-top:6px}
+  .unc-bar{position:relative;height:6px;border-radius:3px;background:var(--panel-3);margin-top:10px}
+  .unc-bar .band{position:absolute;top:0;bottom:0;border-radius:3px;opacity:.35}
+  .unc-bar .mid{position:absolute;top:-4px;width:2px;height:14px;border-radius:1px}
+  .unc-ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin-top:5px}
 
-  /* 6-stage stepper */
-  .stepper{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:4px}
-  .step{padding:14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel)}
-  .step .n{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.1em}
-  .step .t{font-size:13.5px;font-weight:600;margin-top:4px}
-  .step .s{margin-top:8px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);display:flex;align-items:center;gap:6px}
-  .step .s .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
-  .step.active{border-color:var(--accent);background:linear-gradient(180deg,rgba(2,132,199,.04),transparent)}
-  .step.active .s{color:var(--accent)}
-  .step.active .s .dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  /* facts: quiet label over value, 2 columns, no boxes (the header badge covers the whole card) */
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vh,22px) 18px;padding:clamp(14px,2.2vh,24px) 18px}
+  .fact .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .fact .val{font-family:var(--mono);font-size:13px;font-weight:500;margin-top:4px;color:var(--ink);white-space:nowrap}
+  .fact .val small{display:block;font-size:11px;color:var(--ink-dim);margin-top:1px}
+  .fact .val.na{color:var(--ink-dim)}
 
-  /* screen cards */
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-  .card{padding:16px 16px 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);transition:border-color 160ms, transform 160ms}
-  .card:hover{border-color:var(--accent)}
-  .card .kv{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.12em;text-transform:uppercase}
-  .card h3{font-size:14px;margin:4px 0 6px;font-weight:600;letter-spacing:-.005em}
-  .card p{color:var(--ink-mute);font-size:12.5px;margin:0 0 12px;line-height:1.55}
-  .card .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute)}
+  .source-line{display:flex;align-items:center;gap:8px;margin:auto 18px 0;padding:9px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink-mute)}
+  .source-line .r{margin-left:auto;font-family:var(--mono);font-size:11.5px}
+  .source-line a.r{color:var(--accent);font-weight:600}
+  .source-line .r.na{color:var(--ink-dim)}
+  .src-actions{padding:4px 18px 16px;border-top:1px solid var(--line);padding-top:12px}
+  .src-actions .btn{width:100%;justify-content:center;padding:11px 16px}
+  .missing{padding:22px 18px;color:var(--ink-mute);font-size:13px}
 
-  /* banner */
-  .notice{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border:1px solid var(--line-strong);border-left:3px solid var(--accent);border-radius:10px;background:linear-gradient(180deg,rgba(2,132,199,.04),transparent);margin:16px 0 24px}
-  .notice h4{margin:0 0 4px;font-size:13px;font-weight:600}
-  .notice p{margin:0;font-size:12.5px;color:var(--ink-mute)}
+  /* gas flag (non-methane observations) */
+  .gas-flag{margin:12px 18px 0;padding:6px 10px;border-radius:4px;background:var(--accent-glow);color:var(--ink-mute);font-size:11.5px;line-height:1.45}
+  .gas-flag b{color:var(--accent-strong);font-weight:600}
+  .rate .sub{font-size:11.5px;color:var(--ink-mute);margin-top:4px}
+  /* provider rate history for the source */
+  .hist{padding:10px 18px 4px;border-bottom:1px solid var(--line)}
+  .hist .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);display:flex}
+  .hist .lbl span{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500}
+  .hist svg{display:block;width:100%;margin-top:4px}
+  .hist .note{font-size:11px;color:var(--ink-dim);margin:0 0 6px}
+  .hist .ax{font-family:var(--mono);font-size:9.5px;fill:var(--ink-dim)}
+  .hist .gl{stroke:var(--line-strong);stroke-width:1}
+  .hist .ln{fill:none;stroke:var(--violet);stroke-width:1.5}
+  .hist .wk{stroke:var(--violet);stroke-opacity:.35;stroke-width:1}
+  .hist .pt{fill:var(--violet)}
+  .hist .now{stroke:var(--pink);stroke-width:1;stroke-dasharray:3 3}
+  .hist .nowt{font-family:var(--mono);font-size:9.5px;fill:var(--pink)}
+
+  .boundary{font-size:11.5px;color:var(--ink-mute);display:flex;gap:8px;align-items:center;min-width:0}
+  .boundary span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  @media (max-width:1100px){.ov-grid{grid-template-columns:1fr}main.fit{height:auto}}
 </style>
 </head>
-<body>
+<body data-page="overview">
 
-<aside class="rail">
-  <div class="brand">
-    <img class="mk" src="img/atelic-logo.png" alt="Atelic">
-    <span class="tg">edge</span>
-  </div>
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
 
-  <nav class="nv">
-    <a href="/" aria-current="page">
-      <span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 3h10v10H3z"/><path d="M5 6h6M5 9h4"/></svg></span>
-      Overview
-      <span class="nd"></span>
-    </a>
-
-    <span class="sec">Investigation</span>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h2m2 0h2M5 10h4"/></svg></span>Camera<span class="nd"></span></a>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="3" cy="8" r="1.8"/><circle cx="13" cy="3" r="1.8"/><circle cx="13" cy="13" r="1.8"/><circle cx="8" cy="8" r="1.8"/><path d="M4.5 7l2 .5M10.5 4.5 9 7M10.5 11.5 9 9"/></svg></span>Locate<span class="nd"></span></a>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 14V7M7 14V3M11 14v-5M15 14v2" stroke-linecap="round"/></svg></span>Quantify<span class="nd"></span></a>
-
-    <span class="sec">Response</span>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 4h10v8H3z"/><path d="M5 7h6"/></svg></span>Plan<span class="nd"></span></a>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8l3 3 7-7"/></svg></span>Approve<span class="nd"></span></a>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 2h6l3 3v9H4z"/><path d="M6 7h5M6 10h3"/></svg></span>Report<span class="nd"></span></a>
-
-    <span class="sec">Observability</span>
-    <a aria-disabled="true"><span class="ic"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/></svg></span>Glass box<span class="nd"></span></a>
-  </nav>
-
-  <div class="ft">
-    <div class="av">MK</div>
-    <div><b>Musthakeem</b><span style="color:#94A3B8">Atelic</span></div>
-  </div>
-</aside>
-
-<header class="topbar">
-  <div class="crumb">
-    <span>Atelic × Dell × NVIDIA</span>
-    <span class="sep">/</span>
-    <span class="cur">Methane Incident Intelligence</span>
-  </div>
-  <div class="right-controls">
-    <span class="status-pill ok" title="Edge runtime"><span class="dot"></span>Dell Edge · Running</span>
-    <span class="status-pill off" title="NVIDIA NIM"><span class="dot"></span>NVIDIA inference · Not connected</span>
-  </div>
-</header>
-
-<main>
+<main class="wide fit">
   <div class="page-head">
-    <h1>Methane Incident Intelligence</h1>
-    <span class="sub">INC-001 · ADIPEC 2026 demo</span>
-  </div>
-  <p class="lede">
-    Detection is solved. Closing the loop isn't. Six operator stages — Detect, Locate, Quantify, Plan, Approve, Report — running on a single Dell edge node with NVIDIA inference and the Atelic plant knowledge graph.
-  </p>
-
-  <div class="notice">
-    <div>
-      <h4>Illustrative scenario</h4>
-      <p>Carbon Mapper satellite observations and METEC OGI footage are independent datasets. Equipment, sensors and maintenance workflow are illustrative.</p>
-    </div>
+    <h1 id="page-title" title="Review regional emissions observations and explore an equipment-level investigation.">Methane observations</h1>
+    <a class="sub inc-count" id="inc-count" href="incidents.html" hidden></a>
   </div>
 
-  <span class="section-label">Pipeline</span>
-  <div class="stepper">
-    <div class="step active">
-      <div class="n">01</div><div class="t">Detect</div>
-      <div class="s"><span class="dot"></span>Ready for review</div>
-    </div>
-    <div class="step">
-      <div class="n">02</div><div class="t">Locate</div>
-      <div class="s"><span class="dot"></span>Not started</div>
-    </div>
-    <div class="step">
-      <div class="n">03</div><div class="t">Quantify</div>
-      <div class="s"><span class="dot"></span>Not started</div>
-    </div>
-    <div class="step">
-      <div class="n">04</div><div class="t">Plan</div>
-      <div class="s"><span class="dot"></span>Not started</div>
-    </div>
-    <div class="step">
-      <div class="n">05</div><div class="t">Approve</div>
-      <div class="s"><span class="dot"></span>Not started</div>
-    </div>
-    <div class="step">
-      <div class="n">06</div><div class="t">Report</div>
-      <div class="s"><span class="dot"></span>Not started</div>
-    </div>
+
+  <div class="ov-grid fill">
+    <!-- 65%: map -->
+    <section class="panel map-panel" aria-label="Observation map">
+      <div class="panel-head">
+        <h2>Regional observation</h2>
+      </div>
+      <div class="map-wrap" id="map">
+        <div class="map-empty" id="map-empty">Loading observation…</div>
+      </div>
+      <div class="map-tools">
+        <label><input type="checkbox" id="toggle-footprint" checked> Show plume footprint</label>
+        <label title="Tanager-1 true-colour imagery from the observation pass, served by Carbon Mapper"><input type="checkbox" id="toggle-scene"> Observation-day imagery</label>
+        <button class="link" id="btn-recenter" type="button">Recenter</button>
+        <span class="boundary" style="margin-left:auto"><span class="badge hypothesis">Boundary</span><span title="A satellite observation does not identify a specific valve or component.">A satellite observation does not identify a specific valve or component.</span></span>
+      </div>
+    </section>
+
+    <!-- 35%: source details -->
+    <section class="panel src-panel" id="src-panel" aria-label="Source details">
+      <div class="panel-head">
+        <h2>Carbon Mapper satellite observation</h2>
+        <span id="src-badge"></span>
+      </div>
+      <div id="src-body"><div class="missing">Loading…</div></div>
+      <div class="src-actions">
+        <button class="btn primary" id="btn-explore">Explore on-site investigation →</button>
+      </div>
+    </section>
   </div>
 
-  <span class="section-label">Screens</span>
-  <div class="cards">
-    <div class="card"><div class="kv">Screen 01</div><h3>Overview / Observe</h3><p>Regional Carbon Mapper satellite observation and entry into the local example.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 02</div><h3>Detect / Camera</h3><p>METEC OGI footage with plume overlay and detection provenance.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 03</div><h3>Locate</h3><p>Equipment layout + knowledge graph tabs, ranked candidates with evidence.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 04</div><h3>Quantify</h3><p>Simulated sensor charts and emission-rate estimate with method + assumptions.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 05</div><h3>Plan</h3><p>Evidence-backed draft work order with cited sources — never executed.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 06</div><h3>Approve</h3><p>Explicit human engineer review. Approval does not operate equipment.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 07</div><h3>Report</h3><p>Source-linked record with audit timeline and OGMP 2.0-aligned export.</p><span class="pill">Scaffolding</span></div>
-    <div class="card"><div class="kv">Screen 08</div><h3>Glass box</h3><p>Real agent trace: models, tools, evidence and guardrail decisions.</p><span class="pill">Scaffolding</span></div>
-  </div>
 </main>
+
+<!-- Addendum B transition notice -->
 
 </body>
 </html>

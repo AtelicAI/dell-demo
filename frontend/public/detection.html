@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera observation — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/plumeheat.js?v=101" defer></script>
+<script src="js/detection.js?v=101" defer></script>
+<style>
+
+  /* PRD Screen 2: 65% video / 35% detection metadata */
+  .det-grid{display:grid;grid-template-columns:minmax(0,65fr) minmax(0,35fr);gap:14px;min-height:0}
+  .det-grid > .panel{min-height:0}
+  .panel-head .badge{margin-left:auto}
+  .panel-head .badge + .meta{margin-left:0}
+  .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+  .panel-head .badges .badge{margin-left:0}
+
+  /* ----- video panel ----- */
+  .vid-panel{display:flex;flex-direction:column;overflow:hidden}
+  /* 2×2 camera wall: each video fills its cell (cover); CAM-01's overlay uses the same crop (slice) */
+  .wall{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;padding:6px}
+  .cell{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid var(--line-strong);border-radius:4px;background:var(--panel);overflow:hidden;transition:border-color var(--t-slow),box-shadow var(--t-slow)}
+  .cell.alert{border-color:var(--warn);box-shadow:0 0 0 3px var(--warn-glow)}
+  .cv{flex:1;min-height:0;position:relative;display:grid;place-items:center;background:#000}
+  .frame{position:absolute;inset:0}
+  .frame video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
+  .tcx{position:absolute;left:8px;top:8px;display:flex;align-items:center;gap:6px;padding:2px 7px;border-radius:4px;background:rgba(15,23,42,.6);color:rgba(255,255,255,.88);font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;pointer-events:none}
+  .tcx i{width:6px;height:6px;border-radius:50%;background:var(--bad);animation:recBlink 1.2s steps(2,start) infinite}
+  @keyframes recBlink{to{visibility:hidden}}
+  /* plume sits near the top of CAM-01, so crop from the bottom (overlay uses xMidYMin to match) */
+  .cam1 .frame video{object-position:center top}
+  .frame canvas.heat{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;filter:blur(3px)}
+  .cam1 .frame canvas.heat{object-position:center top}
+  .frame svg.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  /* CAM-01 before/after: Atelic output is clipped to the right of the handle, original shows on the left */
+  .cmp-on{cursor:ew-resize;touch-action:none;user-select:none}
+  .cam1 .frame video.raw{object-position:center top}
+  .cmp-on #video{clip-path:inset(0 0 0 var(--cut))}
+  .cmp-line{position:absolute;top:0;bottom:0;left:var(--cut);width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,.35);pointer-events:none}
+  .cmp-grip{position:absolute;top:50%;left:var(--cut);width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.45);display:grid;place-items:center;cursor:ew-resize}
+  .cmp-grip::before{content:"\2039\00a0\203A";font:600 15px/1 var(--sans);color:var(--ink);margin-top:-2px}
+  .cmp-grip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .cmp-tag{position:absolute;bottom:8px;padding:2px 7px;border-radius:4px;background:rgba(15,23,42,.6);color:rgba(255,255,255,.9);font-family:var(--mono);font-size:10px;letter-spacing:.04em;pointer-events:none}
+  .cmp-tag.l{left:8px}
+  .cmp-tag.r{right:8px;background:rgba(217,119,6,.85)}
+  .overlay .mask{fill:var(--warn);fill-opacity:.32;stroke:var(--warn);stroke-width:1.5;vector-effect:non-scaling-stroke}
+  .overlay .bbox{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4;vector-effect:non-scaling-stroke}
+  .overlay .origin line{stroke:#fff;stroke-width:1.5;vector-effect:non-scaling-stroke}
+  .overlay .origin circle{fill:none;stroke:#fff;stroke-width:1.5;vector-effect:non-scaling-stroke}
+  .no-feed{display:grid;gap:5px;text-align:center;padding:16px;color:rgba(255,255,255,.82);font-size:13px}
+  .no-feed span{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .no-feed.wide{grid-column:1/-1;grid-row:1/-1;place-self:center;color:var(--ink-mute)}
+  .cl{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--line);min-width:0}
+  .cl b{font-family:var(--mono);font-size:11.5px;font-weight:600;white-space:nowrap;flex-shrink:0}
+  .cl .st{flex-shrink:0}
+  /* Active alarms: every open alarm, the one being investigated, and a way to switch (also by clicking its tile). */
+  .alarms{display:flex;align-items:stretch;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .alarms .al-k{align-self:center;margin-right:4px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .al{flex:1 1 0;display:flex;align-items:center;gap:8px;padding:5px 10px;white-space:nowrap;border:1px solid var(--line-strong);border-left:3px solid var(--bad);border-radius:4px;background:var(--panel);font-size:12px;color:var(--ink-mute);text-decoration:none;min-width:0}
+  .al i{width:7px;height:7px;flex-shrink:0;border-radius:50%;background:var(--bad);animation:camPulse 1.6s ease-in-out infinite}
+  .al b{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .al > span:not(.go):not(.tag){min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .al .go,.al .tag{margin-left:auto!important}
+  .al em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--warn);white-space:nowrap}
+  .al .go{margin-left:4px;font-weight:600;color:var(--accent);white-space:nowrap}
+  a.al:hover{border-color:var(--accent)}
+  .al[aria-current=true]{border-color:var(--accent);border-left-color:var(--bad);box-shadow:0 0 0 2px var(--accent-glow)}
+  .al .tag{margin-left:4px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .cell[data-href]{cursor:pointer}
+  @media (prefers-reduced-motion:reduce){.al i{animation:none}}
+  .cl .ar{font-size:11.5px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .cl .st{margin-left:auto;display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);white-space:nowrap}
+  .cl .st i{width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
+  .cl .st.on{color:var(--good)}
+  .cl .st.on i{background:var(--good)}
+  .cell.alert .cl .st{color:var(--warn);font-weight:600}
+  .cell.alert .cl .st i{background:var(--bad);box-shadow:0 0 0 3px rgba(220,38,38,.25);animation:camPulse 1.6s ease-in-out infinite}
+  .cl .badge{margin-left:0}
+  .wall-foot{padding:8px 14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-dim)}
+  .wall-foot:empty{display:none}
+  @keyframes camPulse{50%{box-shadow:0 0 0 6px rgba(220,38,38,0)}}
+  @media (prefers-reduced-motion:reduce){.cell.alert .cl .st i,.tcx i{animation:none}}
+
+  /* ----- video wall: dark tiles, 2px gaps, labels overlaid on the image (CCTV style) ----- */
+  .wall{background:#0A0D12;gap:2px;padding:2px}
+  .cell{position:relative;border:0;border-radius:0;background:#000;box-shadow:none}
+  .cell.alert{border:0;box-shadow:none}
+  .cell.alert::after{content:"";position:absolute;inset:0;border:2px solid #EF4444;pointer-events:none;z-index:4}
+  .cl{position:absolute;left:0;right:0;bottom:0;z-index:3;border-top:0;padding:16px 10px 6px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.78));color:#E5E7EB}
+  .cl b{color:#F8FAFC}
+  .cl .ar{color:rgba(226,232,240,.7)}
+  .cl .st{color:rgba(226,232,240,.55)}
+  .cl .st i{border-radius:1px}
+  .cl .st.on{color:#6EE7B7}
+  /* healthy camera: a green light that blinks slowly, so the wall reads as live */
+  .cl .st.on i{background:#34D399;box-shadow:0 0 6px rgba(52,211,153,.7);animation:camLive 1.6s ease-in-out infinite}
+  @keyframes camLive{50%{opacity:.25;box-shadow:none}}
+  @media (prefers-reduced-motion:reduce){.cl .st.on i{animation:none}}
+  .cell.alert .cl .st{color:#FCA5A5}
+  .cell.alert .cl .st i{background:#EF4444;box-shadow:none;animation:none}
+  .cl .badge{color:rgba(226,232,240,.55)}
+  .tcx{left:10px;top:8px;padding:0;border-radius:0;background:none;color:rgba(248,250,252,.92);text-shadow:0 1px 2px rgba(0,0,0,.9)}
+  .tcx i{display:none}
+  /* compare: hairline divider, slim rectangular grip, plain overlaid labels */
+  .cmp-line{width:1px;margin-left:0;background:rgba(255,255,255,.85);box-shadow:0 0 0 .5px rgba(0,0,0,.4)}
+  .cmp-grip{width:8px;height:28px;margin:-14px 0 0 -4px;border-radius:1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+  .cmp-grip::before{content:none}
+  .cmp-tag{bottom:34px;padding:0;border-radius:0;background:none;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+  .cmp-tag.r{background:none;color:#fff}
+
+  /* presenter controls + PTZ zoom on the alert */
+  .event-ctl{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+  .ctl-pick .dd-btn{width:auto;height:24px;padding:0 7px 0 9px;font-size:11px}
+  .ctl-pick .dd-v span{display:none}
+  .ctl-pick .dd-pop{width:220px}
+  .cl .open-inc{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  .ctl{display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border:1px solid var(--line-strong);border-radius:3px;background:var(--panel);font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink-mute);cursor:pointer}
+  .ctl:hover{border-color:var(--ink-dim);color:var(--ink)}
+  .ctl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .ctl kbd{font:inherit;font-size:10px;padding:0 4px;border:1px solid var(--line-strong);border-radius:2px;color:var(--ink-dim)}
+  /* the wide shot keeps its equipment, near the bottom of the frame, in view */
+  .cam1 .frame #video-before{object-position:center 75%;transition:transform 650ms cubic-bezier(.4,0,.2,1)}
+  /* zoom toward the vent stack (about 56% across, 70% down in the wide shot) */
+  .cell.ptz #video-before{transform:scale(1.9);transform-origin:56% 70%}
+  .ptz-note{position:absolute;right:10px;top:8px;z-index:3;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:rgba(248,250,252,.92);text-shadow:0 1px 2px rgba(0,0,0,.9);pointer-events:none}
+  @media (prefers-reduced-motion:reduce){#video-before{transition:none}}
+
+  /* ----- metadata panel ----- */
+  .meta-panel{display:flex;flex-direction:column}
+  #meta-body{flex:1;min-height:0;overflow-y:auto}
+  .status{padding:10px 18px 10px;border-bottom:1px solid var(--line)}
+  .status .lbl,.kv .k{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .status .big{display:flex;align-items:center;gap:10px;margin-top:3px;font-size:clamp(20px,2.6vh,28px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
+  .status .big .sig{width:8px;height:8px;border-radius:1px;background:var(--ink-faint);flex-shrink:0}
+  .status.observed .big .sig{background:var(--bad)}
+  .status.unconfirmed .big{color:var(--ink-mute)}
+  .status.closed .big{color:var(--ink)}
+  .status.closed .big .sig{background:var(--good);border-radius:50%}
+  .status .said{margin:8px 0 0;padding:7px 10px;border-left:2px solid var(--good);background:var(--panel-2);font-size:12.5px;color:var(--ink);line-height:1.45}
+  .status .reopen{margin-top:8px;font-size:12px}
+  .btn.dismiss{width:100%;justify-content:center;margin-top:8px;font-weight:500;color:var(--ink-mute)}
+  .status .by{margin-top:5px;line-height:1.4;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-mute)}
+  .status .drawn{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.04em;color:var(--ink-mute)}
+
+  .origin-line{display:flex;align-items:center;gap:8px;padding:7px 18px;white-space:nowrap;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-mute);background:var(--panel-2)}
+  .origin-line b{color:var(--ink);font-weight:600}
+  .origin-line a{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;white-space:nowrap}
+  .origin-line .na{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+
+  .status .gb{margin-top:6px}
+  .kv{display:grid;grid-template-columns:max-content minmax(0,1fr);padding:2px 18px 8px}
+  .kv .v{min-width:0}
+  .kv .v > span:last-child{min-width:0;white-space:normal;text-align:right;line-height:1.35}
+  .kv .k{padding:4px 14px 4px 0;white-space:nowrap;border-bottom:1px dashed var(--line);align-self:stretch;display:flex;align-items:center}
+  .kv .v{padding:4px 0;white-space:nowrap;border-bottom:1px dashed var(--line);font-family:var(--mono);font-size:12px;color:var(--ink);display:flex;align-items:center;justify-content:flex-end;gap:7px;text-align:right;min-width:0}
+  .kv .v.na{color:var(--ink-dim)}
+  .kv .k:nth-last-child(2),.kv .v:last-child{border-bottom:0}
+  .more{border-top:1px solid var(--line)}
+  .more summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:8px 18px;font-size:12px;font-weight:600;color:var(--ink-mute)}
+  .more summary::-webkit-details-marker{display:none}
+  .more summary::before{content:"›";display:inline-block;transition:transform var(--t);color:var(--ink-dim)}
+  .more[open] summary::before{transform:rotate(90deg)}
+  .more summary span{font-weight:400;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .more summary:hover{color:var(--accent)}
+  .pdot{width:6px;height:6px;border-radius:1px;flex-shrink:0;background:var(--ink-faint)}
+  .pdot.experimental_setpoint{background:var(--ink-dim)}
+  .pdot.manual_annotation{background:var(--ink-dim)}
+  .pdot.model_estimated{background:var(--ink-dim)}
+  .pdot.provider_reported{background:var(--ink-dim)}
+  .pdot.simulated{display:none}
+
+  .caveat{margin:0 0 10px;padding:7px 10px;border:0;border-left:2px solid var(--line-strong);background:var(--panel-2);font-size:12px;color:var(--ink-mute);line-height:1.5}
+  .meta-panel.waiting #meta-body > :not(#status-block){display:none}
+  .meta-panel.waiting .badges{visibility:hidden}
+  .meta-actions .btn.disabled{opacity:.45;pointer-events:none}
+  .meta-actions{padding:10px 18px 12px;border-top:1px solid var(--line)}
+  .meta-actions .btn{width:100%;justify-content:center;padding:9px 16px}
+  .meta-actions small{display:block;text-align:center;margin-top:4px;font-size:11px;color:var(--ink-dim)}
+
+  @media (max-width:1100px){.det-grid{grid-template-columns:1fr}main.fit{height:auto}.wall{height:70vw}}
+</style>
+</head>
+<body data-page="detection" data-stage="detect">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide fit">
+  <div class="page-head">
+    <h1 title="Review the infrared recording and the observation that initiated the investigation.">Camera observation</h1>
+  </div>
+
+  <div class="stepper compact" id="stepper"></div>
+
+  <div class="det-grid fill">
+    <!-- 65%: 2×2 camera wall -->
+    <section class="panel vid-panel" aria-label="Field view">
+      <div class="panel-head">
+        <h2>Field view</h2>
+        <span id="clip-badge"></span>
+        <span class="event-ctl" id="event-ctl"></span>
+      </div>
+      <div class="alarms" id="alarms" hidden></div>
+      <div class="wall" id="wall"><div class="no-feed wide"><b>Loading cameras…</b></div></div>
+      <div class="wall-foot" id="wall-foot"></div>
+    </section>
+
+    <!-- 35%: detection metadata -->
+    <section class="panel meta-panel" aria-label="Detection metadata">
+      <div class="panel-head">
+        <h2>Detection</h2>
+        <span class="badges" id="meta-badge"></span>
+      </div>
+      <div id="meta-body"><div class="status">Loading…</div></div>
+      <div class="meta-actions">
+        <div class="caveat">The plume image alone does not identify a particular component or quantify emissions.</div>
+        <a class="btn primary" id="btn-investigate" href="locate.html">Investigate possible source →</a>
+        <button class="btn dismiss" id="btn-dismiss" type="button" hidden>Close as false alarm</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+
+</body>
+</html>

@@ -1,0 +1,431 @@
+{
+  "schema_version": "1.0",
+  "annotations": [
+    {
+      "clip_id": "MOV_1237",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1238",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1239",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1240",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1241",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1242",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1467",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1468",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1469",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1470",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1471",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1472",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_1473",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2559",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2560",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2561",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2562",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2563",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2564",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2566",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2567",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2569",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2571",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2578",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2579",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2580",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2581",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    },
+    {
+      "clip_id": "MOV_2583",
+      "review_status": "pending",
+      "reviewer": null,
+      "reviewed_at": null,
+      "label": null,
+      "intervals": [],
+      "polygons": [],
+      "evidence": [],
+      "source_mapping": "synthetic_illustrative_only; no real facility correspondence",
+      "reason": "Workbook labels and candidate offsets are not verified ground truth"
+    }
+  ],
+  "automated_visual_inspections": [
+    {
+      "clip_id": "MOV_1242",
+      "clip_seconds": 5,
+      "frame_file": "docs/evidence/MOV_1242_5s.png",
+      "method": "ffmpeg frame extraction followed by AI visual inspection with view_image; not human review",
+      "observation": "Grayscale scene with upright apparatus visible; single frame insufficient to establish gas presence or absence",
+      "label": null,
+      "source_inspection": "automated_visual_review"
+    },
+    {
+      "clip_id": "MOV_1242",
+      "clip_seconds": 185,
+      "frame_file": "docs/evidence/MOV_1242_185s.png",
+      "method": "ffmpeg frame extraction followed by AI visual inspection with view_image; not human review",
+      "observation": "Grayscale scene with upright apparatus visible; single frame insufficient to establish gas presence or absence",
+      "label": null,
+      "source_inspection": "automated_visual_review"
+    },
+    {
+      "clip_id": "MOV_2564",
+      "clip_seconds": 16,
+      "frame_file": "docs/evidence/MOV_2564_16s.png",
+      "method": "ffmpeg frame extraction followed by AI visual inspection with view_image; not human review",
+      "observation": "Grayscale scene with upright apparatus visible; single frame insufficient to establish gas presence or absence",
+      "label": null,
+      "source_inspection": "automated_visual_review"
+    },
+    {
+      "clip_id": "MOV_2564",
+      "clip_seconds": 196,
+      "frame_file": "docs/evidence/MOV_2564_196s.png",
+      "method": "ffmpeg frame extraction followed by AI visual inspection with view_image; not human review",
+      "observation": "Grayscale scene with upright apparatus visible; single frame insufficient to establish gas presence or absence",
+      "label": null,
+      "source_inspection": "automated_visual_review"
+    }
+  ],
+  "runtime_replays": [
+    {
+      "scenario": {
+        "id": "SCN-004",
+        "incident_id": "INC-004",
+        "title": "Recorded GasVid scene; gas annotation pending",
+        "duration_seconds": 1200,
+        "replay_limit_seconds": 1199,
+        "start_utc": null,
+        "clock_kind": "parent_assigned_demonstration_utc"
+      },
+      "clip_id": "MOV_1242",
+      "events": [
+        {
+          "event_id": "REC-OBS-004",
+          "incident_id": "INC-004",
+          "scenario_id": "SCN-004",
+          "camera_id": null,
+          "timestamp_utc": null,
+          "scenario_time_seconds": 185,
+          "clip_time_seconds": 185,
+          "mode": "recorded_scene_observation",
+          "source_inspection": "automated_visual_review",
+          "observation": "Upright apparatus visible in grayscale source frame",
+          "observation_status": "verified_scene_content_only",
+          "gas_label": null,
+          "gas_review_status": "pending",
+          "human_reviewed": false,
+          "origin_polygon": null,
+          "source_image_polygon": null,
+          "confidence": null,
+          "evidence": [
+            "docs/evidence/MOV_1242_185s.png"
+          ],
+          "provenance": {
+            "source_kind": "recorded",
+            "source_dataset": "GasVid 2",
+            "clip_id": "MOV_1242",
+            "reference": "downloaded/GasVid 2/Videos/MOV_1242.mp4",
+            "source_sha256": "b7a125f5ab21572c1a11403b9d76528a54d95a73b1b007843ab084c6550da19f",
+            "source_mapping": "synthetic_illustrative",
+            "source_time_synchronized": false
+          },
+          "demonstrative_geometry": {
+            "source_independent": true,
+            "facility_polygon": null,
+            "basis": "Parent may supply demonstrative facility geometry separately; not observed or inferred source region"
+          }
+        }
+      ]
+    }
+  ]
+}

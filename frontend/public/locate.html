@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Locate source — Atelic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css?v=101">
+<link rel="stylesheet" href="css/shell.css?v=101">
+<script src="js/shell.js?v=103" defer></script>
+<script src="js/plumeheat.js?v=101" defer></script>
+<script src="js/locate.js?v=101" defer></script>
+<style>
+
+  /* PRD Screen 3: investigation (camera strip + plant view) | ranked candidates */
+  .loc-grid{position:relative;display:grid;grid-template-columns:minmax(0,60fr) minmax(0,40fr);gap:14px;min-height:0}
+
+  /* Loader: lists the real loads (graph, candidates, camera frame) and what each returned. */
+  .loader{position:absolute;inset:0;z-index:5;display:grid;place-items:center;border-radius:var(--radius);
+    background:linear-gradient(180deg,rgba(246,248,251,.6),var(--bg));transition:opacity var(--t-slow)}
+  .loader.done{opacity:0;pointer-events:none}
+  .ld-card{width:min(440px,90%);padding:18px 20px;border:1px solid var(--line-strong);border-radius:var(--radius-lg);background:var(--panel);box-shadow:0 18px 44px rgba(15,23,42,.10)}
+  .ld-card .lbl{display:block;margin-bottom:10px}
+  .ld-card ul{margin:0;padding:0;list-style:none}
+  .ld-card li{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:13px}
+  .ld-card li:first-child{border-top:0}
+  .ld-card .rs{font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-align:right}
+  .ld-card li.ok .rs{color:var(--ink-mute)}
+  .ld-card li.fail .rs{color:var(--warn)}
+  .st{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink-faint);border-top-color:var(--accent);animation:spin .8s linear infinite}
+  li.ok .st{animation:none;border:0;background:var(--good);-webkit-mask:none;position:relative}
+  li.ok .st::after{content:"";position:absolute;left:4.5px;top:2px;width:4px;height:7px;border:solid #fff;border-width:0 1.8px 1.8px 0;transform:rotate(45deg)}
+  li.fail .st{animation:none;border:0;background:var(--warn)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loc-grid:not(.ready) > .panel{opacity:0}
+  .loc-grid.ready > .panel{animation:rise var(--t-slow) both}
+  .loc-grid.ready > .panel:nth-child(3){animation-delay:60ms}
+  .loc-grid.ready > .panel:nth-child(4){animation-delay:120ms}
+  @media (prefers-reduced-motion:reduce){.loc-grid.ready > .panel{animation:none}.st{animation-duration:2s}}
+  .loc-grid > .panel{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .panel-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+  .kg-link{font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+  .kg-link:hover{text-decoration:underline}
+  .kg-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  .scroll{flex:1;min-height:0;overflow-y:auto}
+  .note{font-size:12px;color:var(--ink-mute);line-height:1.5}
+  .caveat{margin:0;padding:8px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.5}
+  .id{font-family:var(--mono);font-weight:600;color:var(--ink);white-space:nowrap}
+  .panel-head h2{white-space:nowrap}
+
+  /* ----- camera strip (top of the investigation panel): looping replay with heat map + what the incident camera can see ----- */
+  .cam-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+  .cam-stage{width:150px;height:100px;container-type:size;display:grid;place-items:center}
+  .cam-frame{--ar:1.3333;position:relative;aspect-ratio:var(--ar);width:min(100cqw,100cqh * var(--ar));background:#000;border-radius:4px;overflow:hidden;
+    box-shadow:0 0 0 1px var(--line-strong),0 6px 16px rgba(15,23,42,.16)}
+  .cam-frame video{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .cam-frame canvas.heat{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;filter:blur(2px)}
+  .cam-frame svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .cam-frame .bbox{fill:none;stroke:var(--warn);stroke-width:1.5;stroke-dasharray:4 2;vector-effect:non-scaling-stroke}
+  .cam-frame .roi{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke}
+  .cam-frame .roi.sel{fill-opacity:.32;stroke-width:2.2}
+  .cam-frame .br,.cam-chip{display:none}
+  .cam-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:8px;color:rgba(255,255,255,.86);font-size:11px;font-weight:600}
+  .cam-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .cam-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
+  .cam-meta > b{color:var(--ink);font-weight:600}
+  .cam-meta .badges{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  .vis-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .vchips{display:flex;flex-wrap:wrap;gap:4px}
+  .vchip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:3px;border:1px solid var(--line-strong);background:var(--panel);font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color var(--t),background var(--t)}
+  .vchip:hover{border-color:var(--accent)}
+  .vchip.sel{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
+  .vchip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .vchip .d{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-dim)}
+  .vchip .d.on{background:var(--accent);border-color:var(--accent)}
+  .vis-sel{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-mute);white-space:nowrap;min-width:0}
+  .vis-sel:empty{display:none}
+  .vis-sel .t{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .vis-sel b{font-family:var(--mono);color:var(--ink)}
+  .vis-sel .roi-tag{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;border:1px dashed var(--ink-faint);border-radius:3px}
+  .vis-sel .roi-tag.on{color:var(--accent);border:1px solid var(--accent)}
+  .cam-note{font-size:11px;color:var(--ink-mute);line-height:1.35;padding-left:8px;border-left:2px solid var(--warn)}
+
+  /* ----- investigation pane ----- */
+  .tab{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:4px;border:1px solid transparent;background:none;cursor:pointer;color:var(--ink-mute)}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected=true]{color:var(--accent);background:var(--accent-glow);border-color:var(--line-strong)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .view{flex:1;min-height:0;display:flex;flex-direction:column}
+  .canvas{flex:1;min-height:0;position:relative}
+  #layout svg{position:absolute;inset:0;width:100%;height:100%}
+  .view-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px;font-size:13px;color:var(--ink-mute)}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:14px;height:0;border-top:1.5px solid var(--ink-mute)}
+  .legend i.mon{border-top:1.5px dashed var(--pink)}
+  .legend i.obs{border-top:1.5px dotted var(--ink-dim)}
+  .legend i.cand{width:9px;height:9px;border-radius:50%;border:1.5px dashed var(--warn)}
+  .edge-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 14px;border-top:1px solid var(--line);background:var(--panel-2);font-size:11.5px;color:var(--ink-mute);min-height:34px}
+  .edge-info b{font-family:var(--mono);font-size:11px;color:var(--ink)}
+
+  /* layout SVG */
+  .lk{stroke:var(--ink-mute);stroke-width:1.6;fill:none}
+  .lk.mon{stroke:var(--pink);stroke-width:1.1;stroke-dasharray:4 3}
+  .lk.obs{stroke:var(--ink-dim);stroke-width:1.1;stroke-dasharray:1.5 3;opacity:.7}
+  .lk.hl{stroke:var(--accent);stroke-width:2.4;opacity:1}
+  .nd{cursor:pointer}
+  .nd .sh{fill:var(--panel);stroke:var(--ink-mute);stroke-width:1.4}
+  .nd.t-Vessel .sh{fill:rgba(17,24,39,.05);stroke:var(--n-station)}
+  .nd.t-Valve .sh{fill:rgba(17,24,39,.05);stroke:var(--n-equip)}
+  .nd.t-Vent .sh{fill:rgba(17,24,39,.05);stroke:var(--n-well)}
+  .nd.t-Sensor .sh{fill:rgba(17,24,39,.05);stroke:var(--n-tag)}
+  .nd.t-Camera .sh{fill:rgba(17,24,39,.05);stroke:var(--n-wt)}
+  .nd .tx{font-family:var(--mono);font-size:10.5px;font-weight:600;fill:var(--ink)}
+  .nd .sub{font-family:var(--sans);font-size:9.5px;fill:var(--ink-dim)}
+  .nd .cring{fill:none;stroke:var(--warn);stroke-width:1.4;stroke-dasharray:3 3}
+  .nd .rank{font-family:var(--mono);font-size:9px;font-weight:700;fill:var(--warn)}
+  .nd .ring{fill:none;stroke:var(--accent);stroke-width:2.4;opacity:0}
+  .nd.sel .ring{opacity:1}
+  .nd.sel .tx{fill:var(--accent)}
+  .nd:focus-visible{outline:none}
+  .nd:focus-visible .ring{opacity:1;stroke-dasharray:3 2}
+  .nd:hover .sh{stroke-width:2.2}
+
+  /* ----- candidates pane: verdict card, scoreboard, grouped evidence ----- */
+  .assess{padding:11px 16px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .assess .v-k{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  .assess .v-row{display:flex;align-items:center;gap:12px;margin-top:2px}
+  .assess .v-id{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--ink)}
+  .assess .v-nm{font-size:12px;color:var(--ink-mute)}
+    .assess .pill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:3px;background:var(--warn-glow);border:1px solid rgba(217,119,6,.35);color:var(--warn);font-size:11.5px;font-weight:600}
+  .assess .pill i{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+  .assess .by{margin-top:3px;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .assess .by b{color:var(--warn);font-weight:600}
+  .assess.unresolved{background:none}
+  .assess.unresolved .v-id{color:var(--ink-mute)}
+  .cands{padding:7px 10px 7px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+  .cands .lbl{display:block;padding:0 6px 3px}
+  .cand{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:4px 8px;border:1px solid transparent;border-radius:4px;background:none;cursor:pointer;text-align:left;transition:background var(--t),border-color var(--t)}
+  .cand:hover{background:var(--panel-2)}
+  .cand.sel{border-color:var(--accent);background:var(--accent-glow)}
+  .cand:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .cand .rk{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-mute);background:var(--panel-3);border:1px solid var(--line-strong)}
+  .cand.sel .rk{background:var(--accent);border-color:var(--accent);color:#fff}
+  .cand .nm{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+  .cand .nm b{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink)}
+  .cand .nm span{font-size:11.5px;color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cand .ev{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .meter{display:flex;gap:2px}
+  .meter i{width:9px;height:6px;border-radius:2px}
+  .meter i.f{background:var(--ink-mute)}
+  .meter i.a{background:none;box-shadow:inset 0 0 0 1px var(--ink-dim)}
+  .cand .ct{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);white-space:nowrap}
+  .dtabs{display:flex;gap:2px;margin:8px 12px 0;padding:3px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line)}
+  .dtabs .tab{flex:1;font-size:11px;padding:4px 6px;border-radius:4px;border:1px solid transparent;white-space:nowrap}
+  .dtabs .tab[aria-selected=true]{background:var(--panel);border-color:var(--line-strong);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.06)}
+  .detail{padding:2px 16px 10px}
+  .detail h4{margin:10px 0 3px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .detail ul{margin:0;padding:0;list-style:none}
+  .detail li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--ink);line-height:1.45}
+  .detail li:last-child{border-bottom:0}
+  .detail li .mk{flex-shrink:0;width:14px;text-align:center;font-family:var(--mono);font-weight:700}
+  .detail li .mk.for{color:var(--ink)}.detail li .mk.against{color:var(--ink-dim)}.detail li .mk.miss{color:var(--ink-dim)}
+  .detail li .tx{flex:1;min-width:0}
+  .detail li .src{display:block;margin-top:1px}
+  .detail .why{margin:10px 0 2px;font-size:12px;line-height:1.5;color:var(--ink-mute)}
+  .eg{margin-top:10px;border-left:2px solid var(--line-strong);padding-left:10px}
+  .eg h4{display:flex;align-items:center;gap:6px;margin:0 0 2px}
+  .eg h4 .mk{font-size:11px}
+  .eg h4 .n{margin-left:auto;font-weight:600;color:var(--ink-dim)}
+  .eg.for{border-color:var(--ink-mute)}.eg.for h4 .mk{color:var(--ink)}
+  .eg.against{border-color:var(--ink-faint)}.eg.against h4 .mk{color:var(--ink-dim)}
+  .eg.miss{border-color:var(--ink-faint);border-left-style:dashed}
+  .eg li{padding:4px 0;border-bottom:1px dashed var(--line)}
+  .detail h4.oth{margin-top:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--line-strong);border-radius:3px;font-size:11.5px;color:var(--ink-mute);background:var(--panel)}
+  .kv{display:grid;grid-template-columns:auto 1fr;font-size:12px}
+  .kv .k{padding:4px 12px 4px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px dashed var(--line)}
+  .kv .v{padding:4px 0;font-family:var(--mono);font-size:11.5px;color:var(--ink);border-bottom:1px dashed var(--line);text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+  .pdot{width:6px;height:6px;border-radius:1px;flex-shrink:0;background:var(--ink-dim)}
+  .cand-actions{padding:6px 14px 8px;border-top:1px solid var(--line)}
+  .cand-actions .note{margin-bottom:5px;font-size:10.5px;line-height:1.35;color:var(--ink-dim)}
+  .cand-actions .btn{width:100%;justify-content:center;padding:8px 16px}
+  .cand-actions small{display:block;text-align:center;margin-top:4px;font-size:11px;color:var(--ink-dim)}
+
+  @media (max-width:1100px){.loc-grid{grid-template-columns:1fr}main.fit{height:auto}.canvas{height:420px;flex:none}}
+</style>
+</head>
+<body data-page="locate" data-stage="locate">
+
+<aside class="rail" id="rail"></aside>
+<header class="topbar" id="topbar"></header>
+
+<main class="wide fit">
+  <div class="page-head">
+    <h1 title="Compare the camera observation with equipment visibility, piping connections and available records.">Investigate the likely source</h1>
+  </div>
+
+  <div class="stepper compact" id="stepper"></div>
+
+  <div class="loc-grid fill" id="loc-grid">
+    <div class="loader" id="loader" role="status" aria-live="polite">
+      <div class="ld-card">
+        <span class="lbl">Preparing source investigation</span>
+        <ul>
+          <li data-k="graph"><span class="st"></span><span>Site knowledge graph</span><span class="rs">Loading…</span></li>
+          <li data-k="cands"><span class="st"></span><span>Source candidates</span><span class="rs">Loading…</span></li>
+          <li data-k="cam"><span class="st"></span><span>Camera frame</span><span class="rs">Loading…</span></li>
+        </ul>
+      </div>
+    </div>
+    <!-- 1: camera strip + equipment layout (the full knowledge graph has its own page: graph.html) -->
+    <section class="panel" aria-label="Equipment investigation">
+      <div class="panel-head">
+        <h2>Equipment layout</h2>
+        <span class="badges" id="graph-badge"></span>
+        <a class="kg-link" id="kg-link" href="graph.html?from=locate" title="See all relationships of the selected asset">Open in knowledge graph →</a>
+      </div>
+
+      <div class="cam-strip" aria-label="Camera view">
+        <div class="cam-stage"><div class="cam-frame" id="cam-frame"><div class="cam-empty">Loading frame…</div></div></div>
+        <div class="cam-info">
+          <div class="cam-meta"><b id="cam-name">Camera replay</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
+          <div class="vis-row"><span class="lbl">Camera can see</span><div class="vchips" id="vis-list"></div><div class="vis-sel" id="vis-sel"></div></div>
+          <div class="cam-note" id="cam-caveat" hidden></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-layout">
+        <div class="canvas" id="layout"><div class="view-empty">Loading layout…</div></div>
+        <div class="legend">
+          <span><i></i>Piping (gas flow →)</span>
+          <span><i class="mon"></i>Monitors</span>
+          <span><i class="obs"></i>Camera can observe</span>
+          <span><i class="cand"></i>Source candidate</span>
+        </div>
+      </div>
+
+      <div class="edge-info" id="edge-info"><span class="note">Click a connection to see where it comes from.</span></div>
+    </section>
+
+    <!-- 2: ranked candidates + evidence -->
+    <section class="panel" aria-label="Source candidates">
+      <div class="panel-head">
+        <h2>Source assessment</h2>
+        <span class="badges" id="cand-badge"></span>
+        <span class="gb-slot" data-trace="equipment_mapping"></span>
+      </div>
+      <div id="assess" class="assess"><div class="note">Loading…</div></div>
+      <div class="cands" id="cands"></div>
+      <div class="dtabs" role="tablist" aria-label="Asset detail">
+        <button class="tab" role="tab" data-t="evidence" aria-selected="true">Evidence</button>
+        <button class="tab" role="tab" data-t="connections" aria-selected="false" tabindex="-1">Connections</button>
+        <button class="tab" role="tab" data-t="maintenance" aria-selected="false" tabindex="-1">Maintenance</button>
+        <button class="tab" role="tab" data-t="mapping" aria-selected="false" tabindex="-1">Mapping assumptions</button>
+      </div>
+      <div class="scroll"><div class="detail" id="detail" role="tabpanel"></div></div>
+      <div class="cand-actions">
+        <div class="note">Camera-to-equipment mapping is manually configured for this site.</div>
+        <a class="btn primary" id="btn-quantify" href="quantify.html">Review emissions estimate →</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+</body>
+</html>
