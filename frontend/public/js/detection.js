@@ -189,7 +189,6 @@
 
   function renderWall(clipOk, origOk, mode) {
     const cams = wall ? wall.cameras : [{ camera_id: CAM, area: '', watches: [], feed: 'ogi_clip' }];
-    const wallP = wall ? (wall.status === 'sample' ? 'simulated' : wall.provenance) : null;
     const video = (src, low) => `<div class="frame${low ? ' anc-b' : ''}"><video muted autoplay loop playsinline preload="auto" src="${src}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
     $('wall').innerHTML = cams.map((c) => {
       const mine = c.camera_id === CAM;
@@ -197,9 +196,6 @@
       const other = !mine && live.find((l) => l.camera_id === c.camera_id);
       const loop = !mine && !other && c.feed && typeof c.feed === 'object' && c.feed.file;
       const on = mine || other || loop;
-      const tip = mine ? `${c.camera_id} · watches ${c.watches.join(', ')} · ${esc(window.AtelicShell.FACILITY.short)}`
-        : on ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded, looped`
-        : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed`;
       const screen = mine ? cam1Screen(mode, clipOk, origOk)
         : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`, other.frame_anchor === 'bottom')
         : loop ? video(`${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}`)
@@ -209,11 +205,10 @@
         ? `ALERT · <a class="open-inc" href="${window.AtelicShell.incHref('detection', other.incident_id)}">${esc(other.incident_id)} →</a>`
         : on ? 'Watching' : 'No feed';
       const otherOpen = other && other.triggered && !other.dismissal;
-      return `<div class="cell${mine ? ' cam1' : ''}${otherOpen ? ' alert' : ''}" title="${esc(otherOpen ? `${tip} · click to investigate ${other.incident_id}` : tip)}"${otherOpen ? ` data-href="${window.AtelicShell.incHref('detection', other.incident_id)}"` : ''}>
+      return `<div class="cell${mine ? ' cam1' : ''}${otherOpen ? ' alert' : ''}"${otherOpen ? ` data-href="${window.AtelicShell.incHref('detection', other.incident_id)}"` : ''}>
         <div class="cv">${screen}</div>
         <div class="cl"><b>${esc(c.camera_id)}</b><span class="ar">${esc(c.area)}</span>
-          <span class="st${on ? ' on' : ''}"><i></i><span class="sv">${state}</span></span>
-          ${badge(mine ? prov : wallP)}</div>
+          <span class="st${on ? ' on' : ''}"><i></i><span class="sv">${state}</span></span></div>
       </div>`;
     }).join('');
     tickWall();
@@ -454,8 +449,7 @@
     if (g !== gen) return;
     v.playbackRate = 1;
     ffOn = false;
-    say('Model alert', 'ff');
-    setTimeout(() => { if (tag) tag.classList.remove('ff'); }, 2500);
+    say('', '');
     renderControls('event');
   }
 
@@ -611,7 +605,7 @@
       const frames = usableAnnotations(d);
       frames.forEach((a) => byFrame.set(a.frame, a));
 
-      $('clip-badge').innerHTML = wall ? badge(wall.status === 'sample' ? 'simulated' : wall.provenance) : '';
+      $('clip-badge').innerHTML = '';
       const origOk = d.clip_available && d.original_available && meta.plume_rendering === 'burned_in';
       // One continuous recording: from the start of the monitored window while no alarm has been raised, from the
       // alarm on once the incident exists.
