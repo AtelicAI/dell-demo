@@ -5,7 +5,8 @@
   const next = (() => {
     try {
       const u = new URL(new URLSearchParams(location.search).get('next') || '/', location.origin);
-      return u.origin === location.origin && !u.pathname.startsWith('/login') ? u.pathname + u.search + u.hash : '/';
+      // Navigate to the full checked URL so it is never re-parsed as a relative (e.g. protocol-relative) reference.
+      return u.origin === location.origin && !u.pathname.startsWith('/login') ? u.href : '/';
     } catch (e) { return '/'; }
   })();
   $('f').addEventListener('submit', async (e) => {
