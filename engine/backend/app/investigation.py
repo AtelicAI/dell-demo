@@ -14,6 +14,10 @@ MAX_MODEL_TURNS = 8
 # Every tool once (the answer agent can see up to ten) plus a couple of repeats.
 MAX_TOOL_CALLS = 12
 REQUEST_TIMEOUT_SECONDS = 300
+# Hosted endpoints shed load with fast 429/5xx replies. Retrying the same call keeps the agent's tool work so far;
+# a slow failure (the 300 s deadline) is not retried.
+TRANSIENT_STATUS = {408, 429, 500, 502, 503, 504}
+RETRY_WAIT_SECONDS = (5, 15, 30)
 # Reasoning models spend part of the completion budget before writing the cited JSON draft.
 MAX_COMPLETION_TOKENS = 12000
 
@@ -171,6 +175,15 @@ class Provider:
                    "max_tokens": MAX_COMPLETION_TOKENS, "stream": False}
         if tools:
             request.update(tools=tools, tool_choice="auto")
+        for wait in (*RETRY_WAIT_SECONDS, None):
+            try:
+                return self._complete_once(request)
+            except _Transient as exc:
+                if wait is None:
+                    raise ModelUnavailable(f"Inference provider kept failing ({exc}); no model output recorded") from exc
+                time.sleep(exc.retry_after if exc.retry_after is not None else wait)
+
+    def _complete_once(self, request):
         deadline = time.monotonic() + REQUEST_TIMEOUT_SECONDS
         try:
             with httpx.Client(timeout=REQUEST_TIMEOUT_SECONDS) as client:
@@ -183,11 +196,27 @@ class Provider:
                         if time.monotonic() > deadline:
                             raise ModelUnavailable("Inference provider exceeded the request deadline; no model output recorded")
                 choice = json.loads(body)["choices"][0]
+        except httpx.HTTPStatusError as exc:
+            code = exc.response.status_code
+            if code in TRANSIENT_STATUS:
+                after = exc.response.headers.get("retry-after")
+                raise _Transient(f"HTTP {code}", float(after) if after and after.isdigit() and int(after) <= 60 else None) from exc
+            raise ModelUnavailable(f"Inference provider refused the request (HTTP {code}); no model output recorded") from exc
+        except (httpx.ConnectError, httpx.RemoteProtocolError) as exc:
+            raise _Transient(type(exc).__name__) from exc
+        except httpx.TimeoutException as exc:
+            raise ModelUnavailable("Inference provider timed out; no model output recorded") from exc
         except (httpx.HTTPError, KeyError, ValueError) as exc:
-            raise ModelUnavailable("Configured inference provider failed; no successful model output recorded") from exc
+            raise ModelUnavailable(f"Inference provider returned an unusable response ({type(exc).__name__}); no model output recorded") from exc
         if choice.get("finish_reason") == "length" and not choice["message"].get("tool_calls"):
             raise ModelUnavailable("Model output truncated at the completion token limit; no draft saved")
         return choice["message"]
+
+
+class _Transient(Exception):
+    def __init__(self, reason, retry_after=None):
+        super().__init__(reason)
+        self.retry_after = retry_after
 
 
 class Investigator:

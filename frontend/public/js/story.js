@@ -34,6 +34,7 @@
         ${inv.focus ? `<p>Focus from ${esc(inv.requested_by || 'the engineer')}: “${esc(inv.focus)}”</p>` : ''}
         <ul>${(inv.changes || []).map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
       <p class="inv-sum">${esc(inv.summary)}</p>
+      ${inv.source_origin !== 'llm' ? '<p class="inv-tools">The model was unavailable, so this is a rule-based listing. Use Research again on Approve to rerun the investigation with the model.</p>' : ''}
       <ul class="inv-f">${fs.map((f) => {
         const [cls, label] = KIND[f.kind] || ['ctx', f.kind];
         return `<li class="${cls}"><span class="k">${label}</span><span class="t">${esc(f.statement)}${cites(f.evidence_ids)}</span></li>`;
@@ -46,7 +47,9 @@
   function questions(list, canAsk) {
     const items = (list || []).slice().reverse().map((q) => `<li class="qa ${q.status}">
       <div class="qa-q"><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}<p>${esc(q.question)}</p></div>
-      ${q.status === 'answered' ? `<div class="qa-a"><span class="lbl">${esc(q.source_origin === 'llm' ? 'Agent answer · Nemotron' : 'Answer')}</span><p>${esc(q.answer)}</p>
+      ${q.status === 'answered' && q.source_origin !== 'llm' ? `<div class="qa-a"><span class="lbl">Not answered</span>
+        <p>The model was unavailable when this was asked, so no answer was generated.${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(q.question)}">Ask again</button>` : ''}</p></div>`
+      : q.status === 'answered' ? `<div class="qa-a"><span class="lbl">Agent answer · Nemotron</span><p>${esc(q.answer)}</p>
         ${q.cannot_determine ? `<p class="qa-cd"><b>Cannot determine from the evidence:</b> ${esc(Array.isArray(q.cannot_determine) ? q.cannot_determine.join('; ') : q.cannot_determine)}</p>` : ''}
         ${(q.suggested_follow_up || []).length ? `<ul class="qa-fu">${q.suggested_follow_up.map((x) => {
           const t = typeof x === 'string' ? x : x.statement || JSON.stringify(x);

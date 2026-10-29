@@ -27,6 +27,8 @@ RETRYABLE_RATE_REASONS = {'non_steady_plume', 'no_resolved_downwind_signal', 'wa
 # An estimate is kept but the clock keeps advancing while the readings cannot yet separate the camera candidates.
 UNDECIDED_ATTRIBUTION = {'partly_agrees', 'agrees_ambiguous'}
 MODEL_ATTEMPTS = 2
+# Pause before another attempt after a failed one, so a shedding endpoint is not hit again within seconds.
+RETRY_PAUSE_SECONDS = 20
 MAX_FOLLOW_UPS = 20
 # Where an idle run waits, by workflow state. Every exit from these needs an authenticated human.
 IDLE_STATUS = {'pending_review': 'awaiting_human_review', 'approved': 'awaiting_report', 'reported': 'awaiting_repair_record',
@@ -228,7 +230,9 @@ class Orchestrator:
                 modes.append(('deterministic', f'orch-{step}-{tag}-deterministic-{previous+1}'))
         else:
             modes = [('deterministic', f'orch-{step}-{tag}-deterministic')]
-        for mode, key in modes:
+        for i, (mode, key) in enumerate(modes):
+            if i and mode == 'model':
+                time.sleep(RETRY_PAUSE_SECONDS)
             if mode == 'deterministic' and self.options['plan_mode'] == 'model':
                 self.emit(step, 'fallback', detail='Nemotron unavailable for this step; using labeled deterministic template, not AI output')
             body = self.routes.DraftRequest(mode=mode, expected_version=self.record()['version'], idempotency_key=key)
