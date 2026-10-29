@@ -189,7 +189,7 @@
   function wireModal() {
     $('btn-explore').addEventListener('click', () => window.AtelicShell.modal({
       title: 'Separate local example',
-      html: `<p>This local investigation follows a camera alert at ${window.AtelicShell.FACILITY.name}, ${window.AtelicShell.FACILITY.location}. It is not the satellite-observed facility.</p>`,
+      html: `<p>This local investigation follows a camera alert at a ${window.AtelicShell.FACILITY.name.toLowerCase()} in ${window.AtelicShell.FACILITY.location}. It is not the satellite-observed facility.</p>`,
       cancelLabel: 'Stay on overview', okLabel: 'Continue to camera observation', okHref: 'detection.html',
     }));
   }

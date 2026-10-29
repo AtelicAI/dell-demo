@@ -28,7 +28,8 @@
   })();
   let liveIncidents = null;
   // Fictional facility the local investigation is set at (no real operator or site).
-  const FACILITY = { name: 'XXX Gas Gathering Station', short: 'XXX GGS', location: 'Bahrain' };
+  // The site stays anonymous: a generic description, never a station name.
+  const FACILITY = { name: 'Gas gathering station', short: 'Gas gathering station', location: 'Bahrain' };
 
   const STAGE_LABELS = {
     detect: 'Detect', locate: 'Locate', quantify: 'Quantify',
@@ -784,7 +785,7 @@
     card.id = 'no-incident';
     card.className = 'panel no-incident-card';
     card.innerHTML = `<div class="t">No active incident</div>
-      <p>All cameras at ${FACILITY.name} are watching. This screen opens when a camera raises an alert.</p>
+      <p>All cameras at the ${FACILITY.name.toLowerCase()} are watching. This screen opens when a camera raises an alert.</p>
       <a class="btn" href="detection.html">Go to cameras →</a>`;
     const after = $('stepper') || document.querySelector('main .lede');
     if (after) after.after(card); else document.querySelector('main').prepend(card);
