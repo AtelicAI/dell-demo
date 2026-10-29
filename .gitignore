@@ -29,4 +29,3 @@ data/ogi/*.mp4
 .run/
 .ui-state/
 !data/ogi/cam01_mov1242_before.mp4
-!data/ogi/cam01_mov1242_leak.mp4

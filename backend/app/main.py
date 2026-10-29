@@ -497,8 +497,12 @@ def overview_plume_image():
 
 # ----- Camera -----
 
-CLIP = {"before": "ogi/cam01_mov1242_before.mp4", "event": "ogi/cam01_mov1242_leak.mp4"}
-EVENT_START = 185.0  # source seconds of MOV_1242 where the leak clip starts (GasVid Leak 1 boundary)
+# CAM-01 after the alert: the Atelic infrared-visibility view of MOV_1242 (frames 3207-3281, source 215.06-220.0 s),
+# with the untouched original infrared of the same frames for the before/after slider. Before the alert: the same
+# recording at 125-185 s (GasVid class 0, below camera detection).
+CLIP = {"before": "ogi/cam01_mov1242_before.mp4", "event": "ogi/source_clip.mp4", "original": "ogi/source_clip_original.mp4"}
+EVENT_START = 215.056  # source seconds of the first frame of the event clips
+EVENT_SECONDS = 5.0
 FPS = 15.0
 
 
@@ -515,14 +519,14 @@ def model_annotations():
         frames = []
         for p in det["predictions"]:
             t = p.get("pts_seconds")
-            if not p.get("prediction") or t is None or t < EVENT_START:
+            if not p.get("prediction") or t is None or not EVENT_START - 0.5 <= t < EVENT_START + EVENT_SECONDS:
                 continue
-            polys = sorted(p.get("plume_extent_polygons") or [], key=len, reverse=True)
             boxes = p.get("normalized_boxes") or []
             b = boxes[0] if boxes else None
-            start = int(round((t - EVENT_START) * FPS))
-            frames.append({"start_frame": start, "end_frame": start + int(FPS) - 1,
-                           "mask_polygon_normalized": [[round(x, 4), round(y, 4)] for x, y in polys[0]] if polys else [],
+            # The plume is already rendered into the Atelic view, so only the executed model's box is listed (no
+            # browser mask on top). Each 1 Hz sample holds until the next one.
+            start = max(0, int(round((t - EVENT_START) * FPS)))
+            frames.append({"start_frame": start, "end_frame": min(int(EVENT_SECONDS * FPS) - 1, start + int(FPS) - 1),
                            "bbox_normalized": [round(v, 4) for v in (b[0], b[1], b[2] - b[0], b[3] - b[1])] if b else None,
                            "confidence": None, "source_seconds": round(t, 3)})
         return {"mon": mon, "ranges": frames}
@@ -540,11 +544,13 @@ def get_detections(incident_id: str):
         "status": "verified", "ogi_clip_id": mon["clip_id"], "origin": "METEC (GasVid)",
         "source_url": "https://purl.stanford.edu/gn716hm8958",
         "recording_date": f.get("recorded_date") or "2017-07-13", "camera_type": "FLIR GF-320 (OGI)",
-        "resolution": "320x240", "frame_rate": FPS, "variable_frame_rate": False, "duration_s": 120.0,
-        "license_status": "verified", "provenance": "model_estimated", "plume_rendering": "overlay",
+        "resolution": "640x480 (Atelic view, 2x) · 320x240 original", "frame_rate": FPS, "variable_frame_rate": False,
+        "duration_s": EVENT_SECONDS, "license_status": "verified", "provenance": "model_estimated", "plume_rendering": "burned_in",
+        "source_segment": {"start_seconds": round(EVENT_START, 3), "end_seconds": round(EVENT_START + EVENT_SECONDS, 3), "frames": [3207, 3281]},
+        "rendering": "Atelic infrared plume visibility: SAM2 support x reference-relative image evidence; not concentration",
         "detection_mode": "recorded_model_output",
         "model_version": f"{model['method']} ({model['owl']['id'].split('/')[-1]} + {model['sam']['id'].split('/')[-1]})",
-        "clip_window_seconds": [EVENT_START, EVENT_START + 120], "alert_policy": mon["alert_policy"],
+        "clip_window_seconds": [EVENT_START, EVENT_START + EVENT_SECONDS], "alert_policy": mon["alert_policy"],
         "metered_release": {"rate_g_h": seg.get("metered_rate_g_h") or seg.get("rate_g_h"), "label": seg.get("label"),
                             "basis": "GasVid metered release class for this footage (Wang et al. 2020, Table 1)"},
         "mapping_basis": mon["mapping_basis"],
@@ -557,7 +563,7 @@ def get_detections(incident_id: str):
                         "reviewed_by": None, "frames": [], "ranges": a["ranges"], "run_id": mon["run_id"],
                         "note": "1 Hz executed model samples, each held until the next sample"},
         "triggered": bool(s["engine_id"]), "dismissal": s["dismissal"], "clip_available": True,
-        "before_available": True, "original_available": False, "frame_times": None,
+        "before_available": True, "original_available": True, "frame_times": None,
         "camera_wall": read_json("skid", "camera_wall.json"),
         "alert": ev and {"clip_time_seconds": ev.get("clip_time_seconds"), "timestamp_utc": ev.get("timestamp_utc"),
                          "reference": (ev.get("provenance") or {}).get("reference")},
@@ -602,6 +608,12 @@ def incident_clip(incident_id: str, request: Request):
 def incident_clip_before(incident_id: str, request: Request):
     slot_or_404(incident_id)
     return serve_mp4(DATA_DIR / CLIP["before"], request)
+
+
+@app.get("/incidents/{incident_id}/clip/original")
+def incident_clip_original(incident_id: str, request: Request):
+    slot_or_404(incident_id)
+    return serve_mp4(DATA_DIR / CLIP["original"], request)
 
 
 @app.get("/ogi/cams/{camera_id}")

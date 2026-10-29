@@ -1,7 +1,7 @@
 {
-  "_comment": "Clip: 5 s enhanced-visibility rendering of GasVid MOV_2566 (gasvid-visibility-clean.mp4, supplied by the Atelic team): 2x upscaled, plume colourised in the video itself; the supplied file's 32 px title bar is cropped off (ffmpeg crop=640:480:0:32, libx264 crf 16). Which 5 s of the original it covers is not recorded, so source_segment is null. The raw cut (03:10-08:00, 4324 frames) is kept locally as data/ogi/source_clip_raw.mp4. plume_rendering 'burned_in' turns off the browser heat map, which would otherwise paint over the colourised plume. Licence still unconfirmed, so status stays pending. resolution/frame_rate/duration_s/frame_count are written by scripts/ogi_inspect.py. Clip goes in data/ogi/source_clip.mp4 (not committed). detection_mode is one of: external_detector_alert, local_model_inference, recorded_model_output, manually_annotated_replay.",
+  "_comment": "Clip: 5 s Atelic infrared-visibility rendering of GasVid MOV_1242 (renders/gasvid-visibility-clean.mp4: frames 3207-3281, source 215.06-220.0 s; provenance in the engine repo), 2x upscaled with the plume rendered into the video; source_clip_original.mp4 is the untouched original infrared of the same 75 frames. Earlier drafts of this file named MOV_2566; the render provenance shows MOV_1242. The UI API (backend/app/main.py) now serves the metadata for these clips.",
   "status": "pending",
-  "ogi_clip_id": "MOV_2566",
+  "ogi_clip_id": "MOV_1242",
   "origin": "METEC",
   "source_url": "https://drive.google.com/drive/folders/1JKEMtCGPSq2IqGk4uXZP9A6gr8fyJsGC",
   "recording_date": null,
@@ -20,6 +20,13 @@
   "model_version": null,
   "variable_frame_rate": false,
   "frame_count": 75,
-  "source_segment": null,
+  "source_segment": {
+    "start_seconds": 215.056,
+    "end_seconds": 220.0,
+    "frames": [
+      3207,
+      3281
+    ]
+  },
   "plume_rendering": "burned_in"
 }
