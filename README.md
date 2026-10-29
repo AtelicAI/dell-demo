@@ -10,7 +10,7 @@ order, answer the engineer's questions, revise on request, and verify the repair
 ## Run locally
 
 ```bash
-cp .env.example .env          # fill the secrets, or: deploy/gen_env.sh .env :8080 <demo-password>
+cp .env.example .env          # fill the secrets, or: deploy/gen_env.sh .env :8080 <sign-in-password>
 docker compose up -d --build
 docker compose --profile seed run --rm seed   # once per fresh volume set
 ```

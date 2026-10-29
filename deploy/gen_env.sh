@@ -1,8 +1,8 @@
 #!/bin/bash
-# Generate a fresh .env with random secrets. Usage: deploy/gen_env.sh <out-file> <site-address> [login-password]
+# Generate a fresh .env with random secrets. Usage: deploy/gen_env.sh <out-file> <site-address> <login-password>
 # NVIDIA_API_KEY is read from the environment (never echoed).
 set -euo pipefail
-out=$1; site=$2; pass=${3:-atelicadmin}
+out=$1; site=$2; pass=${3:?pass the sign-in password as the third argument}
 r() { openssl rand -hex 24; }
 umask 077
 cat > "$out" <<ENV

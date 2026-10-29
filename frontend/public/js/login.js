@@ -1,10 +1,12 @@
 // Sign-in page: POST /api/login sets an HttpOnly session cookie; then go back to the page that asked.
 (function () {
   const $ = (id) => document.getElementById(id);
-  // Only same-site paths are followed after sign-in (never an absolute URL from the query string).
+  // Only same-origin pages are followed after sign-in; the value is resolved by the browser's own URL parser.
   const next = (() => {
-    const n = new URLSearchParams(location.search).get('next') || '/';
-    return n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/login') ? n : '/';
+    try {
+      const u = new URL(new URLSearchParams(location.search).get('next') || '/', location.origin);
+      return u.origin === location.origin && !u.pathname.startsWith('/login') ? u.pathname + u.search + u.hash : '/';
+    } catch (e) { return '/'; }
   })();
   $('f').addEventListener('submit', async (e) => {
     e.preventDefault();
