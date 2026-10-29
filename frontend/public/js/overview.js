@@ -107,7 +107,11 @@
       ? `<a class="r" href="${esc(rec.source_url)}" target="_blank" rel="noopener">Open on Carbon Mapper ↗</a>`
       : '<span class="r na">Not available</span>';
 
-    $('src-body').innerHTML = `${flag}${rate}${historyBlock(rec, $('src-body').clientWidth)}
+    // Regional context only: a public detection near the (anonymous) demo site, never its history.
+    const context = `<div class="ctx-note"><b>Regional context, not this site.</b> A public ${esc(rec.sector_label || '').toLowerCase() || 'oil and gas'} methane detection
+      in ${esc(window.AtelicShell.FACILITY.location)}. Satellites like ${esc(rec.instrument || 'Tanager-1')} see plumes of hundreds to thousands of kg/h;
+      the leak in this investigation is 0.28 kg/h, far below that, which is why cameras and sensors watch the site.</div>`;
+    $('src-body').innerHTML = `${flag}${context}${rate}${historyBlock(rec, $('src-body').clientWidth)}
       <div class="facts">
         ${fact('Observed', obsDate || null, obsTime && `${obsTime} UTC`)}
         ${fact('Instrument', rec.instrument, rec.gsd_m != null ? `${Math.round(rec.gsd_m)} m pixels` : null)}
