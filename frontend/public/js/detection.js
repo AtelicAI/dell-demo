@@ -177,8 +177,11 @@
   // captured it, rendered into the video) with the untouched original infrared on the slider, from the start of the
   // monitored window; the alarm latches from the executed detector samples while it plays. Until the alarm only the
   // original infrared shows (no slider, no Atelic view); the alarm reveals the comparison (revealCompare).
+  // Default state is quiet: until Trigger the camera loops plume-free footage (#video-quiet) over the paused event
+  // recording, so nothing is detected or raised on its own.
   function cam1Screen(mode, clipOk, origOk) {
-    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted autoplay playsinline preload="auto" src="${API()}/incidents/${window.AtelicShell.INCIDENT_ID}/clip"></video><canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
+    const quiet = !raised, auto = quiet ? '' : ' autoplay', inc = window.AtelicShell.INCIDENT_ID;
+    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip"></video>${quiet ? `<video id="video-quiet" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${inc}/clip/before"></video>` : ''}<canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
       : `<div class="no-feed"><b>${esc(CAM)} leak recording not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
   }
 
@@ -396,17 +399,21 @@
     if (r) r.addEventListener('click', reset);
   }
 
-  // Trigger while the camera is monitoring: fast-forward the recording to just before the model alarm; the alarm
-  // then latches from the model's own samples and raises the incident (raise below). Otherwise raise directly.
+  // Trigger while the camera is quiet: cut from the quiet loop straight to the model alarm in the event recording, so
+  // the plume and the detection appear together; the alarm latches from the model's own samples and raises the
+  // incident (raise below). Otherwise raise directly.
   let monitor = null, alerted = false;
   function fastForward() {
     const v = $('video');
     if (!monitor || monitor.alert_t == null || !v || v.readyState < 1) return false;
-    const to = Math.max(0, monitor.alert_t - 6);
-    if (v.currentTime < to) v.currentTime = to;
+    if (v.currentTime < monitor.alert_t) v.currentTime = monitor.alert_t;
     v.play().catch(() => {});
+    const raw = $('video-raw');
+    if (raw) { raw.currentTime = monitor.alert_t; raw.play().catch(() => {}); }
+    const q = $('video-quiet');
+    if (q) q.remove();
     const tag = $('mon-tag');
-    if (tag) { tag.textContent = 'Fast-forward to the model alarm'; tag.className = 'mon-tag ff'; setTimeout(() => tag.classList.remove('ff'), 2500); }
+    if (tag) { tag.textContent = 'Model alarm'; tag.className = 'mon-tag ff'; setTimeout(() => tag.classList.remove('ff'), 2500); }
     return true;
   }
 
