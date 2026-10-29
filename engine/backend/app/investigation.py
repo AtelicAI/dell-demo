@@ -221,16 +221,20 @@ class Provider:
 # Tools still execute live on the new incident; only the model's replies come from the recording, with the recorded
 # engine incident ID swapped for the new one. Engineer questions, research rounds and revisions always call the model.
 # Delete a recording (or set MODEL_REPLAY=0) to run live again.
-RECORDINGS = Path(os.getenv("RECORDED_RUNS_DIR", Path(__file__).resolve().parents[2] / "data" / "recorded_runs"))
+# New recordings go to RECORDED_RUNS_DIR (a volume on the host); recordings committed to the repo are read as well.
+COMMITTED = Path(__file__).resolve().parents[2] / "data" / "recorded_runs"
+RECORDINGS = Path(os.getenv("RECORDED_RUNS_DIR", COMMITTED))
 RECORDED_TASKS = ("investigate", "plan")
 REPLAY_MAX_TURN_SECONDS = float(os.getenv("REPLAY_MAX_TURN_SECONDS", "6"))
 
 
 def _recording_path(incident_id, task):
+    """Where this chain step's recording is (host recordings first, then committed ones), or would be written."""
     slot = incident_id.rsplit("-M", 1)[0]
     if not re.fullmatch(r"INC-\d{3}", slot) or task not in RECORDED_TASKS:
         return None
-    return RECORDINGS / f"{slot}.{task}.json"
+    name = f"{slot}.{task}.json"
+    return next((d / name for d in (RECORDINGS, COMMITTED) if (d / name).is_file()), RECORDINGS / name)
 
 
 def recorded_provider(incident_id, task):
@@ -244,8 +248,11 @@ def recorded_provider(incident_id, task):
 
 
 def recording_status():
-    return {p.name.removesuffix(".json"): json.loads(p.read_text()).get("recorded_at")
-            for p in sorted(RECORDINGS.glob("INC-*.json"))} if RECORDINGS.is_dir() else {}
+    out = {}
+    for d in (COMMITTED, RECORDINGS):  # host recordings override committed ones
+        for p in sorted(d.glob("INC-*.json")) if d.is_dir() else []:
+            out[p.name.removesuffix(".json")] = json.loads(p.read_text()).get("recorded_at")
+    return out
 
 
 class RecordingProvider(Provider):

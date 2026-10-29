@@ -7,8 +7,8 @@ COPY scripts /srv/scripts
 COPY data /srv/data
 ENV ATELIC_DATA_DIR=/srv/data PYTHONUNBUFFERED=1
 RUN useradd --system --uid 10001 atelic
-# Recorded agent runs are written here on the first live run of each demo incident (engine/data/recorded_runs).
-RUN mkdir -p /srv/data/recorded_runs && chown -R atelic /srv/data/recorded_runs
+# Recorded agent runs: new ones are written to /srv/recordings (a volume); committed ones ship in /srv/data/recorded_runs.
+RUN mkdir -p /srv/recordings && chown atelic /srv/recordings
 USER atelic
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--app-dir", "backend", "--host", "0.0.0.0", "--port", "8000"]

@@ -1284,7 +1284,8 @@ def agent_status(s):
     step = orch.get("current_step")
     # The automatic chain's investigate/plan replay a recorded Nemotron run when one exists (engine/data/recorded_runs).
     recs = cached(("recordings",), lambda: engine.try_get("/model/recordings") or {}, ttl=30)
-    replayed = running and f"{s['incident_id']}.{step}" in recs and not (step == "plan" and (record(s) or {}).get("draft_version"))
+    # Recordings are keyed by the engine's scenario (INC-002's engine incidents are INC-003-M…).
+    replayed = running and f"{s['engine_id'].rsplit('-M', 1)[0]}.{step}" in recs and not (step == "plan" and (record(s) or {}).get("draft_version"))
     return {"status": orch["status"], "current_step": step, "replayed": bool(replayed),
             "trace": step_trace(orch) if running else None,
             "text": AGENT_TEXT.get(orch.get("current_step"), orch.get("current_step")) if running else None,
