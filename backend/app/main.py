@@ -35,7 +35,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "P
 STAGES = ["detect", "locate", "quantify", "plan", "approve", "report", "close"]
 OPERATOR = "Operator (not signed in)"
 AGENT_STEPS = ("investigate", "plan", "revise", "answer", "verify")
-SLOT_DEFAULTS = {"INC-001": {"camera_id": "CAM-01", "profile": "leak"}}
+SLOT_DEFAULTS = {"INC-001": {"camera_id": "CAM-01", "profile": "leak"},            # event 1: MOV_1237, SCN-001
+                 "INC-002": {"camera_id": "CAM-02", "profile": "wind_outage"}}     # event 2: MOV_1239, SCN-003 (wind lost)
 REPORTED = ("reported", "repair_recorded", "verification_ready", "closed", "follow_up_required")
 APPROVED_OR_LATER = ("approved",) + REPORTED
 
@@ -291,7 +292,7 @@ def view(s):
         "dismissal": s["dismissal"],
         "source_status": ("No active alert" if not s["engine_id"] else "False alarm (dismissed)" if s["dismissal"]
                           else "Source unconfirmed"),
-        "scenario": "SCN-001" if s["profile"] == "leak" else s["profile"],
+        "scenario": {"leak": "SCN-001", "wind_outage": "SCN-003"}.get(s["profile"], s["profile"]),
         "stages": stages_for(s),
         "engine": {"incident_id": s["engine_id"], "status": (orch or {}).get("status"),
                    "current_step": (orch or {}).get("current_step"), "state": rec and rec["state"],
@@ -420,7 +421,7 @@ def post_trigger(incident_id: str):
                                                      "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")}, human=True)
             s.update(engine_id=res["incident_id"], triggered_at=now_utc())
             ev = res["event"]
-            audit(s, "alert_triggered", "CAM-01 model alarm (OWLv2 + SAM2, 3 of 5 samples)",
+            audit(s, "alert_triggered", f"{s['camera_id']} model alarm (OWLv2 + SAM2, 3 of 5 samples)",
                   f"{s['camera_id']} alert raised; engine incident {res['incident_id']} opened. Model alert on recorded "
                   f"GasVid footage at clip {ev.get('clip_time_seconds') or 0:.1f} s; agents started")
             save()
@@ -497,80 +498,73 @@ def overview_plume_image():
 
 # ----- Camera -----
 
-# CAM-01 after the alert: the Atelic infrared-visibility view of MOV_1242 (frames 3207-3281, source 215.06-220.0 s),
-# with the untouched original infrared of the same frames for the before/after slider. Before the alert: the same
-# recording at 125-185 s (GasVid class 0, below camera detection).
-CLIP = {"before": "ogi/cam01_mov1242_before.mp4", "event": "ogi/source_clip.mp4", "original": "ogi/source_clip_original.mp4"}
-EVENT_START = 215.056  # source seconds of the first frame of the event clips
-MONITOR_START, MONITOR_END = 125.0, 230.0  # source seconds of the continuous pre-alert clip (CLIP["before"])
-EVENT_SECONDS = 5.0
+# Each event is one continuous recording: the Atelic infrared-visibility render (the plume as the model captured
+# it, frame by frame) with the untouched original of the same frames for the slider. It plays from the start of
+# the monitored window; the alarm latches from the executed detector samples (3 of the last 5 positive).
+EVENTS = {
+    "INC-001": {"atelic": "ogi/inc001_mov1237_atelic.mp4", "original": "ogi/inc001_mov1237_original.mp4"},
+    "INC-002": {"atelic": "ogi/inc002_mov1239_atelic.mp4", "original": "ogi/inc002_mov1239_original.mp4"},
+}
 FPS = 15.0
 
 
-def footage():
-    return cached(("footage",), lambda: engine.get("/monitor/footage", {"profile": "leak"}), ttl=3600)
+def footage(profile):
+    return cached(("footage", profile), lambda: engine.get("/monitor/footage", {"profile": profile}), ttl=3600)
 
 
-def model_annotations():
-    """Executed OWLv2+SAM2 predictions (1 Hz) on the leak clip as per-frame regions. Each sample is shown for
-    the second until the next one; frames between samples were not inferred."""
+def event_timeline(profile):
+    """Executed detector samples over the monitored window, the alarm moment (as the engine computes it) and the
+    metered release segments, all in seconds from the start of the event clip."""
     def build():
-        mon = engine.get("/monitor", {"profile": "leak"})
+        mon = engine.get("/monitor", {"profile": profile})
         det = engine.get(f"/videos/{mon['clip_id']}/detections", {"run_id": mon["run_id"]})
-        frames = []
-        for p in det["predictions"]:
-            t = p.get("pts_seconds")
-            if not p.get("prediction") or t is None or not EVENT_START - 0.5 <= t < EVENT_START + EVENT_SECONDS:
-                continue
-            boxes = p.get("normalized_boxes") or []
-            b = boxes[0] if boxes else None
-            # The plume is already rendered into the Atelic view, so only the executed model's box is listed (no
-            # browser mask on top). Each 1 Hz sample holds until the next one.
-            start = max(0, int(round((t - EVENT_START) * FPS)))
-            frames.append({"start_frame": start, "end_frame": min(int(EVENT_SECONDS * FPS) - 1, start + int(FPS) - 1),
-                           "bbox_normalized": [round(v, 4) for v in (b[0], b[1], b[2] - b[0], b[3] - b[1])] if b else None,
-                           "confidence": None, "source_seconds": round(t, 3)})
-        # Continuous monitoring before the alarm: every executed 1 Hz sample in the pre-alert clip, and the moment
-        # the persistence policy (3 of the last 5 samples positive) first latches, as the engine computes it.
-        window = [p for p in det["predictions"] if p.get("pts_seconds") is not None and MONITOR_START <= p["pts_seconds"] < MONITOR_END]
-        samples = []
-        for p in window:
-            polys = sorted(p.get("plume_extent_polygons") or [], key=len, reverse=True)
+        t0, t1 = float(mon["clip_start_seconds"]), float(mon["clip_end_seconds"])
+        preds = sorted((p for p in det["predictions"] if p.get("pts_seconds") is not None), key=lambda p: p["pts_seconds"])
+        alert = (engine.get("/monitor/status", {"profile": profile, "clip_seconds": t1}).get("alert") or {})
+        alert_t = alert["clip_seconds"] - t0 if alert.get("clip_seconds") is not None else None
+        box = lambda b: [round(v, 4) for v in (b[0], b[1], b[2] - b[0], b[3] - b[1])]
+        # Regions for the plume panel after the alarm: each executed sample's box until the next sample.
+        ranges = []
+        positives = [p for p in preds if p.get("prediction") and alert_t is not None and p["pts_seconds"] - t0 >= alert_t - 1e-6]
+        for p, nxt in zip(positives, positives[1:] + [None]):
+            start = int(round((p["pts_seconds"] - t0) * FPS))
+            end = int(round(((nxt["pts_seconds"] if nxt else t1) - t0) * FPS)) - 1
             b = (p.get("normalized_boxes") or [None])[0]
-            samples.append({"t": round(p["pts_seconds"] - MONITOR_START, 3), "positive": bool(p.get("prediction")),
-                            "mask_polygon_normalized": [[round(x, 4), round(y, 4)] for x, y in polys[0]] if p.get("prediction") and polys else [],
-                            "bbox_normalized": [round(v, 4) for v in (b[0], b[1], b[2] - b[0], b[3] - b[1])] if p.get("prediction") and b else None})
-        status = engine.get("/monitor/status", {"profile": "leak", "clip_seconds": MONITOR_END})
-        alert = status.get("alert") or {}
-        segs = [{"start": round(x["start_seconds"] - MONITOR_START, 3), "end": round(x["end_seconds"] - MONITOR_START, 3),
-                 "rate_g_h": x.get("metered_rate_g_h") or x.get("rate_g_h"), "label": x.get("label")} for x in footage().get("segments", [])]
-        monitor = {"clip_start_seconds": MONITOR_START, "clip_end_seconds": MONITOR_END, "samples": samples,
-                   "alert_t": round(alert["clip_seconds"] - MONITOR_START, 3) if alert.get("clip_seconds") is not None else None,
+            ranges.append({"start_frame": start, "end_frame": max(start, end), "bbox_normalized": box(b) if b else None,
+                           "confidence": None, "source_seconds": round(p["pts_seconds"], 3)})
+        segs = [{"start": round(x["start_seconds"] - t0, 3), "end": round(x["end_seconds"] - t0, 3),
+                 "rate_g_h": x.get("metered_rate_g_h"), "label": x.get("label")} for x in footage(profile).get("segments", [])]
+        monitor = {"clip_start_seconds": t0, "clip_end_seconds": t1, "alert_t": round(alert_t, 3) if alert_t is not None else None,
+                   "samples": [{"t": round(p["pts_seconds"] - t0, 3), "positive": bool(p.get("prediction"))} for p in preds],
                    "policy": mon["alert_policy"], "segments": segs,
-                   "note": "Executed OWLv2+SAM2 samples at 1 Hz on the recorded footage; the alarm latches when 3 of the last 5 samples are positive"}
-        return {"mon": mon, "ranges": frames, "monitor": monitor}
-    return cached(("annotations",), build, ttl=3600)
+                   "note": "Executed detector samples on the recorded footage; the alarm latches when 3 of the last 5 are positive"}
+        return {"mon": mon, "ranges": ranges, "monitor": monitor}
+    return cached(("timeline", profile), build, ttl=3600)
 
 
 @app.get("/incidents/{incident_id}/detections")
 def get_detections(incident_id: str):
     s = slot_or_404(incident_id)
-    a = model_annotations()
-    mon, f = a["mon"], footage()
+    a = event_timeline(s["profile"])
+    mon, f = a["mon"], footage(s["profile"])
     model = mon["model"]
-    seg = next((x for x in f.get("segments", []) if x.get("class") == 1), {})
+    m = a["monitor"]
+    at = (m["alert_t"] or 0) + m["clip_start_seconds"]
+    seg = next((x for x in f.get("segments", []) if x["start_seconds"] <= at < x["end_seconds"]), {})
     meta = {
         "status": "verified", "ogi_clip_id": mon["clip_id"], "origin": "METEC (GasVid)",
         "source_url": "https://purl.stanford.edu/gn716hm8958",
-        "recording_date": f.get("recorded_date") or "2017-07-13", "camera_type": "FLIR GF-320",
+        "recording_date": f.get("recorded_date"), "camera_type": "FLIR GF-320",
+        "imaging_distance_m": f.get("imaging_distance_m"),
         "resolution": "640x480 (Atelic view, 2x) · 320x240 original", "frame_rate": FPS, "variable_frame_rate": False,
-        "duration_s": EVENT_SECONDS, "license_status": "verified", "provenance": "model_estimated", "plume_rendering": "burned_in",
-        "source_segment": {"start_seconds": round(EVENT_START, 3), "end_seconds": round(EVENT_START + EVENT_SECONDS, 3), "frames": [3207, 3281]},
-        "rendering": "Atelic infrared plume visibility: SAM2 support x reference-relative image evidence; not concentration",
+        "duration_s": m["clip_end_seconds"] - m["clip_start_seconds"], "license_status": "verified", "provenance": "model_estimated",
+        "plume_rendering": "burned_in",
+        "source_segment": {"start_seconds": m["clip_start_seconds"], "end_seconds": m["clip_end_seconds"]},
+        "rendering": "Atelic infrared plume visibility: SAM2 video tracking x reference-relative image evidence; not concentration",
         "detection_mode": "recorded_model_output",
-        "model_version": f"{model['method']} ({model['owl']['id'].split('/')[-1]} + {model['sam']['id'].split('/')[-1]})",
-        "clip_window_seconds": [EVENT_START, EVENT_START + EVENT_SECONDS], "alert_policy": mon["alert_policy"],
-        "metered_release": {"rate_g_h": seg.get("metered_rate_g_h") or seg.get("rate_g_h"), "label": seg.get("label"),
+        "model_version": f"{model['method']} (owlv2 + {model['id'].split('/')[-1]})" if model.get("id") else model.get("method"),
+        "clip_window_seconds": [m["clip_start_seconds"], m["clip_end_seconds"]], "alert_policy": mon["alert_policy"],
+        "metered_release": {"rate_g_h": seg.get("metered_rate_g_h"), "label": seg.get("label"), "class": seg.get("class"),
                             "basis": "GasVid metered release class for this footage (Wang et al. 2020, Table 1)"},
         "mapping_basis": mon["mapping_basis"],
     }
@@ -580,11 +574,10 @@ def get_detections(incident_id: str):
         "camera_id": s["camera_id"], "metadata": meta,
         "annotations": {"status": "verified", "provenance": "model_estimated", "ogi_clip_id": mon["clip_id"],
                         "reviewed_by": None, "frames": [], "ranges": a["ranges"], "run_id": mon["run_id"],
-                        "note": "1 Hz executed model samples, each held until the next sample"},
+                        "note": "Executed detector samples from the alarm on, each held until the next sample"},
         "triggered": bool(s["engine_id"]), "dismissal": s["dismissal"], "clip_available": True,
         "before_available": True, "original_available": True, "frame_times": None,
-        "camera_wall": read_json("skid", "camera_wall.json"),
-        "monitor": a["monitor"],
+        "camera_wall": read_json("skid", "camera_wall.json"), "monitor": m,
         "alert": ev and {"clip_time_seconds": ev.get("clip_time_seconds"), "timestamp_utc": ev.get("timestamp_utc"),
                          "reference": (ev.get("provenance") or {}).get("reference")},
     }
@@ -621,19 +614,19 @@ def serve_mp4(path, request):
 @app.get("/incidents/{incident_id}/clip")
 def incident_clip(incident_id: str, request: Request):
     slot_or_404(incident_id)
-    return serve_mp4(DATA_DIR / CLIP["event"], request)
+    return serve_mp4(DATA_DIR / EVENTS[incident_id]["atelic"], request)
 
 
 @app.get("/incidents/{incident_id}/clip/before")
 def incident_clip_before(incident_id: str, request: Request):
     slot_or_404(incident_id)
-    return serve_mp4(DATA_DIR / CLIP["before"], request)
+    return serve_mp4(DATA_DIR / EVENTS[incident_id]["atelic"], request)  # one continuous recording per event
 
 
 @app.get("/incidents/{incident_id}/clip/original")
 def incident_clip_original(incident_id: str, request: Request):
     slot_or_404(incident_id)
-    return serve_mp4(DATA_DIR / CLIP["original"], request)
+    return serve_mp4(DATA_DIR / EVENTS[incident_id]["original"], request)
 
 
 @app.get("/ogi/cams/{camera_id}")

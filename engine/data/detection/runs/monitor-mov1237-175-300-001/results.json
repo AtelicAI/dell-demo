@@ -1,0 +1,2832 @@
+{
+ "schema_version": "1.0",
+ "run_id": "monitor-mov1237-175-300-001",
+ "status": "completed",
+ "clip_id": "MOV_1237",
+ "source_sha256": "55b188cd39b9373d20d9a1cedcee98ea6ca15aaf554ea06302fe9e445e644c71",
+ "start_seconds": 175.0,
+ "end_seconds": 300.0,
+ "sample_interval_seconds": "irregular (detector cadence of the full job, median about 2 s)",
+ "model": {
+  "method": "langgas-inspired-owlv2-sam2-v1",
+  "id": "facebook/sam2.1-hiera-small",
+  "revision": "ee5bba1d82bb8749febdf90f45e84b687142ba03",
+  "weights_sha256": "0a4067b11ce1e23d5229203f11c718a823060d15a4b23fa2372a7d4b77cbbc60",
+  "implementation_sha256": "e354ac0fedd3d6ea5e8d5bef04e2d6e4c2b1ac4384b293e638df4a5c4bb3c48f",
+  "device": "cuda",
+  "load_seconds": 0.19710178100012854,
+  "training_performed": false,
+  "seed_source": "existing model prediction; never ground truth",
+  "api_key_used": false,
+  "real_time_verified": false,
+  "limitations": [
+   "Visual propagation does not establish methane identity or source",
+   "Incorrect seeds can propagate; reset required at shot boundaries",
+   "Maximum 120 frames / 8 source seconds per session"
+  ],
+  "detector": {
+   "method": "langgas-inspired-owlv2-sam2-v1",
+   "implementation_sha256": "f18960fa70305ef3abafb2b147c657a563c9a5d91b21d0bc1fa37425721dbd9d",
+   "min_alert_mask_pixels": 4,
+   "owl": {
+    "id": "google/owlv2-base-patch16-ensemble",
+    "revision": "cfd3195ba4ea9592eec887ded089f4c08eff231d",
+    "license": "Apache-2.0",
+    "weights_sha256": "e1e130b9e404cf91a75ad45644c1da9d7fa5284085eecc864266a6923efb99e7",
+    "weights_bytes": 619918824
+   },
+   "sam": {
+    "id": "facebook/sam2.1-hiera-small",
+    "revision": "ee5bba1d82bb8749febdf90f45e84b687142ba03",
+    "license": "Apache-2.0",
+    "weights_sha256": "0a4067b11ce1e23d5229203f11c718a823060d15a4b23fa2372a7d4b77cbbc60",
+    "weights_bytes": 184305280
+   },
+   "device": "cuda",
+   "hardware": "local workstation; not Dell/NVIDIA deployment",
+   "pretrained": true,
+   "training_performed": false,
+   "threshold": 0.06,
+   "threshold_source": "fixed upstream owl_gasvid.py threshold; not fitted to our footage",
+   "temporal_filter": false,
+   "model_load_seconds": 0.6472369040002377,
+   "versions": {
+    "torch": "2.12.0+cu126",
+    "transformers": "5.8.1",
+    "opencv": "4.10.0"
+   },
+   "differences_from_upstream": [
+    "float32 local inference, no CUDA/bitsandbytes requirement",
+    "Hugging Face SAM2 implementation and causal positive-box matching",
+    "bounded prompt boxes; raw masks saved before visual labels",
+    "sample interval and temporal context recorded per run; not a claimed paper reproduction"
+   ],
+   "limitations": [
+    "Not a methane-specific trained detector or calibrated gas classifier",
+    "A visual plume candidate cannot establish gas identity, exact equipment or kg/h",
+    "Masks are predictions, not annotation ground truth"
+   ]
+  }
+ },
+ "derived_from": {
+  "run_id": "full-MOV_1237-20261023",
+  "results_sha256": "2cf4b48bd7192d2cdb6dc135e115da4776a99c96585de6ec93c6bd5619db15f2",
+  "detections_sha256": "2b20b4c7bd66576d899d3e0674edf55db8b476ce308fdb2e46e88653b42d8505",
+  "note": "Detector samples copied unchanged from the completed full-recording job; no new inference"
+ },
+ "predictions": [
+  {
+   "frame_id": 2614,
+   "pts_seconds": 175.40033333333335,
+   "prediction": 0,
+   "score": 0.023195110261440277,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 66.49072500022157,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2630,
+   "pts_seconds": 176.46233333333333,
+   "prediction": 0,
+   "score": 0.04350152611732483,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 66.73354800022935,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2646,
+   "pts_seconds": 177.52233333333334,
+   "prediction": 0,
+   "score": 0.022916443645954132,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.017735000452376,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2662,
+   "pts_seconds": 178.58333333333334,
+   "prediction": 0,
+   "score": 0.0305562112480402,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 60.25953100015613,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2678,
+   "pts_seconds": 179.64433333333335,
+   "prediction": 0,
+   "score": 0.03293759003281593,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 66.6427920004935,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2684,
+   "pts_seconds": 180.04233333333335,
+   "prediction": 0,
+   "score": 0.012252281419932842,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 62.22774900015793,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2700,
+   "pts_seconds": 181.10433333333333,
+   "prediction": 0,
+   "score": 0.015698226168751717,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 62.6773880003384,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2716,
+   "pts_seconds": 182.16533333333334,
+   "prediction": 0,
+   "score": 0.021881168708205223,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.42666000009922,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2732,
+   "pts_seconds": 183.22533333333334,
+   "prediction": 0,
+   "score": 0.022339656949043274,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 60.951200000090466,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2748,
+   "pts_seconds": 184.28633333333335,
+   "prediction": 0,
+   "score": 0.018292048946022987,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.70238700047048,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2763,
+   "pts_seconds": 185.31433333333334,
+   "prediction": 0,
+   "score": 0.026671890169382095,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 60.92419699962193,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2774,
+   "pts_seconds": 186.07733333333334,
+   "prediction": 0,
+   "score": 0.013820519670844078,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 61.22872800006007,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2789,
+   "pts_seconds": 187.10633333333334,
+   "prediction": 0,
+   "score": 0.013417873531579971,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.478432000105386,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2805,
+   "pts_seconds": 188.16533333333334,
+   "prediction": 0,
+   "score": 0.017101861536502838,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.68927199955942,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2821,
+   "pts_seconds": 189.22633333333334,
+   "prediction": 0,
+   "score": 0.009425647556781769,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.81795400020928,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2837,
+   "pts_seconds": 190.28833333333336,
+   "prediction": 0,
+   "score": 0.02739728055894375,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.16477300070255,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2852,
+   "pts_seconds": 191.31533333333334,
+   "prediction": 0,
+   "score": 0.020296940580010414,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.17306399987865,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2864,
+   "pts_seconds": 192.11233333333334,
+   "prediction": 0,
+   "score": 0.014042267575860023,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 60.54789699919638,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2880,
+   "pts_seconds": 193.17233333333334,
+   "prediction": 0,
+   "score": 0.012173225171864033,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 58.61060200004431,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2896,
+   "pts_seconds": 194.23333333333335,
+   "prediction": 0,
+   "score": 0.014979739673435688,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 60.79141099962726,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2912,
+   "pts_seconds": 195.29433333333336,
+   "prediction": 0,
+   "score": 0.020353691652417183,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.58994599950529,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2928,
+   "pts_seconds": 196.35533333333333,
+   "prediction": 0,
+   "score": 0.012529429979622364,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 59.463039000547724,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2943,
+   "pts_seconds": 197.38333333333335,
+   "prediction": 1,
+   "score": 0.12643678486347198,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     181.474853515625,
+     122.30909729003906,
+     191.931396484375,
+     144.187255859375
+    ]
+   ],
+   "boxes": [
+    [
+     181.474853515625,
+     122.30909729003906,
+     191.931396484375,
+     144.187255859375
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5671089172363282,
+     0.5096212387084961,
+     0.5997856140136719,
+     0.6007802327473958
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.56875,
+      0.5125
+     ],
+     [
+      0.575,
+      0.5833333333333334
+     ],
+     [
+      0.58125,
+      0.5958333333333333
+     ],
+     [
+      0.590625,
+      0.5958333333333333
+     ],
+     [
+      0.596875,
+      0.5833333333333334
+     ],
+     [
+      0.59375,
+      0.5291666666666667
+     ],
+     [
+      0.5875,
+      0.5125
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 162,
+   "latency_ms": 233.1283749999784,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 2954,
+   "pts_seconds": 198.11333333333334,
+   "prediction": 1,
+   "score": 0.12557707726955414,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     176.58285522460938,
+     120.97598266601562,
+     192.07533264160156,
+     143.5872802734375
+    ]
+   ],
+   "boxes": [
+    [
+     176.58285522460938,
+     120.97598266601562,
+     192.07533264160156,
+     143.5872802734375
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5518214225769043,
+     0.5040665944417317,
+     0.6002354145050048,
+     0.5982803344726563
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.55625,
+      0.5083333333333333
+     ],
+     [
+      0.553125,
+      0.5166666666666667
+     ],
+     [
+      0.565625,
+      0.5166666666666667
+     ],
+     [
+      0.571875,
+      0.5291666666666667
+     ],
+     [
+      0.578125,
+      0.5875
+     ],
+     [
+      0.59375,
+      0.5875
+     ],
+     [
+      0.596875,
+      0.5333333333333333
+     ],
+     [
+      0.590625,
+      0.5125
+     ],
+     [
+      0.575,
+      0.5041666666666667
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 178,
+   "latency_ms": 87.3739230000865,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3044,
+   "pts_seconds": 204.08233333333334,
+   "prediction": 1,
+   "score": 0.09160508960485458,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     176.44700622558594,
+     121.68402862548828,
+     191.96778869628906,
+     143.8946990966797
+    ]
+   ],
+   "boxes": [
+    [
+     176.44700622558594,
+     121.68402862548828,
+     191.96778869628906,
+     143.8946990966797
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5513968944549561,
+     0.5070167859395345,
+     0.5998993396759034,
+     0.5995612462361654
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.55625,
+      0.5083333333333333
+     ],
+     [
+      0.553125,
+      0.5208333333333334
+     ],
+     [
+      0.565625,
+      0.5208333333333334
+     ],
+     [
+      0.571875,
+      0.5291666666666667
+     ],
+     [
+      0.571875,
+      0.575
+     ],
+     [
+      0.5875,
+      0.5958333333333333
+     ],
+     [
+      0.59375,
+      0.5791666666666667
+     ],
+     [
+      0.596875,
+      0.5208333333333334
+     ],
+     [
+      0.58125,
+      0.5083333333333333
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 184,
+   "latency_ms": 90.21140699951502,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3133,
+   "pts_seconds": 210.08333333333334,
+   "prediction": 1,
+   "score": 0.08668714761734009,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     177.3008575439453,
+     122.44155883789062,
+     239.810546875,
+     142.9447784423828
+    ],
+    [
+     177.30169677734375,
+     121.705810546875,
+     192.5759735107422,
+     136.27615356445312
+    ],
+    [
+     165.81539916992188,
+     120.18879699707031,
+     193.86813354492188,
+     240
+    ]
+   ],
+   "boxes": [
+    [
+     177.3008575439453,
+     122.44155883789062,
+     239.810546875,
+     142.9447784423828
+    ],
+    [
+     177.30169677734375,
+     121.705810546875,
+     192.5759735107422,
+     136.27615356445312
+    ],
+    [
+     165.81539916992188,
+     120.18879699707031,
+     193.86813354492188,
+     240
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5540651798248291,
+     0.5101731618245443,
+     0.749407958984375,
+     0.5956032435099284
+    ],
+    [
+     0.5540678024291992,
+     0.5071075439453125,
+     0.6017999172210693,
+     0.5678173065185547
+    ],
+    [
+     0.5181731224060059,
+     0.5007866541544597,
+     0.6058379173278808,
+     1.0
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.74375,
+      0.5166666666666667
+     ],
+     [
+      0.63125,
+      0.5291666666666667
+     ],
+     [
+      0.525,
+      0.5
+     ],
+     [
+      0.525,
+      0.6291666666666667
+     ],
+     [
+      0.546875,
+      0.6375
+     ],
+     [
+      0.553125,
+      0.7416666666666667
+     ],
+     [
+      0.528125,
+      0.9958333333333333
+     ],
+     [
+      0.596875,
+      0.9958333333333333
+     ],
+     [
+      0.59375,
+      0.5875
+     ],
+     [
+      0.74375,
+      0.5958333333333333
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 3070,
+   "latency_ms": 91.64735800004564,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3223,
+   "pts_seconds": 216.11833333333334,
+   "prediction": 1,
+   "score": 0.0704365074634552,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     176.208984375,
+     119.34600830078125,
+     192.86842346191406,
+     132.6429443359375
+    ],
+    [
+     227.22512817382812,
+     97.3178939819336,
+     263.5959167480469,
+     121.70376586914062
+    ]
+   ],
+   "boxes": [
+    [
+     176.208984375,
+     119.34600830078125,
+     192.86842346191406,
+     132.6429443359375
+    ],
+    [
+     227.22512817382812,
+     97.3178939819336,
+     263.5959167480469,
+     121.70376586914062
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.550653076171875,
+     0.49727503458658856,
+     0.6027138233184814,
+     0.552678934733073
+    ],
+    [
+     0.7100785255432129,
+     0.4054912249247233,
+     0.8237372398376465,
+     0.5070990244547526
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.821875,
+      0.4166666666666667
+     ],
+     [
+      0.78125,
+      0.4083333333333333
+     ],
+     [
+      0.765625,
+      0.4375
+     ],
+     [
+      0.73125,
+      0.43333333333333335
+     ],
+     [
+      0.725,
+      0.4583333333333333
+     ],
+     [
+      0.703125,
+      0.4708333333333333
+     ],
+     [
+      0.70625,
+      0.48333333333333334
+     ],
+     [
+      0.721875,
+      0.5
+     ],
+     [
+      0.76875,
+      0.5
+     ],
+     [
+      0.778125,
+      0.4875
+     ],
+     [
+      0.796875,
+      0.49166666666666664
+     ],
+     [
+      0.8,
+      0.4708333333333333
+     ],
+     [
+      0.815625,
+      0.4666666666666667
+     ]
+    ],
+    [
+     [
+      0.55,
+      0.5125
+     ],
+     [
+      0.553125,
+      0.5208333333333334
+     ],
+     [
+      0.565625,
+      0.5166666666666667
+     ],
+     [
+      0.578125,
+      0.5458333333333333
+     ],
+     [
+      0.596875,
+      0.5416666666666666
+     ],
+     [
+      0.596875,
+      0.5125
+     ],
+     [
+      0.590625,
+      0.5
+     ],
+     [
+      0.5625,
+      0.5
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 699,
+   "latency_ms": 89.37575300024037,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3312,
+   "pts_seconds": 222.11933333333334,
+   "prediction": 1,
+   "score": 0.29438790678977966,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     176.01022338867188,
+     118.03185272216797,
+     240.17095947265625,
+     142.99952697753906
+    ],
+    [
+     176.42921447753906,
+     120.38692474365234,
+     194.04441833496094,
+     142.01937866210938
+    ],
+    [
+     166.03402709960938,
+     117.80412292480469,
+     238.98069763183594,
+     238.27584838867188
+    ],
+    [
+     173.45059204101562,
+     106.084228515625,
+     319.0389404296875,
+     144.65969848632812
+    ]
+   ],
+   "boxes": [
+    [
+     176.01022338867188,
+     118.03185272216797,
+     240.17095947265625,
+     142.99952697753906
+    ],
+    [
+     176.42921447753906,
+     120.38692474365234,
+     194.04441833496094,
+     142.01937866210938
+    ],
+    [
+     166.03402709960938,
+     117.80412292480469,
+     238.98069763183594,
+     238.27584838867188
+    ],
+    [
+     173.45059204101562,
+     106.084228515625,
+     319.0389404296875,
+     144.65969848632812
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5500319480895997,
+     0.49179938634236653,
+     0.7505342483520507,
+     0.5958313624064128
+    ],
+    [
+     0.5513412952423096,
+     0.5016121864318848,
+     0.6063888072967529,
+     0.5917474110921224
+    ],
+    [
+     0.5188563346862793,
+     0.4908505121866862,
+     0.7468146800994873,
+     0.9928160349527995
+    ],
+    [
+     0.5420331001281739,
+     0.44201761881510415,
+     0.9969966888427735,
+     0.6027487436930339
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.746875,
+      0.48333333333333334
+     ],
+     [
+      0.525,
+      0.5041666666666667
+     ],
+     [
+      0.553125,
+      0.8875
+     ],
+     [
+      0.528125,
+      0.9166666666666666
+     ],
+     [
+      0.525,
+      0.9958333333333333
+     ],
+     [
+      0.596875,
+      0.9833333333333333
+     ],
+     [
+      0.59375,
+      0.6
+     ],
+     [
+      0.65625,
+      0.5541666666666667
+     ],
+     [
+      0.746875,
+      0.5583333333333333
+     ]
+    ],
+    [
+     [
+      0.896875,
+      0.44166666666666665
+     ],
+     [
+      0.903125,
+      0.4375
+     ],
+     [
+      0.9125,
+      0.45
+     ],
+     [
+      0.93125,
+      0.45
+     ],
+     [
+      0.9375,
+      0.44166666666666665
+     ]
+    ],
+    [
+     [
+      0.984375,
+      0.4708333333333333
+     ],
+     [
+      0.996875,
+      0.48333333333333334
+     ],
+     [
+      0.996875,
+      0.4666666666666667
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 3212,
+   "latency_ms": 91.90967599988653,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3402,
+   "pts_seconds": 228.15333333333334,
+   "prediction": 1,
+   "score": 0.1989065259695053,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     176.7899169921875,
+     119.70693969726562,
+     210.8503875732422,
+     137.75428771972656
+    ],
+    [
+     165.3856201171875,
+     118.10440063476562,
+     214.65591430664062,
+     236.64874267578125
+    ]
+   ],
+   "boxes": [
+    [
+     176.7899169921875,
+     119.70693969726562,
+     210.8503875732422,
+     137.75428771972656
+    ],
+    [
+     165.3856201171875,
+     118.10440063476562,
+     214.65591430664062,
+     236.64874267578125
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5524684906005859,
+     0.4987789154052734,
+     0.6589074611663819,
+     0.573976198832194
+    ],
+    [
+     0.5168300628662109,
+     0.49210166931152344,
+     0.670799732208252,
+     0.9860364278157552
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.528125,
+      0.5
+     ],
+     [
+      0.525,
+      0.6291666666666667
+     ],
+     [
+      0.54375,
+      0.6291666666666667
+     ],
+     [
+      0.553125,
+      0.8583333333333333
+     ],
+     [
+      0.546875,
+      0.8958333333333334
+     ],
+     [
+      0.525,
+      0.9125
+     ],
+     [
+      0.525,
+      0.9916666666666667
+     ],
+     [
+      0.59375,
+      0.9958333333333333
+     ],
+     [
+      0.5875,
+      0.5875
+     ],
+     [
+      0.66875,
+      0.5208333333333334
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 2519,
+   "latency_ms": 90.37838299991563,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3492,
+   "pts_seconds": 234.18733333333336,
+   "prediction": 1,
+   "score": 0.21946823596954346,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     172.04209899902344,
+     116.92378234863281,
+     216.2643585205078,
+     147.75926208496094
+    ],
+    [
+     178.9456787109375,
+     120.86956787109375,
+     192.8474578857422,
+     137.12118530273438
+    ]
+   ],
+   "boxes": [
+    [
+     172.04209899902344,
+     116.92378234863281,
+     216.2643585205078,
+     147.75926208496094
+    ],
+    [
+     178.9456787109375,
+     120.86956787109375,
+     192.8474578857422,
+     137.12118530273438
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5376315593719483,
+     0.4871824264526367,
+     0.675826120376587,
+     0.6156635920206706
+    ],
+    [
+     0.5592052459716796,
+     0.5036231994628906,
+     0.6026483058929444,
+     0.5713382720947265
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.671875,
+      0.5
+     ],
+     [
+      0.646875,
+      0.49583333333333335
+     ],
+     [
+      0.628125,
+      0.5083333333333333
+     ],
+     [
+      0.553125,
+      0.5041666666666667
+     ],
+     [
+      0.553125,
+      0.5208333333333334
+     ],
+     [
+      0.5625,
+      0.5166666666666667
+     ],
+     [
+      0.571875,
+      0.5291666666666667
+     ],
+     [
+      0.578125,
+      0.5875
+     ],
+     [
+      0.590625,
+      0.5833333333333334
+     ],
+     [
+      0.6125,
+      0.5958333333333333
+     ],
+     [
+      0.64375,
+      0.5916666666666667
+     ],
+     [
+      0.65,
+      0.5625
+     ],
+     [
+      0.646875,
+      0.5416666666666666
+     ],
+     [
+      0.653125,
+      0.5291666666666667
+     ],
+     [
+      0.66875,
+      0.525
+     ]
+    ],
+    [
+     [
+      0.53125,
+      0.5958333333333333
+     ],
+     [
+      0.534375,
+      0.6208333333333333
+     ],
+     [
+      0.5375,
+      0.6041666666666666
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 632,
+   "latency_ms": 90.84943099969678,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3581,
+   "pts_seconds": 240.22233333333335,
+   "prediction": 1,
+   "score": 0.11471270769834518,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     169.8890380859375,
+     120.57526397705078,
+     194.1289520263672,
+     175.71475219726562
+    ]
+   ],
+   "boxes": [
+    [
+     169.8890380859375,
+     120.57526397705078,
+     194.1289520263672,
+     175.71475219726562
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5309032440185547,
+     0.5023969332377116,
+     0.6066529750823975,
+     0.7321448008219401
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.53125,
+      0.5041666666666667
+     ],
+     [
+      0.528125,
+      0.6208333333333333
+     ],
+     [
+      0.55625,
+      0.6291666666666667
+     ],
+     [
+      0.559375,
+      0.6416666666666667
+     ],
+     [
+      0.565625,
+      0.6166666666666667
+     ],
+     [
+      0.55,
+      0.6208333333333333
+     ],
+     [
+      0.55,
+      0.5833333333333334
+     ],
+     [
+      0.571875,
+      0.6
+     ],
+     [
+      0.575,
+      0.675
+     ],
+     [
+      0.59375,
+      0.7291666666666666
+     ],
+     [
+      0.59375,
+      0.5875
+     ],
+     [
+      0.603125,
+      0.5625
+     ],
+     [
+      0.596875,
+      0.5125
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 808,
+   "latency_ms": 90.06943500025955,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3671,
+   "pts_seconds": 246.25633333333334,
+   "prediction": 1,
+   "score": 0.21300549805164337,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     185.42874145507812,
+     123.4047622680664,
+     252.80697631835938,
+     143.1710662841797
+    ],
+    [
+     177.238525390625,
+     122.3057632446289,
+     192.82102966308594,
+     140.64166259765625
+    ]
+   ],
+   "boxes": [
+    [
+     185.42874145507812,
+     123.4047622680664,
+     252.80697631835938,
+     143.1710662841797
+    ],
+    [
+     177.238525390625,
+     122.3057632446289,
+     192.82102966308594,
+     140.64166259765625
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5794648170471192,
+     0.5141865094502767,
+     0.7900218009948731,
+     0.5965461095174154
+    ],
+    [
+     0.5538703918457031,
+     0.5096073468526204,
+     0.6025657176971435,
+     0.5860069274902344
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.553125,
+      0.5125
+     ],
+     [
+      0.571875,
+      0.525
+     ],
+     [
+      0.584375,
+      0.5958333333333333
+     ],
+     [
+      0.640625,
+      0.5791666666666667
+     ],
+     [
+      0.653125,
+      0.5958333333333333
+     ],
+     [
+      0.65625,
+      0.5666666666666667
+     ],
+     [
+      0.7,
+      0.5875
+     ],
+     [
+      0.771875,
+      0.5833333333333334
+     ],
+     [
+      0.778125,
+      0.5666666666666667
+     ],
+     [
+      0.79375,
+      0.5791666666666667
+     ],
+     [
+      0.796875,
+      0.5625
+     ],
+     [
+      0.79375,
+      0.5333333333333333
+     ],
+     [
+      0.753125,
+      0.5291666666666667
+     ],
+     [
+      0.75,
+      0.5583333333333333
+     ],
+     [
+      0.728125,
+      0.5666666666666667
+     ],
+     [
+      0.71875,
+      0.525
+     ],
+     [
+      0.625,
+      0.5333333333333333
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 961,
+   "latency_ms": 91.34250100032659,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3761,
+   "pts_seconds": 252.25833333333335,
+   "prediction": 0,
+   "score": 0.056710436940193176,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 58.92621999919356,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3777,
+   "pts_seconds": 253.31933333333333,
+   "prediction": 1,
+   "score": 0.1308932602405548,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     177.93704223632812,
+     119.4443359375,
+     263.73614501953125,
+     146.25831604003906
+    ]
+   ],
+   "boxes": [
+    [
+     177.93704223632812,
+     119.4443359375,
+     263.73614501953125,
+     146.25831604003906
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5560532569885254,
+     0.49768473307291666,
+     0.8241754531860351,
+     0.6094096501668295
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.55625,
+      0.5125
+     ],
+     [
+      0.571875,
+      0.5208333333333334
+     ],
+     [
+      0.575,
+      0.5625
+     ],
+     [
+      0.603125,
+      0.5958333333333333
+     ],
+     [
+      0.621875,
+      0.5833333333333334
+     ],
+     [
+      0.63125,
+      0.5958333333333333
+     ],
+     [
+      0.71875,
+      0.5875
+     ],
+     [
+      0.74375,
+      0.5625
+     ],
+     [
+      0.796875,
+      0.5833333333333334
+     ],
+     [
+      0.803125,
+      0.5625
+     ],
+     [
+      0.821875,
+      0.5625
+     ],
+     [
+      0.815625,
+      0.525
+     ],
+     [
+      0.828125,
+      0.5041666666666667
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 1556,
+   "latency_ms": 88.50576299937529,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3851,
+   "pts_seconds": 258.22633333333334,
+   "prediction": 1,
+   "score": 0.3135223388671875,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     182.59124755859375,
+     70.62325286865234,
+     265.83392333984375,
+     138.91360473632812
+    ],
+    [
+     170.34765625,
+     120.30393981933594,
+     199.9698028564453,
+     146.46170043945312
+    ],
+    [
+     246.66302490234375,
+     70.90760040283203,
+     266.1795654296875,
+     98.35250091552734
+    ]
+   ],
+   "boxes": [
+    [
+     182.59124755859375,
+     70.62325286865234,
+     265.83392333984375,
+     138.91360473632812
+    ],
+    [
+     170.34765625,
+     120.30393981933594,
+     199.9698028564453,
+     146.46170043945312
+    ],
+    [
+     246.66302490234375,
+     70.90760040283203,
+     266.1795654296875,
+     98.35250091552734
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5705976486206055,
+     0.2942635536193848,
+     0.8307310104370117,
+     0.5788066864013672
+    ],
+    [
+     0.53233642578125,
+     0.5012664159138998,
+     0.6249056339263916,
+     0.610257085164388
+    ],
+    [
+     0.7708219528198242,
+     0.2954483350118001,
+     0.8318111419677734,
+     0.4098020871480306
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.81875,
+      0.3
+     ],
+     [
+      0.790625,
+      0.3
+     ],
+     [
+      0.7625,
+      0.3416666666666667
+     ],
+     [
+      0.796875,
+      0.4166666666666667
+     ],
+     [
+      0.7125,
+      0.4
+     ],
+     [
+      0.69375,
+      0.4791666666666667
+     ],
+     [
+      0.553125,
+      0.5125
+     ],
+     [
+      0.575,
+      0.5625
+     ],
+     [
+      0.64375,
+      0.5625
+     ],
+     [
+      0.653125,
+      0.5333333333333333
+     ],
+     [
+      0.71875,
+      0.5583333333333333
+     ],
+     [
+      0.725,
+      0.525
+     ],
+     [
+      0.75625,
+      0.5041666666666667
+     ],
+     [
+      0.79375,
+      0.5166666666666667
+     ],
+     [
+      0.796875,
+      0.45
+     ],
+     [
+      0.821875,
+      0.44583333333333336
+     ],
+     [
+      0.79375,
+      0.42083333333333334
+     ],
+     [
+      0.821875,
+      0.4166666666666667
+     ]
+    ],
+    [
+     [
+      0.534375,
+      0.5875
+     ],
+     [
+      0.53125,
+      0.6125
+     ],
+     [
+      0.5375,
+      0.6041666666666666
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 1969,
+   "latency_ms": 90.33154500048113,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3940,
+   "pts_seconds": 264.22833333333335,
+   "prediction": 0,
+   "score": 0.048718854784965515,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 58.32368600022164,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3956,
+   "pts_seconds": 265.28933333333333,
+   "prediction": 0,
+   "score": 0.05920829996466637,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [],
+   "boxes": [],
+   "normalized_boxes": [],
+   "plume_extent_polygons": [],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 0,
+   "latency_ms": 58.83659299979627,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 3971,
+   "pts_seconds": 266.31733333333335,
+   "prediction": 1,
+   "score": 0.12377821654081345,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     175.78265380859375,
+     120.99906921386719,
+     195.61912536621094,
+     146.30047607421875
+    ],
+    [
+     173.2249755859375,
+     118.24642181396484,
+     298.4073486328125,
+     146.12301635742188
+    ]
+   ],
+   "boxes": [
+    [
+     175.78265380859375,
+     120.99906921386719,
+     195.61912536621094,
+     146.30047607421875
+    ],
+    [
+     173.2249755859375,
+     118.24642181396484,
+     298.4073486328125,
+     146.12301635742188
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5493207931518554,
+     0.5041627883911133,
+     0.6113097667694092,
+     0.6095853169759115
+    ],
+    [
+     0.5413280487060547,
+     0.4926934242248535,
+     0.932522964477539,
+     0.6088459014892578
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.553125,
+      0.5083333333333333
+     ],
+     [
+      0.553125,
+      0.5208333333333334
+     ],
+     [
+      0.571875,
+      0.525
+     ],
+     [
+      0.58125,
+      0.5958333333333333
+     ],
+     [
+      0.653125,
+      0.5875
+     ],
+     [
+      0.678125,
+      0.5583333333333333
+     ],
+     [
+      0.746875,
+      0.5625
+     ],
+     [
+      0.75,
+      0.5291666666666667
+     ],
+     [
+      0.775,
+      0.5291666666666667
+     ],
+     [
+      0.78125,
+      0.5583333333333333
+     ],
+     [
+      0.796875,
+      0.5625
+     ],
+     [
+      0.796875,
+      0.5
+     ],
+     [
+      0.725,
+      0.5
+     ],
+     [
+      0.734375,
+      0.525
+     ],
+     [
+      0.715625,
+      0.5333333333333333
+     ],
+     [
+      0.653125,
+      0.5291666666666667
+     ],
+     [
+      0.590625,
+      0.5
+     ]
+    ],
+    [
+     [
+      0.821875,
+      0.5166666666666667
+     ],
+     [
+      0.8375,
+      0.5208333333333334
+     ],
+     [
+      0.84375,
+      0.5291666666666667
+     ],
+     [
+      0.871875,
+      0.5291666666666667
+     ],
+     [
+      0.875,
+      0.5541666666666667
+     ],
+     [
+      0.8875,
+      0.5541666666666667
+     ],
+     [
+      0.890625,
+      0.5333333333333333
+     ],
+     [
+      0.909375,
+      0.525
+     ],
+     [
+      0.91875,
+      0.5291666666666667
+     ],
+     [
+      0.93125,
+      0.5208333333333334
+     ],
+     [
+      0.9375,
+      0.5
+     ],
+     [
+      0.8375,
+      0.49583333333333335
+     ],
+     [
+      0.825,
+      0.5
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 1354,
+   "latency_ms": 89.69007799987594,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 4029,
+   "pts_seconds": 270.22933333333333,
+   "prediction": 1,
+   "score": 0.10427873581647873,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     170.82150268554688,
+     119.76516723632812,
+     197.48919677734375,
+     150.93202209472656
+    ]
+   ],
+   "boxes": [
+    [
+     170.82150268554688,
+     119.76516723632812,
+     197.48919677734375,
+     150.93202209472656
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.533817195892334,
+     0.4990215301513672,
+     0.6171537399291992,
+     0.628883425394694
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.546875,
+      0.5083333333333333
+     ],
+     [
+      0.553125,
+      0.5208333333333334
+     ],
+     [
+      0.56875,
+      0.525
+     ],
+     [
+      0.575,
+      0.5458333333333333
+     ],
+     [
+      0.575,
+      0.5875
+     ],
+     [
+      0.58125,
+      0.5958333333333333
+     ],
+     [
+      0.590625,
+      0.5958333333333333
+     ],
+     [
+      0.596875,
+      0.5791666666666667
+     ],
+     [
+      0.59375,
+      0.5708333333333333
+     ],
+     [
+      0.6,
+      0.5625
+     ],
+     [
+      0.609375,
+      0.5625
+     ],
+     [
+      0.6125,
+      0.5125
+     ],
+     [
+      0.584375,
+      0.5041666666666667
+     ]
+    ],
+    [
+     [
+      0.528125,
+      0.575
+     ],
+     [
+      0.528125,
+      0.6208333333333333
+     ],
+     [
+      0.540625,
+      0.625
+     ],
+     [
+      0.55,
+      0.6
+     ],
+     [
+      0.540625,
+      0.5875
+     ],
+     [
+      0.53125,
+      0.5875
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 330,
+   "latency_ms": 88.54594800050108,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 4118,
+   "pts_seconds": 276.23033333333336,
+   "prediction": 1,
+   "score": 0.08860509842634201,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     167.0923614501953,
+     118.74517822265625,
+     244.1009521484375,
+     235.2681121826172
+    ],
+    [
+     170.79505920410156,
+     119.4026870727539,
+     238.88507080078125,
+     152.21798706054688
+    ],
+    [
+     177.2296142578125,
+     121.0831069946289,
+     192.4315185546875,
+     140.36569213867188
+    ]
+   ],
+   "boxes": [
+    [
+     167.0923614501953,
+     118.74517822265625,
+     244.1009521484375,
+     235.2681121826172
+    ],
+    [
+     170.79505920410156,
+     119.4026870727539,
+     238.88507080078125,
+     152.21798706054688
+    ],
+    [
+     177.2296142578125,
+     121.0831069946289,
+     192.4315185546875,
+     140.36569213867188
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5221636295318604,
+     0.49477157592773435,
+     0.7628154754638672,
+     0.9802838007609049
+    ],
+    [
+     0.5337345600128174,
+     0.4975111961364746,
+     0.7465158462524414,
+     0.6342416127522786
+    ],
+    [
+     0.5538425445556641,
+     0.5045129458109537,
+     0.6013484954833984,
+     0.5848570505777995
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.53125,
+      0.5
+     ],
+     [
+      0.55,
+      0.8791666666666667
+     ],
+     [
+      0.525,
+      0.9125
+     ],
+     [
+      0.525,
+      0.9958333333333333
+     ],
+     [
+      0.596875,
+      0.9958333333333333
+     ],
+     [
+      0.596875,
+      0.6
+     ],
+     [
+      0.746875,
+      0.5958333333333333
+     ],
+     [
+      0.721875,
+      0.5333333333333333
+     ],
+     [
+      0.665625,
+      0.5625
+     ],
+     [
+      0.6125,
+      0.5125
+     ]
+    ],
+    [
+     [
+      0.76875,
+      0.8166666666666667
+     ],
+     [
+      0.7625,
+      0.825
+     ],
+     [
+      0.715625,
+      0.8
+     ],
+     [
+      0.665625,
+      0.8125
+     ],
+     [
+      0.65625,
+      0.8041666666666667
+     ],
+     [
+      0.653125,
+      0.8291666666666667
+     ],
+     [
+      0.625,
+      0.8416666666666667
+     ],
+     [
+      0.640625,
+      0.8916666666666667
+     ],
+     [
+      0.66875,
+      0.8875
+     ],
+     [
+      0.675,
+      0.9041666666666667
+     ],
+     [
+      0.675,
+      0.9625
+     ],
+     [
+      0.65,
+      0.9666666666666667
+     ],
+     [
+      0.65,
+      0.9958333333333333
+     ],
+     [
+      0.725,
+      0.9958333333333333
+     ],
+     [
+      0.721875,
+      0.9
+     ],
+     [
+      0.76875,
+      0.8875
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 4196,
+   "latency_ms": 88.99187999941205,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 4208,
+   "pts_seconds": 282.26533333333333,
+   "prediction": 1,
+   "score": 0.2866226136684418,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     173.7570343017578,
+     121.7063980102539,
+     206.53115844726562,
+     165.4248809814453
+    ],
+    [
+     163.95864868164062,
+     120.25186157226562,
+     207.1574249267578,
+     236.8998565673828
+    ]
+   ],
+   "boxes": [
+    [
+     173.7570343017578,
+     121.7063980102539,
+     206.53115844726562,
+     165.4248809814453
+    ],
+    [
+     163.95864868164062,
+     120.25186157226562,
+     207.1574249267578,
+     236.8998565673828
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5429907321929932,
+     0.5071099917093913,
+     0.6454098701477051,
+     0.6892703374226888
+    ],
+    [
+     0.5123707771301269,
+     0.5010494232177735,
+     0.6473669528961181,
+     0.9870827356974284
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.53125,
+      0.5
+     ],
+     [
+      0.525,
+      0.6125
+     ],
+     [
+      0.55,
+      0.65
+     ],
+     [
+      0.553125,
+      0.7541666666666667
+     ],
+     [
+      0.55,
+      0.8833333333333333
+     ],
+     [
+      0.525,
+      0.9125
+     ],
+     [
+      0.525,
+      0.9958333333333333
+     ],
+     [
+      0.596875,
+      0.9958333333333333
+     ],
+     [
+      0.59375,
+      0.6833333333333333
+     ],
+     [
+      0.621875,
+      0.6541666666666667
+     ],
+     [
+      0.64375,
+      0.5291666666666667
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 2682,
+   "latency_ms": 90.65286900022329,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 4297,
+   "pts_seconds": 288.26633333333336,
+   "prediction": 1,
+   "score": 0.23977307975292206,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     176.8079376220703,
+     116.38561248779297,
+     200.0304412841797,
+     142.2439727783203
+    ],
+    [
+     175.6468963623047,
+     105.77212524414062,
+     265.44024658203125,
+     139.3782196044922
+    ]
+   ],
+   "boxes": [
+    [
+     176.8079376220703,
+     116.38561248779297,
+     200.0304412841797,
+     142.2439727783203
+    ],
+    [
+     175.6468963623047,
+     105.77212524414062,
+     265.44024658203125,
+     139.3782196044922
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5525248050689697,
+     0.4849400520324707,
+     0.6250951290130615,
+     0.592683219909668
+    ],
+    [
+     0.5488965511322021,
+     0.4407171885172526,
+     0.8295007705688476,
+     0.5807425816853841
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.796875,
+      0.4625
+     ],
+     [
+      0.703125,
+      0.475
+     ],
+     [
+      0.6625,
+      0.4666666666666667
+     ],
+     [
+      0.609375,
+      0.475
+     ],
+     [
+      0.55,
+      0.5166666666666667
+     ],
+     [
+      0.571875,
+      0.525
+     ],
+     [
+      0.575,
+      0.5791666666666667
+     ],
+     [
+      0.584375,
+      0.5875
+     ],
+     [
+      0.603125,
+      0.55
+     ],
+     [
+      0.625,
+      0.5375
+     ],
+     [
+      0.66875,
+      0.5375
+     ],
+     [
+      0.671875,
+      0.5541666666666667
+     ],
+     [
+      0.678125,
+      0.5333333333333333
+     ],
+     [
+      0.79375,
+      0.5291666666666667
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 1305,
+   "latency_ms": 90.49277600024652,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  },
+  {
+   "frame_id": 4387,
+   "pts_seconds": 294.30133333333333,
+   "prediction": 1,
+   "score": 0.25232911109924316,
+   "score_kind": "uncalibrated_open_vocabulary_similarity_not_methane_probability",
+   "raw_positive_boxes": [
+    [
+     181.70318603515625,
+     96.53449249267578,
+     320,
+     142.64453125
+    ],
+    [
+     228.6023712158203,
+     110.9212646484375,
+     249.25369262695312,
+     130.45599365234375
+    ],
+    [
+     176.04493713378906,
+     116.69559478759766,
+     239.96824645996094,
+     146.35769653320312
+    ],
+    [
+     177.209228515625,
+     121.75074768066406,
+     196.17845153808594,
+     141.48464965820312
+    ]
+   ],
+   "boxes": [
+    [
+     181.70318603515625,
+     96.53449249267578,
+     320,
+     142.64453125
+    ],
+    [
+     228.6023712158203,
+     110.9212646484375,
+     249.25369262695312,
+     130.45599365234375
+    ],
+    [
+     176.04493713378906,
+     116.69559478759766,
+     239.96824645996094,
+     146.35769653320312
+    ],
+    [
+     177.209228515625,
+     121.75074768066406,
+     196.17845153808594,
+     141.48464965820312
+    ]
+   ],
+   "normalized_boxes": [
+    [
+     0.5678224563598633,
+     0.4022270520528158,
+     1.0,
+     0.5943522135416667
+    ],
+    [
+     0.7143824100494385,
+     0.46217193603515627,
+     0.7789177894592285,
+     0.543566640218099
+    ],
+    [
+     0.5501404285430909,
+     0.48623164494832355,
+     0.7499007701873779,
+     0.609823735555013
+    ],
+    [
+     0.5537788391113281,
+     0.5072947820027669,
+     0.6130576610565186,
+     0.5895193735758464
+    ]
+   ],
+   "plume_extent_polygons": [
+    [
+     [
+      0.996875,
+      0.5
+     ],
+     [
+      0.975,
+      0.49583333333333335
+     ],
+     [
+      0.96875,
+      0.4083333333333333
+     ],
+     [
+      0.94375,
+      0.4
+     ],
+     [
+      0.86875,
+      0.49583333333333335
+     ],
+     [
+      0.778125,
+      0.5125
+     ],
+     [
+      0.778125,
+      0.4625
+     ],
+     [
+      0.725,
+      0.4666666666666667
+     ],
+     [
+      0.70625,
+      0.5291666666666667
+     ],
+     [
+      0.553125,
+      0.5166666666666667
+     ],
+     [
+      0.571875,
+      0.525
+     ],
+     [
+      0.578125,
+      0.5833333333333334
+     ],
+     [
+      0.63125,
+      0.5958333333333333
+     ],
+     [
+      0.796875,
+      0.55
+     ],
+     [
+      0.821875,
+      0.575
+     ],
+     [
+      0.890625,
+      0.5208333333333334
+     ],
+     [
+      0.996875,
+      0.5291666666666667
+     ]
+    ],
+    [
+     [
+      0.984375,
+      0.4666666666666667
+     ],
+     [
+      0.984375,
+      0.4791666666666667
+     ],
+     [
+      0.996875,
+      0.48333333333333334
+     ],
+     [
+      0.996875,
+      0.4666666666666667
+     ]
+    ]
+   ],
+   "source_origin_polygon": null,
+   "asset_id": null,
+   "mask_pixels": 2635,
+   "latency_ms": 90.71075900010328,
+   "background_frames": 20,
+   "difference_gain": 15.0,
+   "mask_file": null,
+   "overlay_file": null
+  }
+ ]
+}

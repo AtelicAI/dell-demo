@@ -12,10 +12,17 @@
   },
   {
     "profile": "wind_outage",
-    "title": "Leak on camera while the weather station is down (SCN-003)",
+    "title": "Second camera alarm while the weather station is down (SCN-003)",
     "scenario_id": "SCN-003",
     "incident_prefix": "INC-003-M",
     "origin_region_reference": "scenarios/detections.json#DET-003",
-    "mapping_basis": "Same illustrative alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
+    "mapping_basis": "Illustrative demonstration alignment: MOV_1239 from 525 s (GasVid class 2 by the 3-minute protocol, metered 713.1 g/h; class 3, 958.8 g/h, from 545 s) on the synthetic SCN-003 clock, wind readings missing from 600 s. The footage release is larger than the synthetic plant's 277.7 g/h; rates are not matched for this event. Different physical scene; not a shared capture time, calibration or source attribution.",
+    "camera_id": "CAM-02",
+    "monitor_id": "MON-CAM-02",
+    "clip_id": "MOV_1239",
+    "run_id": "monitor-mov1239-525-680-001",
+    "clip_start_seconds": 525,
+    "clip_end_seconds": 680,
+    "scenario_seconds_at_clip_start": 591
   }
 ]
