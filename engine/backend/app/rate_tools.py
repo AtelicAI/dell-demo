@@ -191,13 +191,15 @@ def run(facility, rows, end, gaussian, attribution, candidates, camera_id, clip_
     if camera is not None:
         outputs['qogi'] = camera
     wind_ok = case['wind'] == 'available'
-    if (decisions['bls'][0] == 'cross_check' or tool == 'bls') and wind_ok:
+    # An engineer's request runs only the tool asked for; the agent's own pass runs every cross-check its roles call for.
+    want = lambda t: tool == t if tool else decisions[t][0] == 'cross_check'
+    if want('bls') and wind_ok:
         outputs['bls'] = bls_fit(facility, rows, candidate_asset_id, end, case)
-    if (decisions['gaussian_puff'][0] == 'cross_check' or tool == 'gaussian_puff') and wind_ok:
+    if want('gaussian_puff') and wind_ok:
         outputs['gaussian_puff'] = puff.fit(facility, rows, candidate_asset_id, end)
-    if (decisions['mdlq'][0] == 'cross_check' or tool == 'mdlq') and wind_ok:
+    if want('mdlq') and wind_ok:
         outputs['mdlq'] = mdlq.fit(facility, rows, candidate_asset_id, end)
-    if (decisions['cfd'][0] == 'cross_check' or tool == 'cfd') and wind_ok:
+    if want('cfd') and wind_ok:
         outputs['cfd'] = cfd.fit(facility, rows, candidate_asset_id, end, case, [c['asset_id'] for c in candidates])
     agent_primary = next((t for t, (role, _) in decisions.items() if role == 'primary'), None)
     primary = tool or agent_primary

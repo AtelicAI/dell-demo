@@ -260,7 +260,7 @@
         <div class="t-head"><b>${esc(m.label)}</b><span class="t-role">${esc(ROLE[m.role] || m.role)}</span></div>
         <span class="t-why">${esc(m.reason)}</span>${out(m)}${mine(m)}
         ${m.connected ? (frozen ? `<button class="t-run" data-tool="${esc(m.id)}">Run ${esc(m.label.split(' (')[0])}</button>` : '')
-          : '<span class="t-na">Not deployed on this edge box</span>'}
+          : '<span class="t-na">Not deployed in this demo</span>'}
       </div>`).join('') || '<div class="note">No tools reported by the backend.</div>';
     const ran = Q && Q.result && Q.result.tools && Q.result.tools.length;
     $('btn-run').disabled = !ran;
@@ -347,7 +347,7 @@
     $('meth-panel').hidden = !C;
     if (!C) return;
     const mine = Object.fromEntries(((Q && Q.methods) || []).map((m) => [m.id, m]));
-    $('meth-meta').textContent = `${C.methods.length} tools · ${C.methods.filter((m) => m.connected).length} run on this edge box`;
+    $('meth-meta').textContent = `${C.methods.length} tools · ${C.methods.filter((m) => m.connected).length} run in this demo`;
     $('meth').innerHTML = `<p class="mhead"><b>${esc(C.headline)}</b></p>
       <table class="tmatrix"><tr><th>Tool</th><th>Built for</th><th>Needs</th><th>This incident</th></tr>
       ${C.methods.map((m) => { const d = mine[m.id] || {}; return `<tr class="r-${esc(d.role || 'pending')}">
@@ -406,7 +406,7 @@
   async function run(tool) {
     const btn = $('btn-run'), msg = $('run-msg');
     btn.disabled = true;
-    msg.className = 'run-msg'; msg.textContent = 'Running on the backend…';
+    msg.className = 'run-msg'; msg.textContent = `Running ${tool ? METHOD_LABEL[tool] || tool : "the agent's choice"} on the frozen window…`;
     try {
       const r = await fetch(`${API}/incidents/${INCIDENT_ID}/quantify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: tool || 'agent' }),
@@ -427,7 +427,14 @@
   $('btn-run').addEventListener('click', () => run());
   // Any connected tool can be run on the frozen window; the result shows next to the agent's.
   $('methods').addEventListener('click', (e) => { const b = e.target.closest('.t-run'); if (b) { b.disabled = true; run(b.dataset.tool); } });
-  $('hero-body').addEventListener('click', (e) => { const b = e.target.closest('.trow'); if (b && !b.disabled) { b.disabled = true; b.classList.add('busy'); run(b.dataset.tool); } });
+  $('hero-body').addEventListener('click', (e) => {
+    const b = e.target.closest('.trow');
+    if (!b || b.disabled) return;
+    b.disabled = true; b.classList.add('busy');
+    b.querySelector('.tt').innerHTML = '<em><span class="ag-spin"></span> Running…</em>';
+    b.querySelector('.tv').textContent = '…';
+    run(b.dataset.tool);
+  });
   $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
   window.addEventListener('resize', () => { [traces, qcChart, histChart, aChart].forEach((c) => c && c.resize()); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.

@@ -50,15 +50,13 @@ def design(facility, rows, sources, end, window_s=60):
         travel = np.hypot(disp[:, 0], disp[:, 1])
         sh, sz = np.maximum(.5, .12 * travel), np.maximum(.4, .08 * travel)
         mass = RELEASE_DT_S / 3600  # kg per puff at 1 kg/h
-        row = []
-        for src in sources:
-            dx = s.position[0] - (src[0] + disp[:, 0])
-            dy = s.position[1] - (src[1] + disp[:, 1])
-            z, h = s.position[2], src[2]
-            c = mass / ((2 * math.pi) ** 1.5 * sh * sh * sz) * np.exp(-(dx * dx + dy * dy) / (2 * sh * sh)) * \
-                (np.exp(-(z - h) ** 2 / (2 * sz * sz)) + np.exp(-(z + h) ** 2 / (2 * sz * sz)))
-            row.append(float(c.sum()) * PPM_PER_KG_M3)
-        rows_a.append(row)
+        # All sources at once: (sources, puffs) arrays.
+        dx = s.position[0] - (sources[:, :1] + disp[None, :, 0])
+        dy = s.position[1] - (sources[:, 1:2] + disp[None, :, 1])
+        z, h = s.position[2], sources[:, 2:3]
+        c = mass / ((2 * math.pi) ** 1.5 * sh * sh * sz) * np.exp(-(dx * dx + dy * dy) / (2 * sh * sh)) * \
+            (np.exp(-(z - h) ** 2 / (2 * sz * sz)) + np.exp(-(z + h) ** 2 / (2 * sz * sz)))
+        rows_a.append(c.sum(axis=1) * PPM_PER_KG_M3)
         y.append(v)
         times.append(t)
     return np.array(rows_a).reshape(-1, len(sources)), np.array(y), np.array(times, int)
