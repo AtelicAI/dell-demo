@@ -1,0 +1,426 @@
+{
+  "$defs": {
+    "Asset": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "separator",
+            "compressor",
+            "valve",
+            "pipe",
+            "vent",
+            "flange"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "area": {
+          "title": "Area",
+          "type": "string"
+        },
+        "position": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Position",
+          "type": "array"
+        },
+        "dimensions": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Dimensions",
+          "type": "array"
+        },
+        "pressure_class": {
+          "title": "Pressure Class",
+          "type": "string"
+        },
+        "document_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Document Ids",
+          "type": "array"
+        },
+        "origin_type": {
+          "const": "simulated",
+          "default": "simulated",
+          "enum": [
+            "simulated"
+          ],
+          "title": "Origin Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "area",
+        "position",
+        "dimensions",
+        "pressure_class",
+        "document_ids"
+      ],
+      "title": "Asset",
+      "type": "object"
+    },
+    "Camera": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "position": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Position",
+          "type": "array"
+        },
+        "orientation_degrees": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Orientation Degrees",
+          "type": "array"
+        },
+        "fov_degrees": {
+          "exclusiveMaximum": 180.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Fov Degrees",
+          "type": "number"
+        },
+        "resolution": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Resolution",
+          "type": "array"
+        },
+        "calibration_status": {
+          "const": "illustrative_uncalibrated",
+          "enum": [
+            "illustrative_uncalibrated"
+          ],
+          "title": "Calibration Status",
+          "type": "string"
+        },
+        "video_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Video Id"
+        },
+        "regions": {
+          "items": {
+            "$ref": "#/$defs/Region"
+          },
+          "title": "Regions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "position",
+        "orientation_degrees",
+        "fov_degrees",
+        "resolution",
+        "calibration_status",
+        "video_id",
+        "regions"
+      ],
+      "title": "Camera",
+      "type": "object"
+    },
+    "Connection": {
+      "additionalProperties": false,
+      "properties": {
+        "from_id": {
+          "title": "From Id",
+          "type": "string"
+        },
+        "to_id": {
+          "title": "To Id",
+          "type": "string"
+        },
+        "line_id": {
+          "title": "Line Id",
+          "type": "string"
+        },
+        "relation": {
+          "const": "FLOWS_TO",
+          "default": "FLOWS_TO",
+          "enum": [
+            "FLOWS_TO"
+          ],
+          "title": "Relation",
+          "type": "string"
+        },
+        "verification": {
+          "const": "synthetic_design",
+          "default": "synthetic_design",
+          "enum": [
+            "synthetic_design"
+          ],
+          "title": "Verification",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_id",
+        "to_id",
+        "line_id"
+      ],
+      "title": "Connection",
+      "type": "object"
+    },
+    "Region": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "polygon": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "minItems": 3,
+          "title": "Polygon",
+          "type": "array"
+        },
+        "provenance": {
+          "const": "synthetic_illustrative_mapping",
+          "default": "synthetic_illustrative_mapping",
+          "enum": [
+            "synthetic_illustrative_mapping"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_id",
+        "polygon"
+      ],
+      "title": "Region",
+      "type": "object"
+    },
+    "Sensor": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "variable": {
+          "enum": [
+            "methane",
+            "pressure",
+            "temperature",
+            "flow",
+            "wind_speed",
+            "wind_direction"
+          ],
+          "title": "Variable",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "position": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Position",
+          "type": "array"
+        },
+        "sample_interval_seconds": {
+          "exclusiveMinimum": 0.0,
+          "title": "Sample Interval Seconds",
+          "type": "number"
+        },
+        "uncertainty": {
+          "minimum": 0.0,
+          "title": "Uncertainty",
+          "type": "number"
+        },
+        "detection_limit": {
+          "minimum": 0.0,
+          "title": "Detection Limit",
+          "type": "number"
+        },
+        "lag_seconds": {
+          "minimum": 0.0,
+          "title": "Lag Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "asset_id",
+        "variable",
+        "unit",
+        "position",
+        "sample_interval_seconds",
+        "uncertainty",
+        "detection_limit",
+        "lag_seconds"
+      ],
+      "title": "Sensor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "coordinate_reference": {
+      "const": "local_ENU_m",
+      "enum": [
+        "local_ENU_m"
+      ],
+      "title": "Coordinate Reference",
+      "type": "string"
+    },
+    "geometry_version": {
+      "title": "Geometry Version",
+      "type": "string"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/Asset"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "connections": {
+      "items": {
+        "$ref": "#/$defs/Connection"
+      },
+      "title": "Connections",
+      "type": "array"
+    },
+    "cameras": {
+      "items": {
+        "$ref": "#/$defs/Camera"
+      },
+      "title": "Cameras",
+      "type": "array"
+    },
+    "sensors": {
+      "items": {
+        "$ref": "#/$defs/Sensor"
+      },
+      "title": "Sensors",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "coordinate_reference",
+    "geometry_version",
+    "assets",
+    "connections",
+    "cameras",
+    "sensors"
+  ],
+  "title": "Facility",
+  "type": "object"
+}

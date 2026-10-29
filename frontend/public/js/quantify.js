@@ -21,7 +21,7 @@
   const hhmm = (t) => (t ? t.slice(11, 16) : '—');
   const hhmmss = (t) => (t ? t.slice(11, 19) : '—');
 
-  let S = null, Q = null, method = null, traces = null, qcChart = null, H = null, histChart = null;
+  let S = null, Q = null, method = null, traces = null, qcChart = null, H = null, histChart = null, mChart = null, aChart = null;
 
   // ----- result card -----
   function renderHero() {
@@ -54,7 +54,7 @@
     title.textContent = 'Emission-rate estimate';
     $('res-badges').innerHTML = badge(r.provenance, `Produced by ${r.model_version}`);
     const qc = r.qc || {};
-    body.innerHTML = rateBlock(`<div class="num">${r.rate_kg_ch4_h.toFixed(2)}</div>`,
+    body.innerHTML = rateBlock(`<div class="num">≈ ${r.rate_kg_ch4_h.toFixed(2)}</div>`,
       `<div class="unit">kg CH₄/h</div><div class="sub">${r.attempts ? `Frozen at replay ${r.as_of_seconds} s after ${r.attempts.length} agent attempts · ${qc.samples_used} readings` : `Median of ${qc.samples_used} per-sample estimates`}</div>`) + gauge(r);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const b = body.querySelector('.band');
@@ -91,7 +91,7 @@
         <div class="med" style="left:${pct(r.rate_kg_ch4_h)}" title="Median ${r.rate_kg_ch4_h} kg/h"></div></div>
       <div class="g-legend">
         <span><i class="lm"></i>Median</span>
-        ${iv ? '<span><i class="lb"></i>P10–P90 interval</span>' : ''}
+        ${iv ? `<span><i class="lb"></i>${/sensitivity/.test(iv.basis) ? 'Assumption sensitivity' : 'P10–P90 interval'}</span>` : ''}
         <span><i class="ld"></i>Per-sample estimate</span>
         ${ref ? `<span><i class="lr"></i>Reference release rate · ${ref.rate_kg_ch4_h} kg/h</span>` : ''}
       </div></div>`;
@@ -204,7 +204,7 @@
         ${row('Exclusion rule', esc(qc.off_axis_rule || ''))}
         ${row('Samples used / excluded', `${qc.samples_used} / ${qc.samples_off_axis}`)}
       </div>
-      ${r.interval ? '<div class="qc-chart-h"><b>Per-sample estimates</b><span>kg CH₄/h · band = P10–P90 · line = median</span></div><div id="qc-chart"></div>' : ''}
+      ${r.interval ? `<div class="qc-chart-h"><b>${r.attempts ? 'Agent attempts' : 'Per-sample estimates'}</b><span>kg CH₄/h · band = ${/sensitivity/.test(r.interval.basis) ? 'assumption sensitivity' : 'P10–P90'} · line = frozen estimate</span></div><div id="qc-chart"></div>` : ''}
     </div>`;
     if (!r.interval) return;
     qcChart = echarts.init($('qc-chart'), null, { renderer: 'canvas' });
@@ -276,8 +276,82 @@
       ${fits.map((f) => `<tr class="${f.fit_status === 'best_fit' ? 'best' : f.fit_status === 'poor_fit' ? 'poor' : ''}"><td>${esc(f.candidate_asset_id)}</td><td>${cams.has(f.candidate_asset_id) ? 'yes' : '—'}</td>
         <td>${esc((f.fit_status || '').replace(/_/g, ' '))}</td><td>${f.rate_kg_h != null ? `${f.rate_kg_h.toFixed(3)} kg/h` : '—'}</td>
         <td>${f.residual_rms_ppm != null ? `${f.residual_rms_ppm.toFixed(2)} ppm` : '—'}</td><td>${f.error_ratio_to_best != null ? `${f.error_ratio_to_best}×` : ''}</td></tr>`).join('')}</table>
-      <p class="hist-note">Only best and comparable fits carry a rate. A location fitted outside the camera view is listed when it explains the readings too.</p></div>`;
+      <p class="hist-note">Only best and comparable fits carry a rate. A location fitted outside the camera view is listed when it explains the readings too.</p>
+      <div class="attr-bars" id="attr-bars"></div></div>`;
+    // How much worse each assumed location explains the readings than the best one (1x = best).
+    const bars = fits.filter((f) => f.error_ratio_to_best != null || f.fit_status === 'best_fit').slice(0, 6);
+    aChart = echarts.init($('attr-bars'), null, { renderer: 'canvas' });
+    aChart.setOption({
+      animation: false, grid: { left: 70, right: 30, top: 18, bottom: 22 },
+      title: { text: 'Fit error vs the best location (lower is better)', textStyle: { fontSize: 11, fontWeight: 500, color: css('--ink-mute') }, left: 0, top: 0 },
+      xAxis: { type: 'value', min: 0, axisLabel: { formatter: (v) => `${v}×`, color: css('--ink-dim'), fontFamily: MONO, fontSize: 9.5 }, splitLine: { lineStyle: { color: css('--line') } } },
+      yAxis: { type: 'category', inverse: true, data: bars.map((f) => f.candidate_asset_id), axisLabel: { color: css('--ink'), fontFamily: MONO, fontSize: 10.5 }, axisTick: { show: false } },
+      series: [{ type: 'bar', barWidth: 12, data: bars.map((f) => ({ value: f.fit_status === 'best_fit' ? 1 : f.error_ratio_to_best,
+        itemStyle: { color: f.fit_status === 'best_fit' ? css('--good') : f.fit_status === 'poor_fit' ? css('--ink-faint') : css('--n-equip') } })),
+        label: { show: true, position: 'right', formatter: (p) => `${p.value}×`, fontFamily: MONO, fontSize: 10, color: css('--ink-mute') } }],
+    }, true);
   }
+
+  // Checks behind the number: the gates the pre-registered METEC tests showed are needed.
+  function renderConditions() {
+    const c = Q && Q.conditions;
+    $('cond-panel').hidden = !c;
+    if (!c) return;
+    $('cond-meta').textContent = c.all_ok ? 'All checks pass' : `${c.rows.filter((x) => !x.ok).length} check(s) fail`;
+    const r = Q.result;
+    $('cond').innerHTML = `<p class="cond-sum">${r && r.rate_kg_ch4_h != null
+      ? (c.all_ok ? '<b>Rough estimate.</b> Every condition the real-data tests needed holds for this window.' : '<b>Treat with care.</b> Some conditions fail; the number is shown with them.')
+      : '<b>Rate not estimated.</b> The checks below say why; no number is better than a wrong one.'}</p>
+      <div class="cond">${c.rows.map((x) => `<div class="${x.ok ? 'ok' : 'no'}"><b>${esc(x.label)}</b><span>${esc(x.detail)}</span></div>`).join('')}</div>
+      <p class="hist-note">${esc(c.note)}</p>`;
+  }
+
+  // Which method produced the number, which ones were tested offline, and how they did on real METEC data.
+  function renderCatalog() {
+    const C = Q && Q.catalog;
+    $('meth-panel').hidden = !C;
+    if (!C) return;
+    $('meth-meta').textContent = 'Real METEC 2024 data · pre-registered tests';
+    const label = Object.fromEntries(C.methods.map((m) => [m.id, m.label]));
+    $('meth').innerHTML = `<p class="mhead"><b>${esc(C.headline)}</b></p>
+      <div class="mcards">${C.methods.map((m) => `<div class="mcard${m.in_demo ? ' live' : ''}">
+        <span class="st ${m.status}">${esc(m.status_label)}</span><h4>${esc(m.label)}</h4><p>${esc(m.how)}</p>
+        <ul>${m.needs.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></div>`).join('')}</div>
+      <details class="how"><summary>How the demo estimate works</summary>${HOW_SVG}</details>
+      <div class="mchart" id="m-chart"></div>
+      <p class="hist-note">${esc(C.metric)}. Hatched: development set, not locked in advance. ${C.tests.filter((t) => t.preregistered).map((t) => `${esc(t.label)}: ${esc(t.note)}.`).join(' ')}</p>
+      <ul class="mlessons">${C.lessons.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+      <p class="hist-note">Source: ${esc(C.source)}</p>`;
+    const methods = ['gaussian_candidate_fit', 'gaussian_multisource', 'bls', 'mdlq'];
+    const colors = { gaussian_candidate_fit: css('--accent'), gaussian_multisource: css('--n-equip'), bls: css('--warn'), mdlq: css('--good') };
+    mChart = echarts.init($('m-chart'), null, { renderer: 'canvas' });
+    mChart.setOption({
+      animation: false, grid: { left: 40, right: 12, top: 34, bottom: 46 },
+      legend: { top: 0, textStyle: { fontSize: 10.5, color: css('--ink-mute') }, itemWidth: 12, itemHeight: 8 },
+      tooltip: { trigger: 'item', formatter: (p) => `${p.seriesName}<br>${p.name}: <b>${Math.round(p.value * 100)}%</b> within 2×` },
+      xAxis: { type: 'category', data: C.tests.map((t) => `${t.label}\n${t.units}`), axisLabel: { color: css('--ink-mute'), fontSize: 9.5, interval: 0, lineHeight: 13 }, axisTick: { show: false } },
+      yAxis: { type: 'value', min: 0, max: 1, axisLabel: { formatter: (v) => `${v * 100}%`, color: css('--ink-dim'), fontFamily: MONO, fontSize: 9.5 }, splitLine: { lineStyle: { color: css('--line') } } },
+      series: methods.map((m) => ({ name: label[m], type: 'bar', barMaxWidth: 16,
+        data: C.tests.map((t) => (t.results[m] ? { value: t.results[m].fac2, itemStyle: t.preregistered ? {} : { decal: { symbol: 'rect', dashArrayX: [1, 0], dashArrayY: [2, 3], rotation: -0.8, color: 'rgba(255,255,255,.55)' } } } : null)),
+        itemStyle: { color: colors[m] }, markLine: m === 'gaussian_candidate_fit' ? { silent: true, symbol: 'none', label: { formatter: 'pass bar', fontSize: 9.5, color: css('--ink-dim') }, lineStyle: { type: 'dashed', color: css('--ink-dim') }, data: [{ yAxis: 0.5 }] } : undefined })),
+      aria: { enabled: true, decal: { show: false } },
+    }, true);
+  }
+
+  // Sensors + wind -> one plume model per assumed location -> best fit gives the rate (static explainer).
+  const HOW_SVG = `<svg viewBox="0 0 760 150" role="img" aria-label="Methane sensors and wind feed a plume model per candidate; the best fit gives the rate">
+    <g font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">
+      <rect x="6" y="18" width="150" height="46" rx="4" fill="none" stroke="#94A3B8"/><text x="18" y="38">Methane sensors</text><text x="18" y="55" font-size="10.5" fill="#64748B">CH4-01 … CH4-05, ppm</text>
+      <rect x="6" y="84" width="150" height="46" rx="4" fill="none" stroke="#94A3B8"/><text x="18" y="104">Wind</text><text x="18" y="121" font-size="10.5" fill="#64748B">speed + direction</text>
+      <rect x="216" y="18" width="210" height="112" rx="4" fill="none" stroke="#2E6399"/><text x="230" y="40">Gaussian plume per location</text>
+      <text x="230" y="62" font-size="10.5" fill="#64748B">XV-2104 → predicted ppm per kg/h</text><text x="230" y="80" font-size="10.5" fill="#64748B">F-205 → predicted ppm per kg/h</text>
+      <text x="230" y="98" font-size="10.5" fill="#64748B">P-202 … (all positioned assets)</text><text x="230" y="118" font-size="10.5" fill="#64748B">steady-plume check, refuses otherwise</text>
+      <rect x="486" y="18" width="268" height="112" rx="4" fill="none" stroke="#2F7D4F"/><text x="500" y="40">Fit and compare</text>
+      <text x="500" y="62" font-size="10.5" fill="#64748B">least squares: rate per location</text><text x="500" y="80" font-size="10.5" fill="#64748B">best fit vs poor fit (error ratio)</text>
+      <text x="500" y="98" font-size="10.5" fill="#64748B">rate ± assumption sensitivity</text><text x="500" y="118" font-size="10.5" fill="#64748B">agrees with the camera?</text>
+      <path d="M156 41 L216 60 M156 107 L216 90 M426 74 L486 74" stroke="#64748B" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#64748B"/></marker></defs>
+    </g></svg>`;
 
   function renderHistory() {
     $('hist-panel').hidden = !H;
@@ -306,7 +380,7 @@
   }
 
   function renderAll() {
-    renderMethods(); renderHero(); renderInputs(); renderTraces(); renderLower(); renderAttr(); renderHistory();
+    renderMethods(); renderHero(); renderInputs(); renderTraces(); renderLower(); renderConditions(); renderAttr(); renderCatalog(); renderHistory();
   }
 
   async function run() {
@@ -332,7 +406,7 @@
   $('methods').addEventListener('change', (e) => { method = e.target.value; renderMethods(); });
   $('btn-run').addEventListener('click', run);
   $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
-  window.addEventListener('resize', () => { if (traces) traces.resize(); if (qcChart) qcChart.resize(); if (histChart) histChart.resize(); });
+  window.addEventListener('resize', () => { [traces, qcChart, histChart, mChart, aChart].forEach((c) => c && c.resize()); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.
   new ResizeObserver(() => { if (qcChart) qcChart.resize(); }).observe($('qc'));
 

@@ -19,8 +19,12 @@ def generate():
     chain=[t for t,_,_,_ in tags[:11]]
     edges=[dict(from_id=a,to_id=b,line_id="L-201") for a,b in zip(chain,chain[1:])]
     edges += [dict(from_id=a,to_id=b,line_id="L-VENT") for a,b in [("V-101","XV-105"),("XV-105","P-105"),("XV-2104","XV-2105"),("XV-2105","VENT-01"),("XV-2110","XV-2111")]]
-    regions=[dict(asset_id=t,polygon=p) for t,p in [("XV-2104",[[.42,.44],[.59,.44],[.59,.72],[.42,.72]]),("F-205",[[.57,.46],[.70,.46],[.70,.70],[.57,.70]]),("P-201",[[.25,.45],[.40,.45],[.40,.65],[.25,.65]])]]
-    cameras=[dict(id="CAM-01",position=[10,-5,4],orientation_degrees=[0,25,0],fov_degrees=60,resolution=[1280,720],calibration_status="illustrative_uncalibrated",video_id=None,regions=regions)]
+    regions=[dict(asset_id=t,polygon=p) for t,p in [("XV-2104",[[.42,.44],[.59,.44],[.59,.72],[.42,.72]]),("F-205",[[.57,.46],[.70,.46],[.70,.70],[.57,.70]])]]
+    # Placed as if the cameras recorded the GasVid clips on site: GF-320 320x240, 24 deg, 0.5 m high, pitched 10 deg up
+    # (release point against sky). CAM-01 = MOV_1237 at its logged 6.9 m on heading 80 deg; CAM-02 = MOV_1239 at 12.6 m
+    # looking north. A west wind carries the plume to the right of both frames, as in the recordings.
+    cameras=[dict(id="CAM-01",position=[11.2,4.8,.5],orientation_degrees=[0,10,80],fov_degrees=24,resolution=[320,240],calibration_status="illustrative_uncalibrated",video_id="MOV_1237",regions=regions),
+             dict(id="CAM-02",position=[18,-6.6,.5],orientation_degrees=[0,10,0],fov_degrees=24,resolution=[320,240],calibration_status="illustrative_uncalibrated",video_id="MOV_1239",regions=regions)]
     sensors=[]
     for i,(x,y) in enumerate([(25,6),(30,6),(35,8),(18,0),(8,6)],1):
         sensors.append(dict(id=f"CH4-{i:02}",asset_id="XV-2104" if i<4 else "K-201",variable="methane",unit="ppm",position=[x,y,1.2],sample_interval_seconds=1,uncertainty=.12,detection_limit=.1,lag_seconds=8))
@@ -48,6 +52,17 @@ def generate():
         return source_rate_kg_h if scenario_id!='SCN-002' and seconds>=600 else weep_rate_kg_h
     leak_process=solve_process(f,{'withdrawals_kg_s':{source.id:source_rate_kg_h/3600}})
     leak_process_predictions={r['sensor_id']:r['value'] for r in leak_process['measurements']}
+    # Operating event behind the onset: K-201 load step (pressure ratio 1.8 -> 2.0) at 585 s, 15 s before the packing
+    # leak steps up. The steady solver gives the new pressures; the change itself is a step, not a transient model.
+    load_step_seconds,load_step_ratio=585,2.0
+    step_process=solve_process(f,{'compressor_pressure_ratio':load_step_ratio})
+    step_leak_process=solve_process(f,{'compressor_pressure_ratio':load_step_ratio,'withdrawals_kg_s':{source.id:source_rate_kg_h/3600}})
+    step_predictions={r['sensor_id']:r['value'] for r in step_process['measurements']}
+    step_leak_predictions={r['sensor_id']:r['value'] for r in step_leak_process['measurements']}
+    def process_state(scenario_id,t):
+        stepped=scenario_id!='SCN-002' and t>=load_step_seconds
+        leaking=release_rate(scenario_id,t)>=source_rate_kg_h
+        return (step_leak_predictions if leaking else step_predictions) if stepped else (leak_process_predictions if leaking else process_predictions)
     write(Path('ground_truth/process_leak_solution.json'),leak_process)
     # Maintenance history is canonical and hand-curated once it exists; only bootstrap placeholders.
     if not (DATA/"maintenance.json").exists():
@@ -61,8 +76,16 @@ def generate():
     scenarios=[dict(id=s,incident_id=i,start_utc=start.isoformat(),duration_seconds=1800,replay_limit_seconds=1199,seed=42,title=title) for s,i,title in [("SCN-001","INC-001","Representative methane observation"),("SCN-002","INC-002","Control: release below camera detection"),("SCN-003","INC-003","Ambiguous observation; wind unavailable")]]
     write(Path("scenarios/scenarios.json"),scenarios)
     event=dict(event_id="DET-001",incident_id="INC-001",scenario_id="SCN-001",camera_id="CAM-01",timestamp_utc=(start+timedelta(seconds=600)).isoformat(),clip_time_seconds=None,mode="synthetic_annotation_fixture",origin_polygon=[[.51,.50],[.64,.50],[.64,.65],[.51,.65]],confidence=None,provenance=dict(source_kind="simulated",source_dataset="atelic-synthetic-fixture",generator_version="1.0",reference="scenarios/detections.json#DET-001"))
-    events=[event,{**event,"event_id":"DET-003","incident_id":"INC-003","scenario_id":"SCN-003","provenance":{**event['provenance'],"reference":"scenarios/detections.json#DET-003"}}]
+    events=[event,{**event,"event_id":"DET-003","incident_id":"INC-003","scenario_id":"SCN-003","camera_id":"CAM-02","provenance":{**event['provenance'],"reference":"scenarios/detections.json#DET-003"}}]
     write(Path("scenarios/detections.json"),[DetectionEvent.model_validate(e).model_dump(mode="json") for e in events])
+    # Incident-day operating log entry (the history generator writes the log up to the scenario start).
+    log_path=DATA/'operations/load_changes.json'
+    if log_path.exists():
+        log=json.loads(log_path.read_text())
+        log['events']=[e for e in log['events'] if e['id']!='LC-20261023-0809']+[dict(id='LC-20261023-0809',asset_id='K-201',
+            time_utc=(start+timedelta(seconds=load_step_seconds)).isoformat(),kind='load_step',load_before_percent=100,load_after_percent=110,
+            duration_minutes=1,note='Discharge pressure set-point raised (compressor pressure ratio 1.8 -> 2.0)')]
+        log_path.write_text(json.dumps(log,indent=1)+'\n')
     if not (DATA/"video_manifest.json").exists(): write(Path("video_manifest.json"),dict(status="unavailable",file=None,fps=None,rights="unverified",source="No recorded footage installed",mapping="Synthetic annotation fixture, not GasVid or model inference"))
     write(Path("ground_truth/private_truth.json"),dict(source_asset_id="XV-2104",source_position=list(source.position),rate_kg_h=source_rate_kg_h,pre_onset_weep_kg_h=weep_rate_kg_h,rate_basis="GasVid MOV_1242 metered class 1 (277.7 g/h) and class 0 (5.3 g/h); Wang et al., Applied Energy 2020, Table 1",onset_seconds=600,validation_only_counterfactual_stop_seconds=1200,warning="Generator/validation only; not investigation evidence. Recovery is not an approval."))
     out=DATA/"generated";out.mkdir(exist_ok=True)
@@ -92,7 +115,7 @@ def generate():
                     elif sensor.variable=='wind_direction':value=direction
                     elif sensor.variable in ('pressure','temperature','flow'):
                         # Same source mass as dispersion; steady states, not a transient solver.
-                        predictions=leak_process_predictions if release_rate(scenario['id'],t)>=source_rate_kg_h else process_predictions
+                        predictions=process_state(scenario['id'],t)
                         prediction=predictions[sensor.id]
                         if prediction is None:qc='missing';value=None
                         else:value=prediction+rng.gauss(0,sensor.uncertainty)

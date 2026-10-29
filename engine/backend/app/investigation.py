@@ -106,7 +106,8 @@ INVESTIGATE = Task("investigate", COMMON + (
     "any multi-day quiet stretch (with its observability) and whether it follows a repair date, when they returned, the "
     "weekly trend and how many start soon after a compressor load change; relate these to the maintenance dates. History narrows the area but cannot separate nearby locations or "
     "give a rate, so do not rank candidates by per-episode fits; silence while the wind blew away from the sensors is not "
-    "evidence that nothing leaked. "),
+    "evidence that nothing leaked. If the history lists incident-day operations, relate them to the pressure trace in the sensor history "
+    "and to the onset time, citing the operations log. "),
     Findings, ("findings", "candidate_assessment"))
 
 ANSWER = Task("answer", COMMON + (

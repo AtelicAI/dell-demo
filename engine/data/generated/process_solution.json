@@ -105,12 +105,7 @@
       "outlet_mass_flow_kg_s": 0.5,
       "side_withdrawal_kg_s": 0.0
     },
-    "VENT-01": {
-      "pressure_pa": null,
-      "temperature_k": null,
-      "status": "isolated_closed_branch"
-    },
-    "XV-2111": {
+    "XV-105": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
@@ -125,7 +120,12 @@
       "temperature_k": null,
       "status": "isolated_closed_branch"
     },
-    "XV-105": {
+    "XV-2111": {
+      "pressure_pa": null,
+      "temperature_k": null,
+      "status": "isolated_closed_branch"
+    },
+    "VENT-01": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"

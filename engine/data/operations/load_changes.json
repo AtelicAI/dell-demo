@@ -857,6 +857,16 @@
    "load_before_percent": 60,
    "load_after_percent": 100,
    "duration_minutes": 20
+  },
+  {
+   "id": "LC-20261023-0809",
+   "asset_id": "K-201",
+   "time_utc": "2026-10-23T08:09:45+00:00",
+   "kind": "load_step",
+   "load_before_percent": 100,
+   "load_after_percent": 110,
+   "duration_minutes": 1,
+   "note": "Discharge pressure set-point raised (compressor pressure ratio 1.8 -> 2.0)"
   }
  ]
 }

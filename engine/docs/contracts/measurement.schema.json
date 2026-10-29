@@ -1,0 +1,77 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "observation_id": {
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "timestamp_utc": {
+      "format": "date-time",
+      "title": "Timestamp Utc",
+      "type": "string"
+    },
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "sensor_id": {
+      "title": "Sensor Id",
+      "type": "string"
+    },
+    "asset_id": {
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Value"
+    },
+    "unit": {
+      "title": "Unit",
+      "type": "string"
+    },
+    "quality_flag": {
+      "enum": [
+        "good",
+        "missing",
+        "below_detection",
+        "invalid_wind"
+      ],
+      "title": "Quality Flag",
+      "type": "string"
+    },
+    "origin_type": {
+      "const": "simulated",
+      "default": "simulated",
+      "enum": [
+        "simulated"
+      ],
+      "title": "Origin Type",
+      "type": "string"
+    },
+    "generator_version": {
+      "default": "gaussian-fixture-1",
+      "title": "Generator Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "observation_id",
+    "timestamp_utc",
+    "scenario_id",
+    "sensor_id",
+    "asset_id",
+    "value",
+    "unit",
+    "quality_flag"
+  ],
+  "title": "Measurement",
+  "type": "object"
+}

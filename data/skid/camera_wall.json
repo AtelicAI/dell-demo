@@ -8,8 +8,7 @@
       "area": "Compressor discharge",
       "watches": [
         "XV-2104",
-        "F-205",
-        "P-201"
+        "F-205"
       ],
       "feed": "ogi_clip"
     },
@@ -18,8 +17,7 @@
       "area": "Compressor discharge (east view)",
       "watches": [
         "XV-2104",
-        "F-205",
-        "P-201"
+        "F-205"
       ],
       "feed": {
         "file": "cam02_MOV_2571.mp4",

@@ -695,32 +695,83 @@ def plant_graph():
                 t, a, b = "HAS_WORK_ORDER", b, a
             else:
                 t = EDGE_TYPE.get(t, t)
-            edges.append({"type": t, "from": a, "to": b, "source": src, "provenance": (e.get("props") or {}).get("provenance") or "synthetic",
+            edges.append({"type": t, "from": a, "to": b, "source": src, "provenance": "synthetic",
+                          "relationship_basis": (e.get("props") or {}).get("provenance"),
                           "method": "manual_illustrative" if t == "CAN_OBSERVE" else "graph relationship", "mapping_version": ver})
-        # 2-D layout from the facility coordinates (metres), scaled to 0-100 %.
-        xs = [a["position"][0] for a in fac["assets"]]
-        ys = [a["position"][1] for a in fac["assets"]]
-        sx, sy = (max(xs) - min(xs)) or 1, (max(ys) - min(ys)) or 1
-        X = lambda x: max(3, min(97, 8 + 84 * (x - min(xs)) / sx))
-        positions = {a["id"]: {"x": X(a["position"][0]), "y": 72 - 44 * (a["position"][1] - min(ys)) / sy} for a in fac["assets"]}
+        positions = schematic(fac)
         cams = fac.get("cameras", [])
-        for c in cams:
-            positions[c["id"]] = {"x": X(c["position"][0]), "y": 92}
-        for x in fac["sensors"]:
-            if x["variable"] == "methane":
-                positions[x["id"]] = {"x": X(x["position"][0]), "y": 12}
         rois = {"camera_id": cams[0]["id"] if cams else "CAM-01", "clip_id": "MOV_1242", "mapping_method": "manual_illustrative",
                 "mapping_version": ver,
-                "regions": [{"asset_id": r["asset_id"], "polygon_normalized": r["polygon"]} for c in cams for r in c.get("regions", [])]}
+                "regions": [{"asset_id": r["asset_id"], "polygon_normalized": r["polygon"], "camera_id": c["id"]} for c in cams for r in c.get("regions", [])]}
         return {"nodes": nodes, "edges": edges, "layout": {"positions": positions, "mapping_version": ver},
                 "camera_rois": rois, "store": "neo4j"}
     return cached(("graph-ui",), build, ttl=10)
 
 
+def schematic(fac):
+    """P&ID-style layout (0-100 %): the main gas line left to right, vent branches above their tee and the vent header
+    above them, methane detectors on top at their physical position along the line, cameras below."""
+    con = fac["connections"]
+    main = [c for c in con if c["line_id"] == "L-201"]
+    start = next(c["from_id"] for c in main if not any(d["to_id"] == c["from_id"] for d in main))
+    order = [start]
+    while True:
+        nxt = [c["to_id"] for c in main if c["from_id"] == order[-1]]
+        if not nxt:
+            break
+        order.append(nxt[0])
+    step = 86 / max(1, len(order) - 1)
+    pos = {a: {"x": 7 + i * step, "y": 72} for i, a in enumerate(order)}
+    vent = [c for c in con if c["line_id"] != "L-201"]
+    header = [a for a in {c["to_id"] for c in vent} if sum(c["to_id"] == a for c in vent) > 1]
+    pending = [c for c in vent if c["from_id"] in pos and c["to_id"] not in header]
+    while pending:
+        c = pending.pop(0)
+        if c["to_id"] in pos:
+            continue
+        p = pos[c["from_id"]]
+        pos[c["to_id"]] = {"x": p["x"] if p["y"] == 72 else p["x"] + step, "y": 46}
+        pending += [d for d in vent if d["from_id"] == c["to_id"] and d["to_id"] not in header]
+    for h in header:
+        feeders = [pos[c["from_id"]]["x"] for c in vent if c["to_id"] == h and c["from_id"] in pos]
+        nearest = min(feeders, key=lambda x: abs(x - 50)) if feeders else 50
+        pos[h] = {"x": nearest + step / 2, "y": 24}
+    # Methane detectors: physical x mapped through the main line's physical spacing, kept apart.
+    phys = {a["id"]: a["position"][0] for a in fac["assets"]}
+    xs = [(phys[a], pos[a]["x"]) for a in order]
+    def along(x):
+        if x <= xs[0][0]:
+            return xs[0][1]
+        for (x0, p0), (x1, p1) in zip(xs, xs[1:]):
+            if x <= x1:
+                return p0 + (p1 - p0) * (x - x0) / ((x1 - x0) or 1)
+        return min(97, xs[-1][1] + (x - xs[-1][0]) * step / 3)
+    placed = []
+    for sid, x in sorted(((s["id"], s["position"][0]) for s in fac["sensors"] if s["variable"] == "methane"), key=lambda v: v[1]):
+        px = along(x)
+        while any(abs(px - q) < 7 for q in placed):
+            px += 7
+        placed.append(px)
+        pos[sid] = {"x": px, "y": 7}
+    # Keep detectors on the page and at least 7 % apart, packing back from the right edge.
+    row = sorted((v["x"], k) for k, v in pos.items() if v["y"] == 7)
+    limit = 96
+    for x, k in reversed(row):
+        pos[k]["x"] = min(x, limit)
+        limit = pos[k]["x"] - 7
+    for i, c in enumerate(fac.get("cameras", [])):
+        target = c["regions"][0]["asset_id"] if c.get("regions") else order[len(order) // 2]
+        pos[c["id"]] = {"x": pos.get(target, {"x": 50})["x"] + (i - 0.5) * 12, "y": 94}
+    return pos
+
+
 @app.get("/incidents/{incident_id}/graph")
 def get_graph(incident_id: str):
-    slot_or_404(incident_id)
-    return plant_graph()
+    s = slot_or_404(incident_id)
+    g = plant_graph()
+    # Locate shows what this incident's camera can see.
+    regions = [r for r in g["camera_rois"]["regions"] if r.get("camera_id", s["camera_id"]) == s["camera_id"]]
+    return {**g, "camera_rois": {**g["camera_rois"], "camera_id": s["camera_id"], "regions": regions}}
 
 
 @app.get("/graph/summary")
@@ -792,7 +843,13 @@ def get_candidates(incident_id: str):
         out.append({"asset_id": aid, "status": "candidate", "rationale": ([a["assessment"]] if a else []) + ([c["why"]] if c.get("why") else []),
                     "supporting": sup, "contradicting": con,
                     "missing": ["Field confirmation by an operator", "Calibrated camera-to-equipment mapping"]})
-    return {"status": "verified", "provenance": "model_estimated",
+    # Graph nodes behind the story: everything the agents cited, plus the sensors used for the estimate.
+    cited = [i for f in inv.get("findings", []) for i in f.get("evidence_ids", [])]
+    cited += [i for a_ in inv.get("candidate_assessment", []) for i in a_.get("evidence_ids", [])]
+    if s["versions"]:
+        cited += [e["id"] for e in s["drafts"][str(s["versions"][-1]["draft_version"])]["evidence"]]
+    related = sorted({ev.source_id(i) for i in cited} | set(sensors) | {"WO-" + i.split("WO-")[1][:3] for i in cited if "commitment:WO-" in i})
+    return {"status": "verified", "provenance": "model_estimated", "related_ids": related,
             "method": "Camera overlap + Gaussian candidate fit + Nemotron investigation",
             "assessment": {"result": "likely_source", "asset_id": snap["candidate_asset_id"]},
             "candidates": out, "invalid_ids": [], "attribution": q.get("telemetry_attribution"),
@@ -871,6 +928,50 @@ def quant_methods(s):
              "missing": [] if reveal(s) else ["Revealed only after the report is issued, so it cannot anchor the review"]}]
 
 
+def conditions(s, q):
+    """When the rate can be trusted at all: the checks behind the estimate (or the refusal), from the frozen window."""
+    if not q:
+        return None
+    w = q.get("data_window") or {}
+    series = get_sensor_series(s["incident_id"]) if w else None
+    in_win = lambda pts: [v for t, v in pts if w.get("start_utc") and w["start_utc"] <= t <= w["end_utc"]]
+    speeds = in_win(series["series"]["wind_speed_m_s"]) if series else []
+    dirs = in_win(series["series"]["wind_dir_deg_from_north"]) if series else []
+    import math
+    spread = None
+    if dirs:
+        c, sn = sum(math.cos(math.radians(d)) for d in dirs) / len(dirs), sum(math.sin(math.radians(d)) for d in dirs) / len(dirs)
+        spread = math.degrees(math.sqrt(max(0.0, -2 * math.log(max(1e-9, math.hypot(c, sn))))))
+    fits = q.get("candidate_fits") or []
+    detected = max([f.get("detected_locations") or 0 for f in fits] or [0])
+    steady = (q.get("qc") or {}).get("steady_state") or {}
+    att = q.get("attribution") or {}
+    end = w.get("end_utc")
+    local_hour = (int(end[11:13]) + 3) % 24 if end else None  # Bahrain, UTC+3
+    rows = [
+        {"id": "wind", "label": "Steady wind", "ok": bool(speeds) and min(speeds) >= 1.0 and (spread or 0) <= 30,
+         "detail": (f"{sum(speeds) / len(speeds):.1f} m/s, direction spread {spread:.0f}° (needs at least 1 m/s, at most 30°)" if speeds
+                    else "No wind readings in the window: the weather station is down")},
+        {"id": "sensors", "label": "Sensors downwind with signal", "ok": detected >= 2,
+         "detail": f"{detected} methane sensors above their detection limit" if fits else "Not assessed"},
+        {"id": "steady", "label": "Plume steady", "ok": bool(steady) and abs((steady.get("late_half_rate_kg_h") or 0) - (steady.get("early_half_rate_kg_h") or 0))
+                <= (steady.get("max_relative_change") or 0.3) * max(steady.get("early_half_rate_kg_h") or 1e-9, 1e-9),
+         "detail": (f"Early and late halves of the window agree: {steady['early_half_rate_kg_h']:.3f} vs {steady['late_half_rate_kg_h']:.3f} kg/h" if steady
+                    else "Not assessed")},
+        {"id": "daytime", "label": "Daytime", "ok": local_hour is not None and 7 <= local_hour < 18,
+         "detail": f"{local_hour:02d}:{end[14:16]} local time (UTC+3)" if local_hour is not None else "Not assessed"},
+        {"id": "attribution", "label": "Candidates told apart", "ok": att.get("status") == "agrees_single",
+         "detail": (att.get("status") or "not assessed").replace("_", " ")},
+    ]
+    return {"rows": rows, "all_ok": all(r["ok"] for r in rows),
+            "note": "Gates from the pre-registered METEC tests: estimates outside them were unreliable"}
+
+
+@app.get("/quantification/methods")
+def quantification_methods():
+    return cached(("qmethods",), lambda: engine.get("/quantification/methods"), ttl=3600)
+
+
 @app.get("/incidents/{incident_id}/quantification")
 def get_quantification(incident_id: str):
     s = slot_or_404(incident_id)
@@ -882,7 +983,9 @@ def get_quantification(incident_id: str):
                     "text": (f"Quantify agent: attempt {len(att)} at replay {att[-1]['as_of_seconds']} s — "
                              f"{(att[-1].get('reason') or att[-1].get('attribution') or att[-1]['status']).replace('_', ' ')}") if att
                             else "Quantify agent starts after Locate"}
-    return {"result": quant_result(s), "methods": quant_methods(s), "release_check": release_check(s), "progress": progress}
+    q = quant_result(s)
+    return {"result": q, "methods": quant_methods(s), "release_check": release_check(s), "progress": progress,
+            "conditions": conditions(s, q) if not progress else None, "catalog": quantification_methods()}
 
 
 @app.post("/incidents/{incident_id}/quantify")
@@ -929,7 +1032,10 @@ def get_sensor_series(incident_id: str):
     methane = {k: v for k, v in by.items() if var.get(k) == "methane"}
     peak = max(methane, key=lambda k: max(x[1] for x in methane[k])) if methane else None
     pick = lambda v: next((k for k in by if var.get(k) == v), None)
-    wind_s, wind_d, pres = pick("wind_speed"), pick("wind_direction"), pick("pressure")
+    wind_s, wind_d = pick("wind_speed"), pick("wind_direction")
+    # Pressure at the suspect equipment (the K-201 load step shows there), else the first pressure sensor.
+    src = rec["snapshot"]["candidate_asset_id"] if rec else "XV-2104"
+    pres = next((x["id"] for x in fac["sensors"] if x["variable"] == "pressure" and x["asset_id"] == src and x["id"] in by), pick("pressure"))
     series = {"methane_ppm": methane.get(peak, []), "wind_speed_m_s": by.get(wind_s, []),
               "wind_dir_deg_from_north": by.get(wind_d, []),
               "pressure_bara": [[t, v / 1e5 if v > 1000 else v] for t, v in by.get(pres, [])]}

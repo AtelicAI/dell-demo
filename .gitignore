@@ -30,3 +30,4 @@ data/ogi/*.mp4
 .ui-state/
 !data/ogi/inc00*_mov12*_atelic.mp4
 !data/ogi/inc00*_mov12*_original.mp4
+engine/data/ground_truth/

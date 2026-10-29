@@ -76,9 +76,11 @@
     const left = xs.length ? Math.min(...xs) : 0;
     const mean = (v, d) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : d);
     // Slide right until no node in the same band is closer than 0.6 columns.
+    // Slide right until no node in the same band is closer than 0.9 columns; neighbours alternate half a row so labels clear.
     const free = (x, y) => {
-      while ([...pos.values()].some((p) => p[1] === y && Math.abs(p[0] - x) < 0.6)) x += 0.6;
-      return [x, y];
+      while ([...pos.values()].some((p) => Math.abs(p[1] - y) < 0.45 && Math.abs(p[0] - x) < 0.9)) x += 0.45;
+      const near = [...pos.values()].filter((p) => Math.abs(p[1] - y) < 0.45 && Math.abs(p[0] - x) < 1.4).length;
+      return [x, near % 2 ? y + 0.4 : y];
     };
     const linked = (id, type) => G.edges.filter((e) => e.type === type && (e.from === id || e.to === id))
       .map((e) => (e.from === id ? e.to : e.from)).filter((o) => pos.has(o)).map((o) => pos.get(o)[0]);
@@ -415,7 +417,7 @@
       const ids = new Set(G.nodes.map((n) => n.asset_id));
       incList.forEach((l, i) => {
         const c = cands[i] || { candidates: [] };
-        const rel = [l.camera_id, ...c.candidates.flatMap((x) => [x.asset_id, ...[...(x.supporting || []), ...(x.contradicting || [])].map((e) => e.source_id)])];
+        const rel = [l.camera_id, ...(c.related_ids || []), ...c.candidates.flatMap((x) => [x.asset_id, ...[...(x.supporting || []), ...(x.contradicting || [])].map((e) => e.source_id)])];
         incSets[l.incident_id] = { camera: l.camera_id, nodes: [...new Set(rel)].filter((id) => ids.has(id)),
           cands: new Set(c.candidates.map((x) => x.asset_id)),
           source: c.assessment && c.assessment.result === 'likely_source' ? c.assessment.asset_id : null };

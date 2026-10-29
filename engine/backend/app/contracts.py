@@ -50,7 +50,7 @@ def validate_polygon(polygon):
 class Camera(Contract):
     id: str
     position: tuple[float,float,float]
-    orientation_degrees: tuple[float,float,float]
+    orientation_degrees: tuple[float,float,float]  # roll, pitch (up positive), heading clockwise from north
     fov_degrees: float = Field(gt=0,lt=180)
     resolution: tuple[int,int]
     calibration_status: Literal["illustrative_uncalibrated"]
