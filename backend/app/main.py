@@ -318,7 +318,8 @@ def list_incidents():
                      "clip_available": True, "triggered_at": s["triggered_at"], "stages": v["stages"],
                      "asset_id": selected_asset(s), "asset_provenance": "hypothesis",
                      "rate_kg_ch4_h": q and q.get("rate_kg_ch4_h"), "review": latest_review(s),
-                     "dismissal": s["dismissal"], "engine_incident_id": s["engine_id"]})
+                     "dismissal": s["dismissal"], "engine_incident_id": s["engine_id"],
+                     "frame_anchor": EVENTS[iid]["anchor"]})
     return {"live": live, "history": incident_history()}
 
 
@@ -510,10 +511,14 @@ def overview_plume_image():
 # the monitored window; the alarm latches from the executed detector samples (3 of the last 5 positive).
 EVENTS = {
     "INC-001": {"atelic": "ogi/inc001_mov1237_atelic.mp4", "original": "ogi/inc001_mov1237_original.mp4",
-                "quiet": "ogi/inc001_mov1237_quiet.mp4"},
+                "quiet": "ogi/inc001_mov1237_quiet.mp4", "anchor": "top",
+                "view": "Close view, 6.9 m from the release"},
     "INC-002": {"atelic": "ogi/inc002_mov1239_atelic.mp4", "original": "ogi/inc002_mov1239_original.mp4",
-                "quiet": "ogi/inc002_mov1239_quiet.mp4"},
+                "quiet": "ogi/inc002_mov1239_quiet.mp4", "anchor": "bottom",
+                "view": "Wide view, 12.6 m from the release. A separate release from INC-001, recorded at a different time"},
 }
+# "anchor": which edge of the frame stays in view when a wide tile crops the 4:3 footage. MOV_1237's plume is near
+# the top; MOV_1239 is filmed from farther back, so its stack and equipment sit low and a top crop cuts them off.
 # "quiet": 60 s of the same camera's original infrared from the class-0 interval (5.3 g/h, below camera detection)
 # with no positive detector sample (MOV_1237 40-100 s, MOV_1239 20-80 s). The wall loops it until that incident's
 # alarm, so a camera never shows a detection before it has one.
@@ -579,6 +584,7 @@ def get_detections(incident_id: str):
         "metered_release": {"rate_g_h": seg.get("metered_rate_g_h"), "label": seg.get("label"), "class": seg.get("class"),
                             "basis": "GasVid metered release class for this footage (Wang et al. 2020, Table 1)"},
         "mapping_basis": mon["mapping_basis"],
+        "frame_anchor": EVENTS[incident_id]["anchor"], "view_note": EVENTS[incident_id]["view"],
     }
     rec = record(s)
     ev = rec["snapshot"]["events"][0] if rec and rec["snapshot"].get("events") else None

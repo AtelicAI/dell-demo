@@ -73,6 +73,7 @@
         ${heat ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
         ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
         ${row('Source', `${CAM} · ${meta.camera_type ? `${meta.camera_type} · ` : ''}${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
+        ${meta.view_note ? row('Camera view', meta.view_note, prov) : ''}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
         ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint', 'v-release') : ''}
         ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · 3 of 5 one-second samples positive`, 'model_estimated') : ''}
@@ -181,14 +182,15 @@
   // recording, so nothing is detected or raised on its own.
   function cam1Screen(mode, clipOk, origOk) {
     const quiet = !raised, auto = quiet ? '' : ' autoplay', inc = window.AtelicShell.INCIDENT_ID;
-    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip"></video>${quiet ? `<video id="video-quiet" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${inc}/clip/before"></video>` : ''}<canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMidYMin slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
+    const low = meta.frame_anchor === 'bottom';
+    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}${low ? ' anc-b' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip"></video>${quiet ? `<video id="video-quiet" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${inc}/clip/before"></video>` : ''}<canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMid${low ? 'YMax' : 'YMin'} slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
       : `<div class="no-feed"><b>${esc(CAM)} leak recording not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
   }
 
   function renderWall(clipOk, origOk, mode) {
     const cams = wall ? wall.cameras : [{ camera_id: CAM, area: '', watches: [], feed: 'ogi_clip' }];
     const wallP = wall ? (wall.status === 'sample' ? 'simulated' : wall.provenance) : null;
-    const video = (src) => `<div class="frame"><video muted autoplay loop playsinline preload="auto" src="${src}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
+    const video = (src, low) => `<div class="frame${low ? ' anc-b' : ''}"><video muted autoplay loop playsinline preload="auto" src="${src}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
     $('wall').innerHTML = cams.map((c) => {
       const mine = c.camera_id === CAM;
       // Another live incident on this camera: its normal view, or its alarm with a link to open it.
@@ -199,7 +201,7 @@
         : on ? `${c.camera_id} · watches ${c.watches.join(', ')} · recorded, looped`
         : `${c.camera_id} · watches ${c.watches.join(', ')} · no feed`;
       const screen = mine ? cam1Screen(mode, clipOk, origOk)
-        : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`)
+        : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`, other.frame_anchor === 'bottom')
         : loop ? video(`${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}`)
         : '<div class="no-feed"><b>No feed</b></div>';
       const state = other && other.dismissal ? 'Closed · false alarm'
