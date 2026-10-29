@@ -65,42 +65,32 @@
       "where": "engine/backend/app/puff.py"
     },
     {
-      "id": "pyelq",
-      "label": "pyELQ (plume + Bayesian)",
-      "family": "Bayesian inversion",
-      "connected": false,
-      "how": "Shell's open-source inversion: Gaussian plume physics with Bayesian sampling over where sources are and how big.",
-      "needs": [
-        "Continuous sensor network",
-        "Wind",
-        "Hours of data"
-      ],
-      "best_when": "Many sensors, several leaks at once, steady wind"
-    },
-    {
       "id": "mdlq",
       "label": "MDLQ (puff + Bayesian)",
       "family": "Bayesian inversion",
-      "connected": false,
-      "how": "Detects, locates and quantifies from a continuous network: Gaussian puffs with a spike-and-slab Bayesian model that gives each source a leak probability and a rate range.",
+      "connected": true,
+      "how": "Weighs every source the sensors can see, alone or leaking together: Gaussian puffs give each source's footprint and a spike-and-slab Bayesian model (after Daniels et al. 2026) gives each one a leak probability and a rate range. Our Python implementation, not the authors' R code.",
       "needs": [
-        "Ring of sensors around the site",
-        "Wind",
-        "Hours of data"
+        "Methane sensors around the site",
+        "Wind speed and direction",
+        "A few minutes of readings"
       ],
-      "best_when": "Many sensors, several leaks at once, changing wind"
+      "best_when": "Several possible sources, maybe leaking at once; says which ones leak",
+      "where": "engine/backend/app/mdlq.py"
     },
     {
       "id": "cfd",
       "label": "CFD + inversion",
       "family": "Flow solver",
-      "connected": false,
-      "how": "Solves the airflow around buildings and equipment, then inverts the readings through it.",
+      "connected": true,
+      "how": "Solves the airflow around the separator and compressor on a 23,040-cell 3-D grid (mass-consistent wind, as in QUIC-URB), carries methane through it from each candidate with near-field turbulence from the sonic, then fits the rates. A fast diagnostic solver, not full RANS or LES.",
       "needs": [
-        "3-D site model",
-        "Hours of compute per case"
+        "3-D equipment model",
+        "Wind and sonic turbulence",
+        "About 1 s of compute per candidate"
       ],
-      "best_when": "Enclosed or built-up areas where air flows around obstacles"
+      "best_when": "Equipment or buildings bend the airflow between source and sensors",
+      "where": "engine/backend/app/cfd.py"
     }
   ]
 }

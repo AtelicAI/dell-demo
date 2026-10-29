@@ -17,11 +17,9 @@ def _time(x):
     return x if isinstance(x, datetime) else datetime.fromisoformat(str(x).replace('Z', '+00:00'))
 
 
-def fit(facility, rows, asset_id, end, window_s=60):
-    from scipy.optimize import lsq_linear
-    base = dict(method=METHOD, status='rate_unavailable', rate_kg_h=None, candidate_asset_id=asset_id)
+def design(facility, rows, sources, end, window_s=60):
+    """Unit responses (ppm per kg/h) of every methane reading in the window to each source position, the readings and their times."""
     sensors = {s.id: s for s in facility.sensors}
-    source = np.array(next(a for a in facility.assets if a.id == asset_id).position)
     end = _time(end)
     wind = {}
     for r in rows:
@@ -37,33 +35,46 @@ def fit(facility, rows, asset_id, end, window_s=60):
                if sensors.get(r['sensor_id']) and sensors[r['sensor_id']].variable == 'methane' and r['quality_flag'] == 'good'
                and r['value'] is not None and end - timedelta(seconds=window_s) <= _time(r['timestamp_utc']) <= end]
     ages = np.arange(RELEASE_DT_S, MAX_AGE_S, RELEASE_DT_S)
-    resp, y = [], []
+    idx = np.minimum((ages - 1e-9).astype(int), MAX_AGE_S - 1)
+    frac = ages - idx
+    sources = np.atleast_2d(np.asarray(sources, float))
+    rows_a, y, times = [], [], []
     for s, v, t in samples:
         # Puff centres: integrate the per-second wind back from the sample time.
         steps = [vel.get(t - k) for k in range(1, MAX_AGE_S + 1)]
         if any(x is None for x in steps):
             continue
         cum = np.cumsum(np.array(steps), axis=0)
-        idx = np.minimum((ages - 1e-9).astype(int), len(cum) - 1)
-        frac = ages - idx
         prev = np.vstack(([0., 0.], cum))[idx]
         disp = prev + (cum[idx] - prev) * frac[:, None]
         travel = np.hypot(disp[:, 0], disp[:, 1])
         sh, sz = np.maximum(.5, .12 * travel), np.maximum(.4, .08 * travel)
-        dx = s.position[0] - (source[0] + disp[:, 0])
-        dy = s.position[1] - (source[1] + disp[:, 1])
-        z, h = s.position[2], source[2]
         mass = RELEASE_DT_S / 3600  # kg per puff at 1 kg/h
-        c = mass / ((2 * math.pi) ** 1.5 * sh * sh * sz) * np.exp(-(dx * dx + dy * dy) / (2 * sh * sh)) * \
-            (np.exp(-(z - h) ** 2 / (2 * sz * sz)) + np.exp(-(z + h) ** 2 / (2 * sz * sz)))
-        resp.append(float(c.sum()) * PPM_PER_KG_M3)
+        row = []
+        for src in sources:
+            dx = s.position[0] - (src[0] + disp[:, 0])
+            dy = s.position[1] - (src[1] + disp[:, 1])
+            z, h = s.position[2], src[2]
+            c = mass / ((2 * math.pi) ** 1.5 * sh * sh * sz) * np.exp(-(dx * dx + dy * dy) / (2 * sh * sh)) * \
+                (np.exp(-(z - h) ** 2 / (2 * sz * sz)) + np.exp(-(z + h) ** 2 / (2 * sz * sz)))
+            row.append(float(c.sum()) * PPM_PER_KG_M3)
+        rows_a.append(row)
         y.append(v)
-    resp, y = np.array(resp), np.array(y)
+        times.append(t)
+    return np.array(rows_a).reshape(-1, len(sources)), np.array(y), np.array(times, int)
+
+
+def fit(facility, rows, asset_id, end, window_s=60):
+    from scipy.optimize import lsq_linear
+    base = dict(method=METHOD, status='rate_unavailable', rate_kg_h=None, candidate_asset_id=asset_id)
+    source = next(a for a in facility.assets if a.id == asset_id).position
+    A, y, _ = design(facility, rows, [source], end, window_s)
     if len(y) == 0:
         return {**base, 'reason': 'missing_wind_or_methane'}
+    resp = A[:, 0]
     if (resp > .01).sum() < 3:
         return {**base, 'reason': 'no_sensor_downwind'}
-    design = np.column_stack((resp, np.ones(len(y))))
-    solved = lsq_linear(design, y, bounds=([0, 0], [np.inf, 5]))
+    X = np.column_stack((resp, np.ones(len(y))))
+    solved = lsq_linear(X, y, bounds=([0, 0], [np.inf, 5]))
     return {**base, 'status': 'estimated', 'reason': None, 'rate_kg_h': float(solved.x[0]), 'background_ppm': float(solved.x[1]),
-            'residual_rms_ppm': float(np.sqrt(np.mean((design @ solved.x - y) ** 2))), 'puffs_per_sample': len(ages)}
+            'residual_rms_ppm': float(np.sqrt(np.mean((X @ solved.x - y) ** 2))), 'puffs_per_sample': int(MAX_AGE_S / RELEASE_DT_S)}

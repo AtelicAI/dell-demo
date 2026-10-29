@@ -932,13 +932,16 @@ def quant_result(s):
 TOOL_NOTE = {"gaussian_candidate_fit": "Plume model: one Gaussian fit per candidate location over every methane sensor and the measured wind",
              "bls": "Particle model through the measured turbulence and stability",
              "gaussian_puff": "Puff model: puffs carried by each second's wind, fitted over every methane sensor",
+             "mdlq": "MDLQ method: puffs + spike-and-slab Bayesian over every visible source, leak probability for each",
+             "cfd": "Flow solver: airflow around the equipment, methane transport from each candidate, rate fit",
              "qogi": "Camera: plume mass from the radiometric frame × plume speed from the footage; no anemometer"}
 RATE_REASON = {"missing_wind_or_methane": "Weather mast down and no camera plume to measure",
                "waiting_for_camera_window": "Weather mast down; the camera plume never held steady within the wait limit",
                "non_steady_plume": "Plume never became steady within the wait limit"}
 
 
-TOOL_SHORT = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera (QOGI)", "bls": "bLs", "gaussian_puff": "Gaussian puff"}
+TOOL_SHORT = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera (QOGI)", "bls": "bLs", "gaussian_puff": "Gaussian puff",
+              "mdlq": "MDLQ", "cfd": "CFD"}
 
 
 def attempt_text(a):

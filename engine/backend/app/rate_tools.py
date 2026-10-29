@@ -11,7 +11,7 @@ import numpy as np
 from .bls import SurfaceLayer, ppm_per_kg_h, wind_frame
 from .bls_footprint import footprint
 from .data import DATA
-from . import puff, qogi
+from . import cfd, mdlq, puff, qogi
 
 WINDOW_S = 60
 STEADY_SPREAD_DEG = 30.
@@ -160,10 +160,15 @@ def decide(case, camera):
                           if wind_ok and case['wind_steady'] else
                           ('blocked', 'Needs wind to carry the puffs; the weather mast is not reporting') if not wind_ok else
                           ('cross_check', f'Wind turning (spread {spread:.0f}°): puffs follow the changing direction'))
-    many = 'several sources leaking at once, over hours of network data'
-    d['pyelq'] = ('not_needed', f"Built for {many}; the camera alarm narrowed this to {case['camera_candidates']} candidates in one window")
-    d['mdlq'] = ('not_needed', f"Built for {many} and changing wind; one camera-flagged release here")
-    d['cfd'] = ('not_needed', 'Open skid on a desert pad, no enclosure; air flows freely around the equipment')
+    if not wind_ok:
+        d['mdlq'] = ('blocked', 'Needs wind to carry the puffs; the weather mast is not reporting')
+        d['cfd'] = ('blocked', 'Needs wind and sonic turbulence to drive the flow; the weather mast is not reporting')
+    else:
+        d['mdlq'] = ('cross_check', f"Weighs every source the sensors can see, alone or leaking together: leak probability for each, "
+                                    f"not just the {case['camera_candidates']} the camera flagged")
+        d['cfd'] = (('cross_check', 'One source left: solves the airflow around the separator and compressor to check the equipment does not '
+                                    'bend the plume away from the sensors') if single else
+                    ('waiting', 'Runs once the readings single out one source; about 1 s of flow solving per candidate'))
     return d
 
 
@@ -190,6 +195,10 @@ def run(facility, rows, end, gaussian, attribution, candidates, camera_id, clip_
         outputs['bls'] = bls_fit(facility, rows, candidate_asset_id, end, case)
     if (decisions['gaussian_puff'][0] == 'cross_check' or tool == 'gaussian_puff') and wind_ok:
         outputs['gaussian_puff'] = puff.fit(facility, rows, candidate_asset_id, end)
+    if (decisions['mdlq'][0] == 'cross_check' or tool == 'mdlq') and wind_ok:
+        outputs['mdlq'] = mdlq.fit(facility, rows, candidate_asset_id, end)
+    if (decisions['cfd'][0] == 'cross_check' or tool == 'cfd') and wind_ok:
+        outputs['cfd'] = cfd.fit(facility, rows, candidate_asset_id, end, case, [c['asset_id'] for c in candidates])
     agent_primary = next((t for t, (role, _) in decisions.items() if role == 'primary'), None)
     primary = tool or agent_primary
     known = {m['id']: m for m in registry()['methods']}
@@ -218,7 +227,7 @@ def run(facility, rows, end, gaussian, attribution, candidates, camera_id, clip_
     # Other tools' numbers against the primary: the sensors and models say whether the camera's rate holds.
     p = result['rate_kg_h']
     checks = []
-    for tid in ('gaussian_candidate_fit', 'bls', 'gaussian_puff', 'qogi'):
+    for tid in ('gaussian_candidate_fit', 'bls', 'mdlq', 'cfd', 'gaussian_puff', 'qogi'):
         o = outputs.get(tid)
         if tid == primary or not o or o.get('status') != 'estimated' or not p:
             continue
