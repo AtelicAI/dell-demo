@@ -466,7 +466,6 @@
     if (g !== gen) return;
     v.playbackRate = 1;
     ffOn = false;
-    say('', '');
     renderControls('event');
   }
 
@@ -484,7 +483,7 @@
       const seek = () => { v.currentTime = m.alert_t; };
       if (v.readyState >= 1) seek(); else v.addEventListener('loadedmetadata', seek, { once: true });
     }
-    let shown = '';
+    let shown = '', confirmedAt = null;
     const run = gen;
     const step = () => {
       if (run !== gen) return;
@@ -494,11 +493,16 @@
       const recent = m.samples.slice(Math.max(0, i - m.policy.window_samples + 1), i + 1).filter((x) => x.positive).length;
       const past = m.alert_t != null && t >= m.alert_t;
       if (past) revealCompare();
-      const text = past || raised ? '' : recent ? `Plume seen in ${recent} of the last ${m.policy.window_samples} checks · alert at ${m.policy.min_positive_samples}` : '';  // idle: the tile's "Watching" says it
+      // Counts toward the alarm (3 of the last 5 one-second samples), then holds "3/3" for a moment at the alarm.
+      const need = m.policy.min_positive_samples;
+      if (past && liveRun && confirmedAt == null) confirmedAt = performance.now();
+      const confirmed = confirmedAt != null && performance.now() - confirmedAt < 3500;
+      const text = confirmed ? `Plume confirmed (${need}/${need})`
+        : past || raised ? '' : recent ? `Possible plume · confirming (${Math.min(recent, need)}/${need})` : '';  // idle: the tile's "Watching" says it
       if (tag && !tag.classList.contains('ff') && text !== shown) {
         shown = text;
         tag.textContent = text;
-        tag.className = `mon-tag${recent ? ' pos' : ''}`;
+        tag.className = `mon-tag${confirmed ? ' hit' : recent ? ' pos' : ''}`;
       }
       const g = seg(t), rel = $('v-release');
       if (rel && g) rel.innerHTML = `<span class="pdot experimental_setpoint"></span><span>${g.rate_g_h} g/h metered · ${esc(g.label || '')}</span>`;
