@@ -69,7 +69,7 @@
      "detector_score": 0.167
     },
     {
-     "label": "Valve and regulator assembly",
+     "label": "Valve assembly",
      "kind": "valve",
      "box_normalized": [
       0.3247,
