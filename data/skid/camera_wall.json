@@ -1,5 +1,5 @@
 {
-  "_comment": "Cameras on the plant for the camera row on the Camera screen. CAM-01 is the incident camera: recorded GasVid MOV_1242 (METEC metered release) with executed OWLv2+SAM2 model output, mapped illustratively to the compressor discharge area of the synthetic plant (engine/data/facility). CAM-02..04 loop other recorded GasVid/METEC clips picked as having no visible plume; they are not in the engine's knowledge graph and are not live feeds.",
+  "_comment": "Cameras on the plant for the camera row on the Camera screen. CAM-01 is the incident camera: recorded GasVid MOV_1242 (METEC metered release) with executed OWLv2+SAM2 model output, mapped illustratively to the compressor discharge area of the synthetic plant (engine/data/facility). CAM-02..04 loop other recorded GasVid/METEC clips picked as having no visible plume; they are not in the engine's knowledge graph and are not live feeds. CAM-01 (event 1, MOV_1237) and CAM-02 (event 2, MOV_1239) are the incident cameras; their feeds are served per incident by the UI API.",
   "status": "sample",
   "provenance": "simulated",
   "cameras": [
@@ -8,18 +8,16 @@
       "area": "Compressor discharge",
       "watches": [
         "XV-2104",
-        "F-205",
-        "P-202"
+        "F-205"
       ],
       "feed": "ogi_clip"
     },
     {
       "camera_id": "CAM-02",
-      "area": "Inlet separator",
+      "area": "Compressor discharge (wide view)",
       "watches": [
-        "V-101",
-        "XV-104",
-        "P-101"
+        "XV-2104",
+        "F-205"
       ],
       "feed": {
         "file": "cam02_MOV_2571.mp4",

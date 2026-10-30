@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/theme.css?v=101">
 <link rel="stylesheet" href="css/shell.css?v=101">
-<link rel="stylesheet" href="css/story.css?v=101">
+<link rel="stylesheet" href="css/story.css?v=3">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" defer></script>
-<script src="js/shell.js?v=105" defer></script>
-<script src="js/story.js?v=101" defer></script>
-<script src="js/quantify.js?v=101" defer></script>
+<script src="js/shell.js?v=107" defer></script>
+<script src="js/story.js?v=103" defer></script>
+<script src="js/quantify.js?v=121" defer></script>
 <style>
 
   /* PRD Screen 4 (scrolling page): result card + sensor charts on the left, method/inputs/QC on the right
@@ -45,6 +45,23 @@
 
   /* interval gauge: every per-sample estimate on the kg/h scale */
   .g-track{position:relative;height:74px;margin:0 6px}
+  .tstrip{display:grid;gap:3px;margin:0 6px 10px}
+  .trow{display:grid;grid-template-columns:118px 1fr 52px;align-items:center;gap:8px;padding:3px 6px;border:1px solid transparent;border-radius:4px;background:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink-mute)}
+  .trow:hover{border-color:var(--line-strong);background:var(--panel-2)}
+  .trow.prim{color:var(--ink);font-weight:600}
+  .trow.busy{opacity:.55;cursor:wait}
+  .trow .tn{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trow .tt{position:relative;height:16px;border-bottom:1px solid var(--line)}
+  .trow .tt em{font-size:10.5px;color:var(--ink-dim);font-style:normal;line-height:16px}
+  .trow .tv{font-family:var(--mono);font-size:11px;text-align:right}
+  .tdot{position:absolute;top:4px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--n-equip)}
+  .trow.prim .tdot{background:var(--accent);width:11px;height:11px;margin-left:-5.5px;top:3px}
+  .tdot.mine{box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--accent)}
+  .tref{position:absolute;top:-2px;height:20px;border-left:1.5px dashed var(--warn)}
+  .taxis{display:grid;grid-template-columns:118px 1fr 52px;gap:8px;padding:0 6px;height:22px}
+  .taxis .tt{position:relative}
+  .taxis .tv{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);text-align:right}
+  .g-tick.ta{top:0}
   .g-axis{position:absolute;left:0;right:0;top:46px;height:1px;background:var(--ink-faint)}
   .g-tick{position:absolute;top:46px;width:1px;height:6px;background:var(--ink-faint)}
   .g-tick span{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9.5px;color:var(--ink-dim)}
@@ -117,6 +134,35 @@
   .side .sec:last-child{border-bottom:0}
   .side .lbl{display:block}
   .side .sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+  .tool{padding:7px 10px;margin-top:6px;border:1px solid var(--line);border-radius:4px;display:grid;gap:2px}
+  .tool .t-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .tool b{font-size:12.5px;font-weight:600}
+  .t-role{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim);white-space:nowrap}
+  .tool .t-why{font-size:11px;color:var(--ink-mute);line-height:1.4}
+  .tool .t-out{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .tool .t-out.mine{color:var(--accent)}
+  .tool .t-na{font-size:10.5px;color:var(--ink-dim);font-style:italic}
+  .t-run{justify-self:start;margin-top:3px;font:inherit;font-size:11px;padding:3px 9px;border:1px solid var(--line-strong);border-radius:4px;background:var(--panel);color:var(--ink);cursor:pointer}
+  .t-run:hover{border-color:var(--accent);color:var(--accent)}
+  .t-run:disabled{opacity:.5;cursor:wait}
+  .tool.r-primary{border-color:var(--accent);background:var(--accent-glow)}
+  .r-primary .t-role{color:var(--accent)}
+  .tool.r-cross_check{border-color:var(--good)}
+  .r-cross_check .t-role{color:var(--good)}
+  .r-blocked .t-role{color:var(--warn)}
+  .tool.r-not_needed,.tool.r-blocked,.tool.r-pending{background:var(--panel-2)}
+  .tool.r-not_needed b,.tool.r-blocked b{color:var(--ink-mute)}
+  .alog{list-style:none;margin:6px 0 0;padding:0;max-height:220px;overflow:auto;font-size:11.5px}
+  .alog li{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);color:var(--ink-mute)}
+  .alog li.ok{color:var(--ink)}
+  .alog .at{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
+  .sub.cc{margin-top:4px}.sub.cc.ok{color:var(--good)}.sub.cc.no{color:var(--warn)}
+  .tmatrix{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+  .tmatrix th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-dim);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line-strong)}
+  .tmatrix td{padding:7px 8px;border-bottom:1px dashed var(--line);vertical-align:top;color:var(--ink-mute);line-height:1.4}
+  .tmatrix td b{display:block;color:var(--ink);font-size:12.5px}.tmatrix td small{color:var(--ink-dim);font-size:10.5px}
+  .tmatrix tr.r-primary td{background:var(--accent-glow)}
+  .tmatrix tr.r-cross_check td:first-child{box-shadow:inset 3px 0 0 var(--good)}
   .meth{display:grid;grid-template-columns:16px 1fr;gap:1px 9px;padding:7px 10px;margin-top:6px;border:1px solid var(--line-strong);border-radius:4px;cursor:pointer;transition:border-color var(--t),background var(--t)}
   .meth:hover{border-color:var(--accent)}
   .meth.sel{border-color:var(--accent);background:var(--accent-glow)}
@@ -192,13 +238,17 @@
 
       <!-- method + inputs -->
       <section class="panel side" aria-label="Method and inputs">
-        <div class="panel-head"><h2>Method &amp; inputs</h2></div>
+        <div class="panel-head"><h2>Agent tools &amp; inputs</h2></div>
         <div class="body">
           <div class="sec">
-            <span class="lbl">Method</span>
-            <div id="methods" role="radiogroup" aria-label="Quantification method"></div>
-            <button class="btn primary run" id="btn-run" disabled>Run estimate</button>
+            <span class="lbl">Rate tools the quantify agent can use</span>
+            <div id="methods" aria-label="Rate tools and the agent's decision"></div>
+            <button class="btn primary run" id="btn-run" disabled>Re-run the agent's choice</button>
             <div class="run-msg" id="run-msg" role="status" aria-live="polite"></div>
+          </div>
+          <div class="sec">
+            <span class="lbl">Agent steps <span class="meta" id="log-meta"></span></span>
+            <div id="agent-log"><div class="pending-box">Starts after Locate.</div></div>
           </div>
           <div class="sec inputs">
             <span class="lbl">Inputs</span>
@@ -212,10 +262,22 @@
       </section>
     </div>
 
+    <!-- when the rate can be trusted, and the methods behind it -->
+    <section class="panel" aria-label="Can this rate be trusted" id="cond-panel" hidden style="margin-bottom:18px">
+      <div class="panel-head"><h2>Can this rate be trusted?</h2><span class="meta" id="cond-meta"></span></div>
+      <div style="padding:14px 16px" id="cond"></div>
+    </section>
+
     <!-- sensors vs camera: every assumed source location fitted -->
     <section class="panel" aria-label="Sensors versus camera" id="attr-panel" hidden style="margin-bottom:18px">
       <div class="panel-head"><h2>Sensors vs camera</h2><span class="meta" id="attr-meta"></span></div>
       <div style="padding:14px 16px" id="attr"></div>
+    </section>
+
+    <!-- rate tools: what each is built for and the agent's decision here -->
+    <section class="panel" aria-label="Rate methods" id="meth-panel" hidden style="margin-bottom:18px">
+      <div class="panel-head"><h2>Which tool for which case</h2><span class="meta" id="meth-meta"></span></div>
+      <div style="padding:14px 16px" id="meth"></div>
     </section>
 
     <!-- 47 days of plant history before the alert -->

@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'data/benchmarks/metec2024/cache'
 OUT = ROOT / 'data/generated/history_calibration.json'
 TARGET_START = '2026-09-06T00:00:00+00:00'
-TARGET_END = '2026-10-23T08:00:00+00:00'
+TARGET_END = '2026-10-23T20:00:00+00:00'  # SCN-001 start (scripts/generate.py)
 ROTATION = -40.  # degrees added to the measured FROM direction
 QUIET_BEFORE, QUIET_AFTER = pd.Timedelta(minutes=5), pd.Timedelta(minutes=20)
 

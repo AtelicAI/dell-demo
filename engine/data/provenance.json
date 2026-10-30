@@ -1,6 +1,6 @@
 {
   "facility": "simulated",
-  "telemetry": "simulated; Gaussian forward + solved steady process baseline",
+  "telemetry": "simulated; Gaussian forward + solved steady process baseline; sonic turbulence consistent with the mean wind",
   "detector": "synthetic_annotation_fixture",
   "video": "recorded GasVid metadata ready; annotations pending; independent scene",
   "runtime": "local development; Dell deployment not verified",

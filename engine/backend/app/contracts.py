@@ -50,7 +50,7 @@ def validate_polygon(polygon):
 class Camera(Contract):
     id: str
     position: tuple[float,float,float]
-    orientation_degrees: tuple[float,float,float]
+    orientation_degrees: tuple[float,float,float]  # roll, pitch (up positive), heading clockwise from north
     fov_degrees: float = Field(gt=0,lt=180)
     resolution: tuple[int,int]
     calibration_status: Literal["illustrative_uncalibrated"]
@@ -60,7 +60,8 @@ class Camera(Contract):
 class Sensor(Contract):
     id: str
     asset_id: str
-    variable: Literal["methane", "pressure", "temperature", "flow", "wind_speed", "wind_direction"]
+    variable: Literal["methane", "pressure", "temperature", "flow", "wind_speed", "wind_direction",
+                      "friction_velocity", "obukhov_length", "sensible_heat_flux"]
     unit: str
     position: tuple[float,float,float]
     sample_interval_seconds: float = Field(gt=0)
@@ -70,7 +71,8 @@ class Sensor(Contract):
 
     @model_validator(mode="after")
     def units(self):
-        units = {"methane":"ppm", "pressure":"bar(a)", "temperature":"K", "flow":"kg/h", "wind_speed":"m/s", "wind_direction":"deg_from_north"}
+        units = {"methane":"ppm", "pressure":"bar(a)", "temperature":"K", "flow":"kg/h", "wind_speed":"m/s", "wind_direction":"deg_from_north",
+                 "friction_velocity":"m/s", "obukhov_length":"m", "sensible_heat_flux":"W/m2"}
         if self.unit != units[self.variable]:
             raise ValueError("unit does not match measured variable")
         return self

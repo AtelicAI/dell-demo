@@ -28,4 +28,6 @@ data/ogi/*.mp4
 .deploy/
 .run/
 .ui-state/
-!data/ogi/cam01_mov1242_before.mp4
+!data/ogi/inc00*_mov12*_atelic.mp4
+!data/ogi/inc00*_mov12*_original.mp4
+engine/data/ground_truth/

@@ -662,7 +662,7 @@
     const cands = await Promise.all(incList.map((l) => get(`/incidents/${l.incident_id}/candidates`).catch(() => null)));
     incList.forEach((l, i) => {
       const c = cands[i] || { candidates: [] };
-      const rel = new Set([l.camera_id, ...c.candidates.flatMap((x) => [x.asset_id, ...[...(x.supporting || []), ...(x.contradicting || [])].map((e) => e.source_id)])]);
+      const rel = new Set([l.camera_id, ...(c.related_ids || []), ...c.candidates.flatMap((x) => [x.asset_id, ...[...(x.supporting || []), ...(x.contradicting || [])].map((e) => e.source_id)])]);
       // A cited commitment or field report brings in its work order and asset, so the records connect to the plant.
       [...rel].forEach((id) => {
         const wo = byId.has(id) ? recordOf(id) : null;

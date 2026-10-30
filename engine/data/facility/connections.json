@@ -103,5 +103,19 @@
     "line_id": "L-VENT",
     "relation": "FLOWS_TO",
     "verification": "synthetic_design"
+  },
+  {
+    "from_id": "P-105",
+    "to_id": "VENT-01",
+    "line_id": "L-VENT",
+    "relation": "FLOWS_TO",
+    "verification": "synthetic_design"
+  },
+  {
+    "from_id": "XV-2111",
+    "to_id": "VENT-01",
+    "line_id": "L-VENT",
+    "relation": "FLOWS_TO",
+    "verification": "synthetic_design"
   }
 ]

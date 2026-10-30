@@ -12,6 +12,6 @@ rsync -az --delete -e "ssh -i .deploy/key.pem" \
 scp -q -i .deploy/key.pem .deploy/aws.env ec2-user@"$IP":/opt/atelic/.env
 "${SSH[@]}" "cd /opt/atelic && chmod 600 .env && docker compose -f docker-compose.yml -f deploy/compose.aws.yml up -d --build --remove-orphans"
 if [[ "${1:-}" == "--seed" ]]; then
-  "${SSH[@]}" "cd /opt/atelic && docker compose -f docker-compose.yml -f deploy/compose.aws.yml run --rm seed && docker compose -f docker-compose.yml -f deploy/compose.aws.yml restart engine backend"
+  "${SSH[@]}" "cd /opt/atelic && docker compose -f docker-compose.yml -f deploy/compose.aws.yml run --rm --build seed && docker compose -f docker-compose.yml -f deploy/compose.aws.yml restart engine backend"
 fi
 echo "Deployed: https://$(echo "$IP" | tr . -).sslip.io"

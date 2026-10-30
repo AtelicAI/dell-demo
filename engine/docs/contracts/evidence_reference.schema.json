@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "recorded",
+            "simulated",
+            "derived",
+            "manually_annotated",
+            "inferred"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "source_dataset": {
+          "title": "Source Dataset",
+          "type": "string"
+        },
+        "generator_version": {
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_kind",
+        "source_dataset",
+        "generator_version",
+        "reference"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "detection",
+        "camera_mapping",
+        "graph_fact",
+        "measurement",
+        "document",
+        "calculation",
+        "review"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "uri": {
+      "title": "Uri",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "uri",
+    "provenance"
+  ],
+  "title": "EvidenceReference",
+  "type": "object"
+}

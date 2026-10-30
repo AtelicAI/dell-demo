@@ -5,7 +5,9 @@ One incident, start to finish: a quiet camera, a leak whose real metered rate we
 ## Say this up front (keep it on screen)
 - The footage is recorded GasVid MOV_1242, a different physical scene from the plant. The camera-to-equipment mapping is illustrative.
 - The footage is a real METEC controlled release (13 July 2017, FLIR GF-320 at 4.6 m) with a published metered rate; the synthetic plant releases that same rate at XV-2104. Only the rate is matched, not the scene.
-- The plant, its sensors, its maintenance history, its 47-day sensor history and the "repair" are synthetic. The history's wind and background variability come from measured METEC 2024 data.
+- The site is an anonymous gas gathering station in open desert in Saudi Arabia's Eastern Province. The incident runs at night (20:00 UTC = 23:00 local); the footage was shot by day, which a thermal camera images the same way.
+- Camera rates use GasVid grey levels as a stand-in for radiometric frames. Each camera's gain comes from a metered 277.7 g/h release it recorded; for CAM-01 that is the first 40 s of the same release the incident measures.
+- The plant, its sensors (including a sonic anemometer on the weather mast), its maintenance history, its 47-day sensor history and the "repair" are synthetic. The history's wind and background variability come from measured METEC 2024 data.
 - The agents run on hosted NVIDIA Nemotron (`nvidia/nemotron-3-ultra-550b-a55b`), not on Dell hardware.
 - Agents never approve, close, issue reports or touch equipment. Every one of those is an authenticated engineer.
 
@@ -13,23 +15,24 @@ One incident, start to finish: a quiet camera, a leak whose real metered rate we
 
 | # | Beat | What the audience sees | Backend | Who | Typical time |
 |---|---|---|---|---|---|
-| 00 | Satellite view | Overview: a real Carbon Mapper methane plume from Bahrain's oil and gas sector (Tanager-1, 12 May 2026, ≈4,300 kg/h; 3 detections in 14 passes), labelled regional context, not this site. Say: "Satellites catch super-emitters. The leak we're about to find is 0.28 kg/h, about 15,000× smaller and far below what orbit can see. That's why the station needs cameras and sensors on site." | UI `GET /api/overview/plume` (cached Carbon Mapper record) | – | 30 s |
+| 00 | Satellite view | Overview: a real Carbon Mapper methane plume from the oil and gas sector in the Eastern Province (Tanager-1, 4 November 2025, ≈1,040 kg/h; 1 detection in 15 passes), labelled regional context, not this site. Say: "Satellites catch super-emitters. The leak we're about to find is 0.28 kg/h, about 3,700× smaller and far below what orbit can see. That's why the station needs cameras and sensors on site." | UI `GET /api/overview/plume` (cached Carbon Mapper record) | – | 30 s |
 | 0 | Control | `no_leak` feed: a real 5.3 g/h metered release the camera cannot see; no alert, nothing can be opened | `GET /monitor/status?profile=no_leak` (`metered_release`) | – | as long as you like |
-| 1 | Calm | UI Camera: CAM-01 plays the `leak` recording from clip 125 s with the model's 1 Hz output; the other three cameras loop their GasVid class-0 intervals (5.3 g/h, below detection). Press Trigger (T) to fast-forward to ≈6 s before the alarm | `GET /monitor/status` | – | 60 s of footage |
-| 2 | Alert | Plume appears; alert latches at clip ≈194 s (scenario 610 s) and the UI raises INC-001 by itself, then shows the Atelic view vs original IR slider. Caption: "On camera: METEC metered release 277.7 g/h" | `POST /monitor/incidents`, `GET /monitor/footage` | – | instant |
+| 1 | Calm | UI Camera: CAM-01 plays event 1 (GasVid MOV_1237, 6.9 m) as the Atelic render with the original-IR slider, from clip 175 s while the metered release is still below detection (5.3 g/h). CAM-03/04 loop class-0 footage. Press Trigger (T) to fast-forward to 6 s before the alarm | `GET /monitor/status` | – | up to 30 s |
+| 2 | Alert | The release steps to 277.7 g/h at 199 s; the detector alarm latches at 204.1 s (3 of the last 5 samples, scenario 606 s) and the UI raises INC-001 in place: the same recording keeps playing | `POST /monitor/incidents` | – | instant |
+| 2b | Event 2 (optional) | Trigger CAM-02: event 2 (MOV_1239, 12.6 m) alarms at 538.6 s on the weather-mast-outage scenario (SCN-003). The plant releases what the footage shows (713.1 g/h, then 958.8 g/h from clip 545 s). The mast stops reporting, so the quantify agent switches to camera quantification (QOGI), waits 80 s for a steady 90 s plume window and estimates ≈1.06 kg/h (answer key 958.8 g/h, +11%) | `profile=wind_outage` | – | instant |
 | 3 | Locate | XV-2104 and F-205 both mapped; neither confirmed | trace `locate` | deterministic | <1 s |
-| 4 | Quantify | `non_steady_plume`, then ≈0.26 kg/h at 670 s with pipe P-202 still possible; by 850 s only XV-2104 fits, 0.279 kg/h | trace `quantify` | physics | <1 s |
+| 4 | Quantify | Camera first: the agent reads the rate from CAM-01's radiometric plume (QOGI), waiting about 90 s for a steady window: 0.243 kg/h. The sensor models check it as the case allows: Gaussian plume 0.279 (1.15×) and MDLQ 0.278, with leak probability 1.0 for XV-2104 and ≤0.002 for every other source, by 846 s. With one source left: bLs 0.314 (1.29×, stable night air from the sonic) and CFD 0.296 (1.22×, flow solved around the separator and compressor). The rate chart shows every tool on one kg/h scale; click a row (or a tool's Run button) to run that tool on the frozen window | trace `quantify` (`primary_tool`, `tool_roles`, `cross_checks`) | physics | ~8 s (bLs + CFD) |
 | 4b | History | 47 days of plant history: faint episodes at the load changes from 15 Sept, quiet for 10 days after the WO-009 re-torque, back from 6 Oct and growing | `GET /incidents/{id}/plant-history?include_series=true` | deterministic | 2 s |
 | 5 | Investigate | Findings: WO-009 "verified" but the WO-008 OGI re-survey never happened, and the history shows the episodes returned 10 days later; WO-012 hissing between the two candidates; F-205 torque record missing | trace `investigate` | Nemotron | see below |
 | 6 | Plan | Draft v1 with cited checks; waits for the engineer | trace `plan`, `submit` | Nemotron | see below |
 | 7 | Ask | Engineer asks why XV-2104 still leads despite WO-009; agent answers with citations | `POST /incidents/{id}/questions` | engineer → Nemotron | see below |
 | 8 | Push back | Engineer requests changes; agent revises to draft v2 and resubmits | `POST /incidents/{id}/review` `request_changes` | engineer → Nemotron | see below |
 | 9 | Approve | Engineer approves v2 and issues the report (PDF) | `review` `approve`, `POST /report` | engineer | instant |
-| 9b | Answer key | Metered 277.7 g/h vs our estimate; error under 1%. Only now, so it never anchored the review | `GET /incidents/{id}/reveal` | – | instant |
+| 9b | Answer key | Metered 277.7 g/h vs the camera's 243 g/h (−12.5%); the sensor checks were 279 and 314 g/h. Only now, so it never anchored the review | `GET /incidents/{id}/reveal` | – | instant |
 | 10 | Repair | Engineer records the field work done by the crew | `POST /incidents/{id}/repair` | engineer | instant |
 | 11 | Verify | Physics check: readings back to the pre-incident baseline; agent recommends closing | trace `verify` | physics + Nemotron | see below |
 | 12 | Close | Engineer closes; audit chain valid; the incident is written to the graph as memory for XV-2104 and F-205 | `POST /incidents/{id}/close` (`graph_memory`), `GET /assets/XV-2104/incident-memory` | engineer | instant |
-| 13 | Contrast | `wind_outage` feed: same footage, weather station down; no rate, and the plan says so | `POST /monitor/incidents` `profile=wind_outage` | – | one more investigate + plan |
+| 13 | Contrast | `wind_outage` feed: weather mast down; sensor tools cannot run, the agent switches to the camera and still gets a rate (≈1.06 kg/h) | `POST /monitor/incidents` `profile=wind_outage` | – | one more investigate + plan |
 
 Throughout, show `GET /incidents/{id}/orchestration` events as the Agent Activity drawer: every Nemotron turn and tool call appears as it happens, so the agent wait is something to watch, not dead air.
 

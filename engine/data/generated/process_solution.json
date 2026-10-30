@@ -110,7 +110,7 @@
       "temperature_k": null,
       "status": "isolated_closed_branch"
     },
-    "XV-2111": {
+    "XV-2105": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
@@ -120,12 +120,12 @@
       "temperature_k": null,
       "status": "isolated_closed_branch"
     },
-    "XV-2105": {
+    "XV-105": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
     },
-    "XV-105": {
+    "XV-2111": {
       "pressure_pa": null,
       "temperature_k": null,
       "status": "isolated_closed_branch"
@@ -357,6 +357,27 @@
       "sensor_id": "MET-01-WD",
       "asset_id": "K-201",
       "unit": "deg_from_north",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-US",
+      "asset_id": "K-201",
+      "unit": "m/s",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-OL",
+      "asset_id": "K-201",
+      "unit": "m",
+      "value": null,
+      "status": "not_modeled"
+    },
+    {
+      "sensor_id": "MET-01-HF",
+      "asset_id": "K-201",
+      "unit": "W/m2",
       "value": null,
       "status": "not_modeled"
     }

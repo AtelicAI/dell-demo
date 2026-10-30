@@ -3,18 +3,18 @@
   "title": "Leak develops on camera (SCN-001)",
   "monitor_id": "MON-CAM-01",
   "camera_id": "CAM-01",
-  "clip_id": "MOV_1242",
-  "run_id": "monitor-mov1242-125-305-001",
+  "clip_id": "MOV_1237",
+  "run_id": "monitor-mov1237-175-300-001",
   "scenario_id": "SCN-001",
   "incident_prefix": "INC-001-M",
-  "clip_start_seconds": 125,
-  "clip_end_seconds": 305,
-  "scenario_seconds_at_clip_start": 540,
+  "clip_start_seconds": 175,
+  "clip_end_seconds": 300,
+  "scenario_seconds_at_clip_start": 576,
   "alert_policy": {
     "window_samples": 5,
     "min_positive_samples": 3,
     "max_sample_age_seconds": 1.5
   },
   "origin_region_reference": "scenarios/detections.json#DET-001",
-  "mapping_basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
+  "mapping_basis": "Illustrative demonstration alignment: GasVid workbook Leak 0 / Leak 1 boundary of MOV_1237 (199 s, metered 5.3 -> 277.7 g/h) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
 }

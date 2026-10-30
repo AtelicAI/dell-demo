@@ -2,7 +2,7 @@
 
 The orchestrator owns stage order, retries and the durable trace. It calls the same
 read/compute/workflow functions as the HTTP routes, so state-machine, idempotency and
-evidence rules still apply. After a human acts (question, request_changes, repair record)
+evidence rules still apply. After a human acts (question, research round, request_changes, repair record)
 it resumes the agent work that unblocks. It never reviews, approves, reports, closes or
 controls equipment.
 """
@@ -21,12 +21,14 @@ from .workflow import WorkflowError
 
 router = APIRouter()
 STEPS = ('detect', 'locate', 'quantify', 'freeze', 'investigate', 'plan', 'submit')
-FOLLOW_UP_STEPS = ('answer', 'revise', 'submit', 'verify')
+FOLLOW_UP_STEPS = ('answer', 'reinvestigate', 'revise', 'submit', 'verify')
 # Physics refusals that can clear as the replay clock advances; anything else is final.
-RETRYABLE_RATE_REASONS = {'non_steady_plume', 'no_resolved_downwind_signal'}
+RETRYABLE_RATE_REASONS = {'non_steady_plume', 'no_resolved_downwind_signal', 'waiting_for_camera_window'}
 # An estimate is kept but the clock keeps advancing while the readings cannot yet separate the camera candidates.
 UNDECIDED_ATTRIBUTION = {'partly_agrees', 'agrees_ambiguous'}
 MODEL_ATTEMPTS = 2
+# Pause before another attempt after a failed one, so a shedding endpoint is not hit again within seconds.
+RETRY_PAUSE_SECONDS = 20
 MAX_FOLLOW_UPS = 20
 # Where an idle run waits, by workflow state. Every exit from these needs an authenticated human.
 IDLE_STATUS = {'pending_review': 'awaiting_human_review', 'approved': 'awaiting_report', 'reported': 'awaiting_repair_record',
@@ -71,6 +73,8 @@ def pending_work(record):
     question = next((q for q in record.get('questions', []) if q['status'] == 'pending'), None)
     if question:
         return 'answer', question['id']
+    if record['state'] == 'pending_review' and record.get('research_request'):
+        return 'reinvestigate', None
     if record['state'] == 'plan_drafted':
         revise = record.get('revision_required_after', 0) >= record.get('draft_version', 0)
         return ('revise', None) if revise else ('submit', None)
@@ -149,6 +153,8 @@ class Orchestrator:
             kind, argument = pending_work(self.record())
             if kind == 'answer':
                 self.stage('answer', lambda: self.answer(argument))
+            elif kind == 'reinvestigate':
+                self.stage('reinvestigate', self.reinvestigate)
             elif kind == 'revise':
                 self.stage('revise', self.revise)
             elif kind == 'submit':
@@ -189,7 +195,9 @@ class Orchestrator:
             attribution = result['telemetry_attribution']
             self.emit('quantify', 'attempt', as_of_seconds=seconds, status=result['status'],
                       rate_kg_h=result['rate_kg_h'], reason=result['reason'], method=result['method'],
-                      attribution=attribution['status'], best_fit_asset_id=attribution.get('best_fit_asset_id'))
+                      attribution=attribution['status'], best_fit_asset_id=attribution.get('best_fit_asset_id'),
+                      primary_tool=result.get('primary_tool'), tool_roles={t['id']: t['role'] for t in result.get('tools', [])},
+                      cross_checks=result.get('cross_checks'))
             if result['status'] == 'estimated':
                 estimate = (seconds, result)
                 if attribution['status'] not in UNDECIDED_ATTRIBUTION:
@@ -204,7 +212,8 @@ class Orchestrator:
             # A final refusal (e.g. wind lost) stands; an earlier window does not describe the current release.
             seconds, result = estimate
         return dict(as_of_seconds=seconds, status=result['status'], rate_kg_h=result['rate_kg_h'], reason=result['reason'],
-                    sensitivity_kg_h=result.get('sensitivity_kg_h'), telemetry_attribution=result['telemetry_attribution'])
+                    sensitivity_kg_h=result.get('sensitivity_kg_h'), telemetry_attribution=result['telemetry_attribution'],
+                    method=result['method'], primary_tool=result.get('primary_tool'), cross_checks=result.get('cross_checks'))
 
     def freeze(self, asset_id, seconds):
         body = self.routes.OpenWorkflow(candidate_asset_id=asset_id, as_of_seconds=seconds, idempotency_key='orch-open')
@@ -221,7 +230,9 @@ class Orchestrator:
                 modes.append(('deterministic', f'orch-{step}-{tag}-deterministic-{previous+1}'))
         else:
             modes = [('deterministic', f'orch-{step}-{tag}-deterministic')]
-        for mode, key in modes:
+        for i, (mode, key) in enumerate(modes):
+            if i and mode == 'model':
+                time.sleep(RETRY_PAUSE_SECONDS)
             if mode == 'deterministic' and self.options['plan_mode'] == 'model':
                 self.emit(step, 'fallback', detail='Nemotron unavailable for this step; using labeled deterministic template, not AI output')
             body = self.routes.DraftRequest(mode=mode, expected_version=self.record()['version'], idempotency_key=key)
@@ -244,6 +255,16 @@ class Orchestrator:
                     findings=len(kinds), contradictions=kinds.count('contradiction'), gaps=kinds.count('gap'),
                     summary=found['content']['summary'])
 
+    def reinvestigate(self):
+        request = self.record()['research_request']
+        self.emit('reinvestigate', 'research_request', round=request['round'], focus=request['focus'], requested_by=request['requested_by'])
+        record = self.attempts('reinvestigate', f"r{request['round']}", lambda body, observe: self.routes.run_reinvestigation(self.incident_id, body, observe))
+        found = record['investigation']['findings']
+        kinds = [f['kind'] for f in found['content']['findings']]
+        return dict(round=request['round'], source_origin=found['source_origin'], model=(found.get('model_run') or {}).get('model'),
+                    findings=len(kinds), contradictions=kinds.count('contradiction'), gaps=kinds.count('gap'),
+                    changes=found['content'].get('changes', []), summary=found['content']['summary'])
+
     def plan(self):
         version = self.record().get('draft_version', 0) + 1
         record = self.attempts('plan', f'v{version}', lambda body, observe: self.routes.run_draft_plan(self.incident_id, body, observe))
@@ -253,8 +274,12 @@ class Orchestrator:
 
     def revise(self):
         current = self.record()
-        feedback = current['review']
-        self.emit('revise', 'reviewer_feedback', engineer_id=feedback['engineer_id'], draft_version=feedback['draft_version'], rationale=feedback['rationale'])
+        basis = current.get('revision_basis')
+        if basis:
+            self.emit('revise', 'research_round', round=basis['round'], requested_by=basis['requested_by'], draft_version=current['draft_version'])
+        else:
+            feedback = current['review']
+            self.emit('revise', 'reviewer_feedback', engineer_id=feedback['engineer_id'], draft_version=feedback['draft_version'], rationale=feedback['rationale'])
         record = self.attempts('revise', f"v{current['draft_version']+1}", lambda body, observe: self.routes.run_draft_plan(self.incident_id, body, observe))
         plan = record['work_order']['plan']
         return dict(source_origin=plan['source_origin'], model=(plan.get('model_run') or {}).get('model'),

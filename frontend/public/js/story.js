@@ -2,7 +2,8 @@
 // repair → verification → closure, and the answer key. Everything renders backend values; nothing is invented.
 (function () {
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const hm = (t) => (t ? `${t.slice(11, 16)} UTC` : '');
+  // Times of things done in this session (questions, notes, agent runs) on the replay clock, so they match the cameras.
+  const hm = (t) => (t ? `${window.AtelicShell.toReplay(t).toISOString().slice(11, 16)} UTC` : '');
   const KIND = { supporting: ['for', 'Supports'], contradiction: ['con', 'Contradiction'], gap: ['gap', 'Gap'], context: ['ctx', 'Context'] };
 
   // Live status of the engine's agents (orchestrator). Shown while they work, or when they failed.
@@ -14,8 +15,23 @@
     }
     if (agent.status !== 'running') return '';
     return `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>${esc(agent.text || 'Agents working')}</b>
-      <span>Live · NVIDIA Nemotron agents with read-only tools. This page updates by itself.</span></div>`;
+      ${trace(agent)}<span>${agent.replayed ? 'Recorded NVIDIA Nemotron run, replayed with live read-only tools. Questions and research run live.'
+        : 'Live · NVIDIA Nemotron agents with read-only tools.'} This page updates by itself.</span></div>`;
   }
+
+  // The running agent's steps so far (tools read, model turns), then the model working, with a live timer.
+  const dur = (ms) => (ms >= 60000 ? `${Math.floor(ms / 60000)} m ${String(Math.round(ms % 60000 / 1000)).padStart(2, '0')} s` : `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`);
+  function trace(agent) {
+    const t = agent && agent.trace;
+    if (!t) return '';
+    const tools = t.done.filter((d) => !d.model && d.status === 'completed').map((d) => d.label);
+    const turns = t.done.filter((d) => d.model);
+    return `<ol class="ag-trace">
+      ${tools.length ? `<li class="ok">Read ${esc([...new Set(tools)].join(' · '))}</li>` : ''}
+      ${turns.map((d, i) => `<li class="ok">Nemotron turn ${i + 1} · ${dur(d.ms || 0)}</li>`).join('')}
+      <li class="now"><span class="ag-spin" aria-hidden="true"></span>${turns.length || tools.length ? 'Nemotron reasoning over the evidence' : 'Starting'} · <span data-since="${esc(t.last)}"></span></li></ol>`;
+  }
+  setInterval(() => document.querySelectorAll('[data-since]').forEach((el) => { el.textContent = dur(Math.max(0, Date.now() - Date.parse(el.dataset.since))); }), 1000);
 
   function cites(ids) {
     return (ids || []).length ? `<span class="st-cites">${ids.map((i) => `<code title="${esc(i)}">${esc(i.split(':').slice(1).join(':').split('#')[0] || i)}</code>`).join('')}</span>` : '';
@@ -27,10 +43,14 @@
     const fs = (inv.findings || []).slice().sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const n = (k) => fs.filter((f) => f.kind === k).length;
     return `<div class="inv">
-      <div class="inv-h"><span class="lbl">Investigation agent</span>
-        <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
-        <span class="inv-n">${n('contradiction')} contradictions · ${n('gap')} gaps · ${n('supporting')} supporting</span></div>
+      <div class="inv-h"><span class="lbl">Investigation agent${inv.round > 1 ? ` · research round ${inv.round}` : ''}</span>
+        <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.replayed ? ' · recorded run' : ''}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
+        <span class="inv-n">${n('contradiction')} contradiction${n('contradiction') === 1 ? '' : 's'} · ${n('gap')} gap${n('gap') === 1 ? '' : 's'} · ${n('supporting')} supporting</span></div>
+      ${inv.round > 1 ? `<div class="inv-ch"><span class="lbl">What changed since round ${inv.round - 1}</span>
+        ${inv.focus ? `<p>Focus from ${esc(inv.requested_by || 'the engineer')}: “${esc(inv.focus)}”</p>` : ''}
+        <ul>${(inv.changes || []).map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
       <p class="inv-sum">${esc(inv.summary)}</p>
+      ${inv.source_origin !== 'llm' ? '<p class="inv-tools">The model was unavailable, so this is a rule-based listing. Use Research again on Approve to rerun the investigation with the model.</p>' : ''}
       <ul class="inv-f">${fs.map((f) => {
         const [cls, label] = KIND[f.kind] || ['ctx', f.kind];
         return `<li class="${cls}"><span class="k">${label}</span><span class="t">${esc(f.statement)}${cites(f.evidence_ids)}</span></li>`;
@@ -71,14 +91,10 @@
     'Could F-205 be the source instead? What would rule it out?',
     'What is still unknown, and which check would confirm the source fastest?',
   ];
-  const since = (t) => {
-    const s = Math.max(0, Math.round((Date.now() - Date.parse(t)) / 1000));
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  };
 
   // Simulated / synthetic provenance stays in the data but is not shown (team decision, 26 Oct).
   const SHOWN_PROV = { model_estimated: 'Model estimated', observed: 'Observed', experimental_setpoint: 'Experimental setpoint', provider_reported: 'Provider reported' };
-  function answerBody(q, tray) {
+  function answerBody(q, tray, canAsk) {
     const src = q.sources || {}, no = {};
     let n = 0;
     (q.claims || []).forEach((c) => (c.evidence_ids || []).forEach((id) => { if (!no[id]) no[id] = ++n; }));
@@ -90,28 +106,35 @@
     const fu = (q.suggested_follow_up || []).map((x) => (typeof x === 'string' ? x : x.statement || '')).filter(Boolean);
     const cd = q.cannot_determine === true ? 'The agent could not answer this from the frozen evidence.'
       : Array.isArray(q.cannot_determine) ? q.cannot_determine.join('; ') : typeof q.cannot_determine === 'string' ? q.cannot_determine : '';
-    return `<div class="qa-a"><span class="lbl">${esc(q.source_origin === 'llm' ? 'Agent answer · Nemotron' : 'Answer · deterministic template (no model)')}</span><p>${esc(q.answer)}</p>
-      ${cd ? `<p class="qa-cd"><b>Cannot determine:</b> ${esc(cd)}</p>` : ''}
+    return `<div class="qa-a"><span class="lbl">Agent answer · Nemotron</span><p>${esc(q.answer)}</p>
+      ${cd ? `<p class="qa-cd"><b>Cannot determine from the evidence:</b> ${esc(cd)}</p>` : ''}
       ${(q.claims || []).length ? `<ul class="qa-cl">${q.claims.map((c) => `<li>${esc(c.statement)}${sup(c.evidence_ids)}</li>`).join('')}</ul>` : ''}
       ${n ? `<details class="qa-srcs"><summary>Sources <b>${n}</b></summary><ol class="qa-src">${Object.keys(no).map((id) => { const e = src[id] || {}, p = SHOWN_PROV[e.provenance];
         return `<li value="${no[id]}"><b>${esc(e.group || id)}</b> ${esc(e.label && e.label !== id ? e.label : '')}${p ? ` <span class="qa-prov">${p}</span>` : ''}</li>`; }).join('')}</ol></details>` : ''}
-      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span>${esc(t)}</span>${tray ? (picked.has(t)
+      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span>${esc(t)}</span>${canAsk ? `<button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}${tray ? (picked.has(t)
         ? '<span class="qa-added">✓ Added</span>'
         : `<button type="button" class="btn sm ghost" data-tray-add="${esc(t)}" data-tray-from="${esc(q.asked_by)}">+ Add to plan</button>`) : ''}</li>`).join('')}</ul></div>` : ''}
     </div>`;
   }
 
-  // opts.tray: the tray key (enables "Add to plan"); opts.offText: why questions are closed right now.
+  // opts.agent: live engine agent (answer trace); opts.tray: the tray key (enables "Add to plan");
+  // opts.offText: why questions are closed right now.
   function questions(list, canAsk, opts = {}) {
+    const agent = opts.agent;
+    // The answer agent works the oldest unanswered question first; its live steps show there.
+    const working = agent && agent.current_step === 'answer' ? ((list || []).find((q) => q.status !== 'answered') || {}).id : null;
     const items = (list || []).slice().reverse().map((q) => `<li class="qa ${q.status}">
       <div class="qa-q"><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}<p>${esc(q.question)}</p></div>
-      ${q.status === 'answered' ? answerBody(q, opts.tray)
-        : `<div class="qa-a pending"><span class="ag-spin"></span>The agent is reading the frozen evidence…${q.asked_at ? ` <span class="qa-t" data-since="${esc(q.asked_at)}">${since(q.asked_at)}</span>` : ''}<span class="qa-tn">usually 30–80 s</span></div>`}
+      ${q.status === 'answered' && q.source_origin !== 'llm' ? `<div class="qa-a"><span class="lbl">Not answered</span>
+        <p>The model was unavailable when this was asked, so no answer was generated.${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(q.question)}">Ask again</button>` : ''}</p></div>`
+      : q.status === 'answered' ? answerBody(q, opts.tray, canAsk)
+        : q.id === working ? `<div class="qa-a pending live">${trace(agent)}</div>`
+        : `<div class="qa-a pending"><span class="ag-spin"></span>Queued: the agent answers questions in order…<span class="qa-tn">usually 30–80 s each</span></div>`}
     </li>`).join('');
     const asked = new Set((list || []).map((q) => q.question));
     const chips = CHIPS.filter((c) => !asked.has(c));
     return `<div class="qa-box">
-      <div class="qa-h"><span class="lbl">Ask the agent</span><span>Answers come only from the frozen evidence and never change the draft.</span></div>
+      <div class="qa-h"><span class="lbl">Ask the agent</span><span>Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.</span></div>
       ${canAsk ? `<div class="qa-form">${chips.length ? `<div class="qa-chips">${chips.map((c) => `<button type="button" class="qa-chip" data-qa-chip="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
         <textarea id="qa-text" rows="2" placeholder="Ask about the evidence, the candidates or the draft"></textarea>
         <button class="btn sm" id="qa-send" type="button">Ask</button><span class="qa-msg" id="qa-msg" role="status"></span></div>`
@@ -138,10 +161,10 @@
       ${rows || '<p class="qa-off">Same lines as the previous draft.</p>'}</details>`;
   }
 
-  // Chips fill the question box; tray add/remove; pending-answer timers tick every second.
+  // Chips and Ask this / Ask again fill the question box; tray add/remove.
   document.addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-qa-chip]');
-    if (chip) { const box = document.getElementById('qa-text'); if (box) { box.value = chip.dataset.qaChip; box.focus(); } return; }
+    const chip = e.target.closest('[data-qa-chip], [data-ask]');
+    if (chip) { const box = document.getElementById('qa-text'); if (box) { box.value = chip.dataset.qaChip || chip.dataset.ask; box.focus(); } return; }
     const add = e.target.closest('[data-tray-add]');
     if (add) {
       const k = add.closest('[data-tray-key]') && add.closest('[data-tray-key]').dataset.trayKey;
@@ -155,9 +178,36 @@
       traySet(k, trayGet(k).filter((_, i) => i !== Number(rm.dataset.trayRemove)));
     }
   });
-  setInterval(() => document.querySelectorAll('[data-since]').forEach((el) => (el.textContent = since(el.dataset.since))), 1000);
 
   const tray = { get: trayGet, set: traySet, box: trayBox, text: trayText, key: (inc, w) => (w && w.engine_incident_id ? `${inc}.${w.engine_incident_id}` : null) };
+
+  // Further research before approval: field notes the engineer adds, and another investigation round that the
+  // planner turns into a revised draft (which then needs approval again).
+  function research(W) {
+    const notes = W.field_notes || [], r = W.research || {};
+    const canNote = W.can_ask;
+    const list = notes.length ? `<ul class="fn-list">${notes.map((n) => `<li><code>${esc(n.id.split(':')[1])}</code><span><b>${esc(n.recorded_by)}</b> · ${hm(n.recorded_at)}<p>${esc(n.text)}</p></span></li>`).join('')}</ul>` : '';
+    const running = r.requested ? `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>Research round ${esc(r.round)} under way</b>
+      <span>The investigator re-reads the evidence with ${notes.length} field note${notes.length === 1 ? '' : 's'} and the answers so far; the planner then revises the draft. Approval waits for the new draft.</span></div>` : '';
+    return `<div class="rs-box">
+      <div class="qa-h"><span class="lbl">Field notes</span><span>What you or the crew saw on site. Added beside the frozen evidence, labelled as unverified human observations; agents read them from then on.</span></div>
+      ${list}
+      ${canNote ? `<div class="qa-form"><textarea id="fn-text" rows="2" placeholder="e.g. Soap test on F-205 flange: no bubbles. Hissing heard near the XV-2104 stem."></textarea>
+        <button class="btn sm" id="fn-send" type="button">Add field note</button><span class="qa-msg" id="fn-msg" role="status"></span></div>` : ''}
+      ${running || (r.can_request ? `<div class="rs-go"><div class="qa-h"><span class="lbl">Research again</span><span>The investigator runs round ${esc(r.next_round)} with your field notes and the answers so far, shows what changed, and the planner revises the draft. The current draft is withdrawn until then.</span></div>
+        <div class="qa-form"><textarea id="rs-focus" rows="2" placeholder="Optional focus, e.g. Recheck F-205 against the soap test and the K-201 load change."></textarea>
+        <button class="btn sm" id="rs-send" type="button">Research again</button><span class="qa-msg" id="rs-msg" role="status"></span></div></div>` : '')}
+    </div>`;
+  }
+
+  async function send(path, body, msgId) {
+    const msg = document.getElementById(msgId);
+    if (msg) msg.textContent = 'Sending…';
+    const r = await fetch(`${window.AtelicShell.API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) { if (msg) msg.textContent = typeof data.detail === 'string' ? data.detail : 'Could not send'; return null; }
+    return data;
+  }
 
   async function ask(incidentId, name) {
     const box = document.getElementById('qa-text'), msg = document.getElementById('qa-msg');
@@ -231,5 +281,5 @@
       <p class="ak-src">${esc(f.camera || '')} · ${esc(f.recorded_date || '')} · ${esc(f.release_location || '')} · ${esc(f.source || '')}</p></div>`;
   }
 
-  window.AtelicStory = { agentBanner, investigation, questions, ask, poll, followUp, answerKey, revisionDiff, tray, esc };
+  window.AtelicStory = { agentBanner, investigation, questions, research, send, ask, poll, followUp, answerKey, revisionDiff, tray, esc };
 })();

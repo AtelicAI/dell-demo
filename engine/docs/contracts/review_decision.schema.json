@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "incident_id": {
+      "title": "Incident Id",
+      "type": "string"
+    },
+    "draft_id": {
+      "title": "Draft Id",
+      "type": "string"
+    },
+    "draft_version": {
+      "minimum": 1,
+      "title": "Draft Version",
+      "type": "integer"
+    },
+    "decision": {
+      "enum": [
+        "approve",
+        "reject",
+        "request_changes"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "rationale": {
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "incident_id",
+    "draft_id",
+    "draft_version",
+    "decision",
+    "rationale",
+    "idempotency_key"
+  ],
+  "title": "ReviewDecision",
+  "type": "object"
+}

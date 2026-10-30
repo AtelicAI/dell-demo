@@ -1,6 +1,6 @@
 {
  "origin": "derived from public plant history by app.history.analyze",
- "evidence_id": "history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00",
+ "evidence_id": "history:HIST-FAC-001:2026-09-06:2026-10-23T19:55:00+00:00",
  "episodes": [
   {
    "episode_id": "EP-20260915-0615",
@@ -1376,76 +1376,6 @@
    "consistent_locations": [],
    "focus_assets": {},
    "minutes_after_load_change": null
-  },
-  {
-   "episode_id": "EP-20261023-0600",
-   "evidence_id": "history-episode:EP-20261023-0600",
-   "start_utc": "2026-10-23T06:00:00+00:00",
-   "duration_minutes": 30,
-   "max_peak_excess_ppm": 0.513,
-   "sensors_above_threshold": [
-    "CH4-01",
-    "CH4-02",
-    "CH4-04"
-   ],
-   "mean_wind_speed_m_s": 0.88,
-   "mean_wind_from_degrees": 277.5,
-   "testable": true,
-   "consistent_location_count": 11,
-   "consistent_locations": [
-    "F-205",
-    "K-201",
-    "P-101",
-    "P-102",
-    "P-105",
-    "P-201",
-    "P-202",
-    "V-101",
-    "XV-104",
-    "XV-105",
-    "XV-2104"
-   ],
-   "focus_assets": {},
-   "minutes_after_load_change": 0
-  },
-  {
-   "episode_id": "EP-20261023-0640",
-   "evidence_id": "history-episode:EP-20261023-0640",
-   "start_utc": "2026-10-23T06:40:00+00:00",
-   "duration_minutes": 10,
-   "max_peak_excess_ppm": 0.452,
-   "sensors_above_threshold": [
-    "CH4-04",
-    "CH4-05"
-   ],
-   "mean_wind_speed_m_s": 0.51,
-   "mean_wind_from_degrees": 40.5,
-   "testable": false,
-   "consistent_location_count": 0,
-   "consistent_locations": [],
-   "focus_assets": {},
-   "minutes_after_load_change": 40
-  },
-  {
-   "episode_id": "EP-20261023-0725",
-   "evidence_id": "history-episode:EP-20261023-0725",
-   "start_utc": "2026-10-23T07:25:00+00:00",
-   "duration_minutes": 15,
-   "max_peak_excess_ppm": 0.327,
-   "sensors_above_threshold": [
-    "CH4-01",
-    "CH4-02",
-    "CH4-04"
-   ],
-   "mean_wind_speed_m_s": 0.92,
-   "mean_wind_from_degrees": 306.2,
-   "testable": true,
-   "consistent_location_count": 1,
-   "consistent_locations": [
-    "F-205"
-   ],
-   "focus_assets": {},
-   "minutes_after_load_change": 85
   }
  ]
 }

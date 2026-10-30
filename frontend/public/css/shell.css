@@ -99,6 +99,17 @@ body[data-stage] #stepper{margin-bottom:10px}
 @keyframes isLive{70%{box-shadow:0 0 0 6px rgba(217,119,6,0)}100%{box-shadow:0 0 0 0 rgba(217,119,6,0)}}
 .incident-strip .is-seg{display:flex;align-items:center;gap:6px;padding:0 11px;border-left:1px solid var(--line)}
 .incident-strip .is-id + .is-seg{border-left:0}
+.incident-strip .is-cam{border-top:0;border-right:0;border-bottom:0;background:none;font:inherit;color:inherit;cursor:pointer}
+.incident-strip .is-cam:hover{background:var(--panel-2);color:var(--ink)}
+.incident-strip .is-cam:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sw-list{display:grid;gap:6px;margin:4px 0 18px;min-width:min(400px,80vw)}
+.sw-opt{display:grid;grid-template-columns:64px 64px 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;color:var(--ink-mute);text-decoration:none}
+a.sw-opt:hover{border-color:var(--accent);color:var(--ink)}
+.sw-opt[aria-current]{background:var(--panel-2)}
+.sw-opt b{color:var(--ink)}
+.sw-opt em{font-style:normal;font-size:12px;color:var(--ink-dim)}
+a.sw-opt em{color:var(--accent)}
+.sw-st.warn,.sw-st.open{color:var(--warn)}.sw-st.ok{color:var(--good)}.sw-st.bad{color:var(--bad)}
 .incident-strip .is-seg svg{color:var(--ink-dim);flex-shrink:0}
 .incident-strip .is-src.warn{color:var(--warn);font-weight:600;background:rgba(217,119,6,.07)}
 .incident-strip .is-src.warn svg{color:var(--warn)}
@@ -188,7 +199,7 @@ a.step:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* Badges: plain small caps with a square marker; only OK / approved states carry colour. */
 .badge{border:0;background:none;padding:0;color:var(--ink-mute)}
 .badge::before{border-radius:1px;background:var(--ink-dim)}
-.badge.observed,.badge.provider_reported,.badge.experimental_setpoint,.badge.model_estimated,.badge.manual_annotation{background:none;color:var(--ink-mute)}
+.badge.observed,.badge.provider_reported,.badge.experimental_setpoint,.badge.model_estimated,.badge.manual_annotation,.badge.field_note{background:none;color:var(--ink-mute)}
 .badge.observed,.badge.approved{color:var(--good);background:none}
 .badge.observed::before,.badge.approved::before{background:var(--good)}
 .badge.pending,.badge.hypothesis{color:var(--ink-dim)}

@@ -9,10 +9,13 @@ from pydantic import Field
 from .contracts import Contract
 from .data import load_json
 from .historian import HistorianUnavailable
-from .investigation import (Investigator, Provider, ModelUnavailable, ToolDenied, INVESTIGATE, ANSWER, VERIFY,
-                            deterministic_draft, deterministic_findings, deterministic_answer, deterministic_verification)
+from .investigation import (Investigator, Provider, ModelUnavailable, ToolDenied, INVESTIGATE, REINVESTIGATE, ANSWER, VERIFY,
+                            recorded_provider, recording_status,
+                            deterministic_draft, deterministic_findings, deterministic_reinvestigation, deterministic_answer,
+                            deterministic_verification)
 from .process import solve_process
 from .quantification import quantify, compare_candidates
+from . import rate_tools
 from .retrieval import Documents, RetrievalUnavailable
 from .video import get_video_manifest, lookup_clip, resolve_video_path, get_annotations
 from .workflow import WorkflowStore, WorkflowError, canonical, report_pdf
@@ -23,6 +26,7 @@ router = APIRouter()
 class ReplaySelection(Contract):
     candidate_asset_id: str = "XV-2104"
     as_of_seconds: int = Field(default=760, ge=0, le=1199)
+    tool: str | None = None  # run this rate tool instead of the agent's choice (engineer request)
 
 
 class OpenWorkflow(ReplaySelection):
@@ -66,6 +70,13 @@ def selected_calculation(incident_id, body):
     result = quantify(m.app.state.facility, history["measurements"], body.candidate_asset_id,
                       history["clock"]["source_timestamp_utc"])
     result["telemetry_attribution"] = compare_candidates(result, {c["asset_id"] for c in local["candidates"]})
+    # The quantify agent reads the case and picks the rate tool; the Gaussian fit above is one of its tools.
+    clock = history["clock"]
+    mapping = clock.get("video_clock_mapping") if isinstance(clock.get("video_clock_mapping"), dict) else {}
+    result = rate_tools.run(m.app.state.facility, history["measurements"], clock["source_timestamp_utc"], result,
+                            result["telemetry_attribution"], local["candidates"], (local.get("event") or {}).get("camera_id"),
+                            mapping.get("clip_id"), clock.get("video_timestamp_seconds"), body.candidate_asset_id,
+                            getattr(body, "tool", None))
     result.update(incident_id=incident_id, scenario_id=m.scenario_for(incident_id)["id"],
                   clock=history["clock"], origin_type="derived_from_simulated_measurements",
                   historian=history["backend"], independent_validation="not_completed")
@@ -95,6 +106,12 @@ def datasets():
 @router.get("/videos")
 def videos():
     return get_video_manifest()
+
+
+@router.get("/model/recordings")
+def model_recordings():
+    """Recorded agent runs the automatic chain replays (slot.task -> recorded_at)."""
+    return recording_status()
 
 
 @router.get("/recorded-replays")
@@ -329,6 +346,12 @@ def evidence_tools(record):
         found = investigation['findings']
         tools['get_investigation_findings'] = lambda: {'evidence_ids':cited(found['content'],('findings','candidate_assessment')),
                                                        'source_origin':found['source_origin'],'findings':found['content']}
+    notes = record.get('field_notes')
+    if notes:
+        tools['get_field_notes'] = lambda: {'evidence_ids':[n['evidence_id'] for n in notes],
+                                            'note':'Recorded by engineers after the evidence was frozen; unverified human observations',
+                                            'field_notes':[dict(id=n['evidence_id'], text=n['text'], recorded_by=n['recorded_by'],
+                                                                recorded_at=n['recorded_at']) for n in notes]}
     plan = record.get('work_order',{}).get('plan')
     if plan:
         draft = plan['evidence_backed_draft']['content']
@@ -338,7 +361,19 @@ def evidence_tools(record):
 
 
 def allowed_evidence(record):
-    return [e['id'] for e in record['evidence_references'] if not e['id'].startswith('SCN-')]
+    return ([e['id'] for e in record['evidence_references'] if not e['id'].startswith('SCN-')]
+            + [n['evidence_id'] for n in record.get('field_notes', [])])
+
+
+def answered(record, before=None):
+    """The engineer's questions answered so far (the conversation), oldest first."""
+    out = []
+    for q in record.get('questions', []):
+        if q['id'] == before:
+            break
+        if q['status'] == 'answered':
+            out.append(dict(question=q['question'], answer=(q.get('answer') or {}).get('answer', {}).get('content', {}).get('answer')))
+    return out
 
 
 def model_run(engine):
@@ -408,7 +443,7 @@ def run_investigation(incident_id, body, observer=None):
         return save(provenance(deterministic_findings(record['snapshot'])))
     if body.mode == "model":
         tools = {k:v for k,v in evidence_tools(record).items() if k in Investigator.EVIDENCE}
-        engine = Investigator(tools, allowed_evidence(record), Provider(), observer, task=INVESTIGATE)
+        engine = Investigator(tools, allowed_evidence(record), recorded_provider(incident_id, 'investigate') or Provider(), observer, task=INVESTIGATE)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
                          lambda result: save(provenance(result, engine)), 'investigate')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
@@ -431,9 +466,12 @@ def run_draft_plan(incident_id, body, observer=None):
         raise WorkflowError('draft_not_allowed')
     snap = record["snapshot"]
     asset_id = snap["candidate_asset_id"]
-    revising = record.get('review',{}).get('decision') == 'request_changes'
+    basis = record.get('revision_basis')
+    revising = record.get('review',{}).get('decision') == 'request_changes' or bool(basis)
     def save(saved):
-        if revising:
+        if basis:
+            saved['revision_of'] = dict(draft_version=record['draft_version'], research_round=basis['round'])
+        elif revising:
             saved['revision_of'] = dict(draft_version=record['review']['draft_version'], review_id=record['review']['id'])
         saved['api_request']=api_request
         return durable.save_draft(incident_id, saved, expected_version=body.expected_version, idempotency_key=body.idempotency_key)
@@ -446,16 +484,25 @@ def run_draft_plan(incident_id, body, observer=None):
         tools = evidence_tools(record)
         if record.get('investigation'):
             # Findings already distil the raw evidence; the planner turns them into checks.
-            tools = {k:tools[k] for k in ('get_investigation_findings','get_camera_candidates','retrieve_procedure','estimate_emissions')}
+            tools = {k:tools[k] for k in ('get_investigation_findings','get_camera_candidates','retrieve_procedure','estimate_emissions','get_field_notes') if k in tools}
         else:
             tools = {k:v for k,v in tools.items() if k in Investigator.EVIDENCE}
-        if revising:
+        if basis:
+            draft, found = record['work_order']['plan']['evidence_backed_draft']['content'], record['investigation']['findings']['content']
+            tools['get_review_feedback'] = lambda: {'evidence_ids':cited(draft,('observed_evidence','hypotheses','recommended_checks')),
+                'reviewer':basis['requested_by'],'decision':'further_research',
+                'feedback':(f"Research round {basis['round']} changed the findings; revise the draft to match them. "
+                            f"Engineer's focus: {basis['focus'] or 'none given'}. What changed: " + '; '.join(found.get('changes', []))),
+                'previous_draft_version':record['draft_version'],'previous_draft':draft,'answered_questions':answered(record)}
+        elif revising:
             review, draft = record['review'], record['work_order']['plan']['evidence_backed_draft']['content']
             tools['get_review_feedback'] = lambda: {'evidence_ids':cited(draft,('observed_evidence','hypotheses','recommended_checks')),
                 'reviewer':review['engineer_id'],'decision':review['decision'],'feedback':review['rationale'],
                 'previous_draft_version':review['draft_version'],'previous_draft':draft,
                 'answered_questions':[dict(question=q['question'],answer=(q.get('answer') or {}).get('answer',{}).get('content')) for q in record.get('questions',[])]}
-        engine = Investigator(tools, allowed_evidence(record), Provider(), observer)
+        # Only the first draft of the automatic chain is recorded/replayed; revisions answer live feedback.
+        first = not (basis or revising)
+        engine = Investigator(tools, allowed_evidence(record), (first and recorded_provider(incident_id, 'plan')) or Provider(), observer)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
                          lambda plan: save({"text": json.dumps(plan["content"]), "source_origin": "llm", "generation_method": "bounded_read_only_tool_calling",
                                             "model_run": model_run(engine), "evidence_backed_draft":plan}), 'plan')
@@ -466,6 +513,14 @@ def run_draft_plan(incident_id, body, observer=None):
 
 class QuestionRequest(Mutation):
     question: str = Field(min_length=1, max_length=2000)
+
+
+class FieldNoteRequest(Mutation):
+    text: str = Field(min_length=1, max_length=3000)
+
+
+class ResearchRequest(Mutation):
+    focus: str = Field(default='', max_length=2000)
 
 
 class RepairRequest(Mutation):
@@ -490,6 +545,65 @@ def ask_question(incident_id: str, body: QuestionRequest, authorization: str | N
     wake(incident_id, action='question', question_id=record['questions'][-1]['id'], question=body.question,
          asked_by=record['questions'][-1]['asked_by'])
     return record
+
+
+@router.post("/incidents/{incident_id}/field-notes")
+def add_field_note(incident_id: str, body: FieldNoteRequest, authorization: str | None = Header(None)):
+    """An engineer's field observation, added beside the frozen evidence; it wakes no agent by itself."""
+    return store().add_field_note(incident_id, body.text, authorization=authorization,
+                                  expected_version=body.expected_version, idempotency_key=body.idempotency_key)
+
+
+@router.post("/incidents/{incident_id}/research")
+def request_research(incident_id: str, body: ResearchRequest, authorization: str | None = Header(None)):
+    """Another research round before approval: the investigator reruns with the field notes and answers so far,
+    then the planner revises the draft. The draft only changes through that revision, and still needs approval."""
+    record = store().request_research(incident_id, body.focus, authorization=authorization,
+                                      expected_version=body.expected_version, idempotency_key=body.idempotency_key)
+    request = record['research_request']
+    wake(incident_id, action='research', round=request['round'], focus=body.focus, requested_by=request['requested_by'])
+    return record
+
+
+@router.post("/incidents/{incident_id}/reinvestigate", dependencies=OPERATOR)
+def reinvestigate(incident_id: str, body: DraftRequest):
+    return run_reinvestigation(incident_id, body)
+
+
+def run_reinvestigation(incident_id, body, observer=None):
+    """Investigation agent again, over the same frozen evidence plus field notes, earlier findings and answers."""
+    durable = store()
+    previous = prior_response(durable, incident_id, body.idempotency_key, job_request(body, 'reinvestigate'))
+    if previous:
+        return previous
+    record = durable.get_incident(incident_id)
+    request = record.get('research_request')
+    if not request:
+        raise WorkflowError('reinvestigation_not_requested')
+    def save(findings):
+        # Questions and field notes may arrive while the agent works; they never conflict with this round.
+        for attempt in range(3):
+            try:
+                return durable.save_reinvestigation(incident_id, findings, expected_version=durable.get_incident(incident_id)['version'],
+                                                    idempotency_key=body.idempotency_key)
+            except WorkflowError as exc:
+                if exc.reason != 'version_conflict' or attempt == 2:
+                    raise
+    if body.mode == "deterministic":
+        return save(provenance(deterministic_reinvestigation(record['snapshot'], record.get('field_notes', []))))
+    if body.mode == "model":
+        all_tools = evidence_tools(record)
+        tools = {k:v for k,v in all_tools.items() if k in Investigator.EVIDENCE or k == 'get_field_notes'}
+        found = record['investigation']['findings']
+        tools['get_previous_findings'] = lambda: {'evidence_ids':cited(found['content'],('findings','candidate_assessment')),
+                                                  'round':record['investigation'].get('round', 1),'findings':found['content'],
+                                                  'answered_questions':answered(record)}
+        focus = request['focus'].strip()
+        engine = Investigator(tools, allowed_evidence(record), Provider(), observer, task=REINVESTIGATE,
+                              question=f"Research round {request['round']}. Engineer's focus: {focus or 'none given; re-check everything'}")
+        return run_agent(durable, incident_id, body, record['version'], engine, ('pending_review',),
+                         lambda result: save(provenance(result, engine)), 'reinvestigate')
+    raise HTTPException(422, "mode must explicitly be model or deterministic")
 
 
 @router.post("/incidents/{incident_id}/questions/{question_id}/answer", dependencies=OPERATOR)
@@ -524,7 +638,10 @@ def run_answer(incident_id, question_id, body, observer=None):
         if record.get('verification'):
             verification = record['verification']
             tools['get_post_repair_readings'] = lambda: {'evidence_ids':[e['id'] for e in verification['evidence_references']],'verification':verification}
-        engine = Investigator(tools, allowed, Provider(), observer, task=ANSWER, question=question['question'])
+        earlier = answered(record, before=question_id)[-4:]
+        thread = ''.join(f"Earlier question: {q['question']}\nEarlier answer: {q['answer']}\n" for q in earlier)
+        engine = Investigator(tools, allowed, Provider(), observer, task=ANSWER,
+                              question=thread + ('Engineer follow-up question: ' if thread else 'Engineer question: ') + question['question'])
         return run_agent(durable, incident_id, body, record['version'], engine, None, lambda result: save(provenance(result, engine)), f'answer:{question_id}')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
 

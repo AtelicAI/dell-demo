@@ -238,8 +238,20 @@ def long_term_history(incident_id, focus_asset_ids):
     if key not in _plant_history:
         try:rows=app.state.historian.long_history(end-timedelta(days=HISTORY_DAYS),end)
         except HistorianUnavailable as exc:raise HTTPException(503,str(exc)) from exc
-        _plant_history[key]=dict(analysis=analyze(app.state.facility,rows,key[1],load_json('operations/load_changes.json')),series=hourly_series(app.state.facility,rows))
+        log=load_json('operations/load_changes.json')
+        before=dict(log,events=[e for e in log['events'] if datetime.fromisoformat(e['time_utc'])<end])
+        analysis=analyze(app.state.facility,rows,key[1],before)
+        # Operating log entries during the replay window (before any alert can be raised), e.g. the K-201 load step.
+        analysis['incident_day_operations']=dict(evidence_id=log['evidence_id'],
+            events=[e for e in log['events'] if end<=datetime.fromisoformat(e['time_utc'])<end+timedelta(seconds=s['replay_limit_seconds'])],
+            note='Operating log entries after the history window, inside the incident replay; read with the pressure trace')
+        _plant_history[key]=dict(analysis=analysis,series=hourly_series(app.state.facility,rows))
     return copy.deepcopy(_plant_history[key])
+
+@app.get('/quantification/methods')
+def quantification_methods():
+    """Rate methods: which one runs in the demo, and how each did in pre-registered tests on real METEC 2024 data."""
+    return load_json('quantification/methods.json')
 
 @app.get('/graph/summary')
 def graph_summary():

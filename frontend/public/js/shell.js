@@ -18,7 +18,7 @@
   })();
   // Incident this tab is working on. The link decides (?inc=); without one, the last incident used in this
   // tab (sessionStorage, so two booth screens never change each other); else INC-001.
-  const INCIDENT_ID = (() => {
+  let INCIDENT_ID = (() => {
     const q = new URLSearchParams(location.search).get('inc'), ok = (v) => /^INC-\d{3}$/.test(v || '');
     try {
       if (ok(q)) { sessionStorage.setItem('atelic.incident', q); return q; }
@@ -29,7 +29,7 @@
   let liveIncidents = null;
   // Fictional facility the local investigation is set at (no real operator or site).
   // The site stays anonymous: a generic description, never a station name.
-  const FACILITY = { name: 'Gas gathering station', short: 'Gas gathering station', location: 'Bahrain' };
+  const FACILITY = { name: 'Gas gathering station', short: 'Gas gathering station', location: 'Eastern Province, Saudi Arabia' };
 
   const STAGE_LABELS = {
     detect: 'Detect', locate: 'Locate', quantify: 'Quantify',
@@ -87,7 +87,7 @@
     { page: 'incidents', label: 'Incidents', href: 'incidents.html' },
     { page: 'graph', label: 'Knowledge graph', href: 'graph.html' },
     { sec: 'Investigation' },
-    { page: 'detection', label: 'Camera', href: 'detection.html', inc: true },
+    { page: 'detection', label: 'Detect', href: 'detection.html', inc: true },
     { page: 'locate', label: 'Locate', href: 'locate.html', inc: true },
     { page: 'quantify', label: 'Quantify', href: 'quantify.html', inc: true },
     { sec: 'Response' },
@@ -172,7 +172,7 @@
     const el = $('topbar');
     if (!el) return;
     el.innerHTML = `
-      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane Incident Intelligence</span></div>
+      <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane incident intelligence</span></div>
       <div class="right-controls">
         <button type="button" id="pill-sys" class="status-pill" data-partner="system" title="Dell edge server, NVIDIA inference and replay clock" aria-expanded="false"><span class="dot"></span>System · …</button>
         <button type="button" id="nt-btn" class="nt-btn" aria-label="Notifications" title="Notifications" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg><span class="nt-n" hidden></span></button>
@@ -362,20 +362,36 @@
     tickReplay();
   }
 
-  // One replay clock for the whole app: incident start + real time elapsed since the first page of this
-  // browser session, so it keeps running across clip loops and page changes.
+  // One replay clock for the whole app, running in real time across clip loops and page changes. A session (and
+  // every Reset) starts in the quiet watch period QUIET_LEAD before the recorded incidents; Camera's Trigger then
+  // fast-forwards it to the event recording and follows the footage (setReplayNow), so the alarm shows its real time.
+  const QUIET_LEAD_MS = 20 * 60 * 1000;
   let replayStart = null, replayTimer = null;
   function replayT0() {
     try {
       const v = Number(sessionStorage.getItem('atelic.replayT0'));
       if (v) return v;
-      sessionStorage.setItem('atelic.replayT0', String(Date.now()));
+      sessionStorage.setItem('atelic.replayT0', String(T0));
     } catch (e) { /* storage blocked: clock restarts per page */ }
     return T0;
   }
-  const T0 = Date.now();
+  let T0 = Date.now() + QUIET_LEAD_MS;
   function replayNow() {
     return replayStart == null ? null : new Date(replayStart + (Date.now() - replayT0()));
+  }
+  // Put the replay clock at a moment (ms since epoch); it runs on in real time from there.
+  function setReplayNow(ms) {
+    if (replayStart == null || !Number.isFinite(ms)) return;
+    T0 = Date.now() - (ms - replayStart);
+    try { sessionStorage.setItem('atelic.replayT0', String(T0)); } catch (e) { /* in-page only */ }
+    sysPill();
+  }
+  // Back to the quiet watch period before the incidents (Reset).
+  const resetReplay = () => { if (replayStart != null) setReplayNow(replayStart - QUIET_LEAD_MS); };
+  // A real time (when something was done in this session) on the replay clock: the same distance back from replay now.
+  function toReplay(iso) {
+    const now = replayNow(), t = Date.parse(iso);
+    return now && !Number.isNaN(t) ? new Date(now.getTime() - (Date.now() - t)) : new Date(iso);
   }
   const fmtUtc = (d, withDate) => `${withDate ? `${d.toISOString().slice(0, 10)} ` : ''}${d.toISOString().slice(11, 19)} UTC`;
   function tickReplay() {
@@ -444,9 +460,26 @@
     strip.setAttribute('aria-label', `Showing ${inc.local_incident_id}: ${[inc.camera_id, asset && `near ${asset}`, w.text].filter(Boolean).join(', ')}`);
     strip.innerHTML = `
       <span class="is-id ${w.kind}"><i></i>${e(inc.local_incident_id)}</span>
-      <span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>
+      ${(liveIncidents || []).length > 1
+        ? `<button type="button" class="is-seg is-cam" id="is-cam" title="Switch camera" aria-haspopup="dialog">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}${CHEVRON}</button>`
+        : `<span class="is-seg">${ic('<rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7.5l4-2v5l-4-2"/>')}${e(inc.camera_id)}</span>`}
       ${asset ? `<span class="is-seg" title="Likely source (hypothesis)">${ic('<circle cx="8" cy="8" r="4.5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>')}near ${e(asset)}</span>` : ''}
       <a class="is-seg is-src ${w.kind}" href="incidents.html?id=${encodeURIComponent(inc.local_incident_id)}" title="Where this incident stands (Incidents page)">${e(w.text)}</a>`;
+    const cam = $('is-cam');
+    if (cam) cam.addEventListener('click', switchCamera);
+  }
+
+  // Camera picker from the strip: one row per camera with its incident. Same screen for an incident that has an
+  // alert; Camera for one that has none yet (that is where it can be triggered).
+  function switchCamera() {
+    const page = document.body.dataset.page;
+    const rows = (liveIncidents || []).map((l) => {
+      const w = whereNow(l), me = l.incident_id === INCIDENT_ID;
+      const body = `<b class="mono">${escAttr(l.camera_id)}</b><span class="mono">${escAttr(l.incident_id)}</span><span class="sw-st ${w.kind}">${escAttr(w.text)}</span>`;
+      return me ? `<div class="sw-opt" aria-current="true">${body}<em>Showing</em></div>`
+        : `<a class="sw-opt" href="${escAttr(incHref(l.triggered ? page : 'detection', l.incident_id))}">${body}<em>Open →</em></a>`;
+    }).join('');
+    modal({ title: 'Switch camera', html: `<div class="sw-list">${rows}</div>`, okLabel: null, cancelLabel: 'Close' });
   }
 
   // A link to another incident (incHref marks it with sw=) asks first, so the user knows the incident changes.
@@ -529,7 +562,7 @@
     observed: 'Observed', provider_reported: 'Provider reported', experimental_setpoint: 'Experimental setpoint',
     model_estimated: 'Model estimated', simulated: 'Simulated', synthetic: 'Simulated', manual_annotation: 'Manual annotation',
     hypothesis: 'Hypothesis', approved: 'Approved', pending: 'Pending', gap: 'Gap',
-    human_decision: 'Human decision', system: 'System status', agent_drafted: 'Agent drafted',
+    human_decision: 'Human decision', system: 'System status', agent_drafted: 'Agent drafted', field_note: 'Field note',
   };
   const escAttr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function badge(p, title) {
@@ -564,7 +597,7 @@
     modalOk = onOk || null;
     $('modal-title').textContent = title;
     $('modal-body').innerHTML = html;
-    m.querySelector('.actions').innerHTML = `<button type="button" class="btn" data-modal-cancel>${cancelLabel}</button>${okHref
+    m.querySelector('.actions').innerHTML = `<button type="button" class="btn" data-modal-cancel>${cancelLabel}</button>${okLabel === null ? '' : okHref
       ? `<a class="btn primary ${okClass}" data-modal-ok href="${escAttr(okHref)}">${okLabel}</a>`
       : `<button type="button" class="btn primary ${okClass}" data-modal-ok>${okLabel}</button>`}`;
     const ok = m.querySelector('[data-modal-ok]'), ta = $('modal-body').querySelector('textarea');
@@ -631,7 +664,7 @@
   function reopenDialog(id, done) {
     modal({
       title: `Reopen ${id}?`,
-      html: `<p class="dm-lead">The false-alarm close is undone and the investigation continues where it was. Your name goes in the audit log.</p>
+      html: `<p class="dm-lead">The false-alarm close is undone and the investigation continues where it left off. Your name goes in the audit log.</p>
         <label for="dm-by">Your name</label><input type="text" id="dm-by" autocomplete="name" value="${escAttr(readName())}">`,
       okLabel: 'Reopen incident',
       isValid: (b) => b.querySelector('#dm-by').value.trim(),
@@ -657,7 +690,7 @@
       if (after) after.after(bar); else return;
     }
     bar.innerHTML = `<span class="ic" aria-hidden="true">✓</span><span><b>Closed as a false alarm</b> by ${escAttr(d.by)} · ${escAttr(d.reason_label)} · “${escAttr(d.comment)}”</span>
-      <a href="detection.html?inc=${encodeURIComponent(inc.local_incident_id)}">Reopen on Camera →</a>`;
+      <a href="detection.html?inc=${encodeURIComponent(inc.local_incident_id)}">Reopen on Detect →</a>`;
   }
 
   // Back bar: a page opened with ?from=<page> (e.g. from a "View in Glass box" link) links back to it.
@@ -798,8 +831,25 @@
     loadLive();
   }
 
+  // Switch this tab to another incident without reloading (Camera's Trigger): URL, rail links, labels, stepper, strip.
+  function setIncident(id) {
+    if (!/^INC-\d{3}$/.test(id) || id === INCIDENT_ID) return Promise.resolve();
+    INCIDENT_ID = id;
+    window.AtelicShell.INCIDENT_ID = id;
+    try { sessionStorage.setItem('atelic.incident', id); } catch (e) { /* ignore */ }
+    const q = new URLSearchParams(location.search);
+    q.set('inc', id); q.delete('sw'); q.delete('swp');
+    try { history.replaceState(null, '', `${location.pathname}?${q}`); } catch (e) { /* ignore */ }
+    Object.keys(replayStatus).forEach((k) => { delete replayStatus[k]; });
+    const bar = document.querySelector('.switch-bar');
+    if (bar) bar.remove();
+    renderRail(document.body.dataset.page);
+    document.querySelectorAll('[data-inc]').forEach((el) => { el.textContent = id; });
+    return refresh();
+  }
+
   window.AtelicShell = {
-    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, fmtUtc, traceLink,
+    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, setReplayNow, resetReplay, toReplay, setIncident, fmtUtc, traceLink,
     BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow, confirmSwitch,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the

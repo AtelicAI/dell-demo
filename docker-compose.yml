@@ -73,6 +73,9 @@ services:
       WORKFLOW_DATABASE_URL: postgresql://atelic_runtime:${WORKFLOW_RUNTIME_PASSWORD:?set WORKFLOW_RUNTIME_PASSWORD}@postgres:5432/atelic
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-nvidia/nemotron-3-ultra-550b-a55b}
+      RECORDED_RUNS_DIR: /srv/recordings
+    # Agent runs recorded on this host survive rebuilds; runs committed in engine/data/recorded_runs ship in the image.
+    volumes: [recorded-runs:/srv/recordings]
     depends_on:
       neo4j: {condition: service_healthy}
       influxdb: {condition: service_healthy}
@@ -131,3 +134,4 @@ volumes:
   documents-data:
   ui-state:
   caddy-data:
+  recorded-runs:

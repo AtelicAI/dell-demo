@@ -1,0 +1,133 @@
+{
+  "$defs": {
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "recorded",
+            "simulated",
+            "derived",
+            "manually_annotated",
+            "inferred"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "source_dataset": {
+          "title": "Source Dataset",
+          "type": "string"
+        },
+        "generator_version": {
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_kind",
+        "source_dataset",
+        "generator_version",
+        "reference"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "incident_id": {
+      "title": "Incident Id",
+      "type": "string"
+    },
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "camera_id": {
+      "title": "Camera Id",
+      "type": "string"
+    },
+    "timestamp_utc": {
+      "format": "date-time",
+      "title": "Timestamp Utc",
+      "type": "string"
+    },
+    "clip_time_seconds": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Clip Time Seconds"
+    },
+    "mode": {
+      "enum": [
+        "synthetic_annotation_fixture",
+        "annotation_replay",
+        "model_inference"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "origin_polygon": {
+      "items": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "minItems": 3,
+      "title": "Origin Polygon",
+      "type": "array"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    }
+  },
+  "required": [
+    "event_id",
+    "incident_id",
+    "scenario_id",
+    "camera_id",
+    "timestamp_utc",
+    "mode",
+    "origin_polygon",
+    "provenance"
+  ],
+  "title": "DetectionEvent",
+  "type": "object"
+}

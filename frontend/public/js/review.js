@@ -135,7 +135,7 @@
           <span class="seal chip ${DECISION[rv.decision].chip}">${esc(DECISION[rv.decision].label)}</span>
           ${ok ? '' : `<div class="why">${esc(rv.reason)}</div>`}
         </div>
-        <p class="rd-note">${ok ? 'Recorded in the audit log. The draft is now locked. The name was typed at review; this demo has no sign-in.'
+        <p class="rd-note">${ok ? 'Recorded in the audit log. The draft is now locked. The name is as typed at review; it is not tied to the sign-in.'
           : 'Returned to Plan. A rejected or returned draft cannot close the incident until it is edited and submitted again.'}</p>
         <a class="btn" href="${ok ? 'report.html' : 'plan.html'}">${ok ? 'Open Report →' : 'Open Plan →'}</a>
         ${history}${safety}`;
@@ -157,7 +157,7 @@
       ${W.stale ? '<p class="rd-note err">The emission estimate changed after this draft was made. It cannot be approved; request changes instead.</p>' : ''}
       <div class="field"><label for="rv-name">Your name</label>
         <input id="rv-name" autocomplete="name" maxlength="80" value="${esc(readName())}" placeholder="Full name">
-        <div class="hint">Recorded with the decision. No sign-in in this demo.</div></div>
+        <div class="hint">Recorded with the decision. Not tied to the sign-in.</div></div>
       ${window.AtelicStory.tray.box(trayKey(), { send: true })}
       <div class="acts">
         <button class="btn go" data-decide="approve"${W.stale ? ' disabled title="Evidence changed after drafting"' : ''}>Approve draft</button>
@@ -187,11 +187,14 @@
     if (!W) return;
     $('agent-banner').innerHTML = S.agentBanner(W.agent);
     $('investigation').innerHTML = S.investigation(W.investigation);
-    $('inv-meta').textContent = W.investigation ? `${W.investigation.findings.length} findings · ${(W.questions || []).length} questions` : '';
-    const draftText = $('qa-text') ? $('qa-text').value : '';
+    const notes = (W.field_notes || []).length, round = W.investigation && W.investigation.round;
+    $('inv-meta').textContent = W.investigation ? [`${W.investigation.findings.length} findings`, `${(W.questions || []).length} questions`,
+      notes ? `${notes} field note${notes === 1 ? '' : 's'}` : '', round > 1 ? `round ${round}` : ''].filter(Boolean).join(' · ') : '';
+    // Keep anything typed but not sent across re-renders.
+    const typed = ['qa-text', 'fn-text', 'rs-focus'].map((id) => [id, $(id) ? $(id).value : '']);
     // "Add to plan" only while a draft waits for this reviewer; the tray goes out with Request changes.
-    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { tray: W.submitted ? trayKey() : null });
-    if ($('qa-text')) $('qa-text').value = draftText;
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: W.submitted ? trayKey() : null }) + S.research(W);
+    typed.forEach(([id, v]) => { if ($(id)) $(id).value = v; });
     $('rev-diff').innerHTML = S.revisionDiff(W);
     $('rev-diff').hidden = !$('rev-diff').innerHTML;
   }
@@ -247,6 +250,24 @@
     }
   });
   document.addEventListener('click', async (e) => {
+    const who = ($('rv-name') && $('rv-name').value.trim()) || readName();
+    if (e.target.id === 'fn-send' || e.target.id === 'rs-send') {
+      const note = e.target.id === 'fn-send';
+      const text = (note ? $('fn-text') : $('rs-focus')).value.trim();
+      if (note && !text) return;
+      e.target.disabled = true;
+      const data = await window.AtelicStory.send(`/incidents/${INCIDENT_ID}/${note ? 'field-notes' : 'research'}`,
+        note ? { text, recorded_by: who } : { focus: text, requested_by: who }, note ? 'fn-msg' : 'rs-msg');
+      e.target.disabled = false;
+      if (data) {
+        W = data;
+        if ($(note ? 'fn-text' : 'rs-focus')) $(note ? 'fn-text' : 'rs-focus').value = '';
+        renderAll();
+        window.AtelicShell.refresh();
+        startPoll();
+      }
+      return;
+    }
     if (e.target.id !== 'qa-send') return;
     e.target.disabled = true;
     const data = await window.AtelicStory.ask(INCIDENT_ID, ($('rv-name') && $('rv-name').value.trim()) || readName());
@@ -280,12 +301,13 @@
   });
 
   // Keep the page live while an agent works (answering, revising after Request changes).
-  const pending = (w) => w && ((w.agent && w.agent.status === 'running') || (w.questions || []).some((q) => q.status !== 'answered'));
+  const pending = (w) => w && ((w.agent && w.agent.status === 'running') || (w.research && w.research.requested)
+    || (w.questions || []).some((q) => q.status !== 'answered'));
   let stopPoll = null;
   function startPoll() {
     if (stopPoll) stopPoll();
     stopPoll = window.AtelicStory.poll(async () => {
-      if (document.activeElement && ['rv-name', 'qa-text', 'rv-reason'].includes(document.activeElement.id)) return W;
+      if (document.activeElement && ['rv-name', 'qa-text', 'rv-reason', 'fn-text', 'rs-focus'].includes(document.activeElement.id)) return W;
       W = await get(`/incidents/${INCIDENT_ID}/work-order`);
       renderAll();
       return W;

@@ -221,6 +221,15 @@ class WorkflowStore:
     def ask_question(self, incident_id, question, *, authorization, expected_version, idempotency_key):
         return self._mutate(incident_id, expected_version, idempotency_key, 'question', dict(question=question), authorization)
 
+    def add_field_note(self, incident_id, text, *, authorization, expected_version, idempotency_key):
+        return self._mutate(incident_id, expected_version, idempotency_key, 'field_note', dict(text=text), authorization)
+
+    def request_research(self, incident_id, focus, *, authorization, expected_version, idempotency_key):
+        return self._mutate(incident_id, expected_version, idempotency_key, 'research', dict(focus=focus), authorization)
+
+    def save_reinvestigation(self, incident_id, findings, *, expected_version, idempotency_key):
+        return self._mutate(incident_id, expected_version, idempotency_key, 'reinvestigate', dict(findings=findings))
+
     def answer_question(self, incident_id, question_id, answer, *, expected_version, idempotency_key):
         return self._mutate(incident_id, expected_version, idempotency_key, 'answer', dict(question_id=question_id, answer=answer))
 
@@ -234,7 +243,7 @@ class WorkflowStore:
         return self._mutate(incident_id, expected_version, idempotency_key, 'close', dict(decision=decision, rationale=rationale), authorization)
 
     # Actions only an authenticated human may take; agents and the orchestrator act as 'system'.
-    HUMAN_ACTIONS = ('review', 'question', 'repair', 'close')
+    HUMAN_ACTIONS = ('review', 'question', 'repair', 'close', 'field_note', 'research')
     QUESTION_STATES = ('pending_review', 'verification_ready')
     REPAIR_STATES = ('approved', 'reported', 'follow_up_required')
 
@@ -292,6 +301,7 @@ class WorkflowStore:
                     record.update(state='plan_drafted', draft_version=version, work_order=draft)
                     record.pop('review', None)
                     record.pop('revision_required_after',None)
+                    record.pop('revision_basis',None)
                 elif action == 'submit':
                     if state != 'plan_drafted':
                         raise WorkflowError('submission_not_allowed')
@@ -316,6 +326,7 @@ class WorkflowStore:
                     report = dict(schema_version='1.0', incident_id=incident_id, status='approved',
                                   work_order=record['work_order'], review=record['review'],
                                   investigation=record.get('investigation'), questions=record.get('questions', []),
+                                  field_notes=record.get('field_notes', []), earlier_investigations=record.get('investigation_history', []),
                                   issued_at=datetime.now(timezone.utc).isoformat(), advisory_only=True)
                     c.execute('INSERT INTO reports VALUES (%s,%s)', (incident_id,Jsonb(report)))
                     record.update(state='reported', report=report)
@@ -331,6 +342,37 @@ class WorkflowStore:
                     question = self._artifact(c, incident_id, 'question', dict(question=payload['question'], asked_by=actor,
                                                                               asked_in_state=state, actor_type='human'))
                     record.setdefault('questions',[]).append(dict(question, status='pending', answer=None))
+                elif action == 'field_note':
+                    # An engineer's observation after the evidence was frozen: added beside it, never into the snapshot.
+                    if state not in self.QUESTION_STATES:
+                        raise WorkflowError('field_note_not_allowed')
+                    if not payload['text'].strip():
+                        raise WorkflowError('field_note_required',422)
+                    notes = record.setdefault('field_notes',[])
+                    notes.append(self._artifact(c, incident_id, 'field_note', dict(
+                        text=payload['text'], recorded_by=actor, actor_type='human', recorded_in_state=state,
+                        evidence_id=f'field_note:FN-{len(notes)+1:03d}', verified_by_system=False)))
+                elif action == 'research':
+                    # A further research round before approval: the investigator runs again, then the planner revises.
+                    if state != 'pending_review':
+                        raise WorkflowError('research_not_allowed')
+                    if record.get('research_request'):
+                        raise WorkflowError('research_already_requested')
+                    record['research_request'] = self._artifact(c, incident_id, 'research_request', dict(
+                        focus=payload['focus'], requested_by=actor, actor_type='human',
+                        round=len(record.get('investigation_history',[]))+2))
+                elif action == 'reinvestigate':
+                    request = record.get('research_request')
+                    if state != 'pending_review' or not request:
+                        raise WorkflowError('reinvestigation_not_requested')
+                    # Earlier rounds stay on the record; the draft under review is now out of date.
+                    record.setdefault('investigation_history',[]).append(record['investigation'])
+                    record['investigation'] = self._artifact(c, incident_id, 'investigation', dict(
+                        findings=payload['findings'], round=request['round'], research_request=request))
+                    record.pop('research_request')
+                    record.update(state='plan_drafted', revision_required_after=record['draft_version'],
+                                  revision_basis=dict(kind='research', round=request['round'], focus=request['focus'],
+                                                      requested_by=request['requested_by']))
                 elif action == 'answer':
                     pending = next((q for q in record.get('questions',[]) if q['id']==payload['question_id']), None)
                     if pending is None or pending['status'] != 'pending':

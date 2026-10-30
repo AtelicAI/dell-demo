@@ -72,7 +72,7 @@ def sample_view(run_id, p):
     base = f"/detection/runs/{run_id}/assets"
     return dict(pts_seconds=p['pts_seconds'], prediction=p['prediction'], score=p['score'], score_kind=p['score_kind'],
                 normalized_boxes=p['normalized_boxes'], plume_extent_polygons=p['plume_extent_polygons'],
-                mask_url=f"{base}/{p['mask_file']}", overlay_url=f"{base}/{p['overlay_file']}")
+                mask_url=f"{base}/{p['mask_file']}" if p.get('mask_file') else None, overlay_url=f"{base}/{p['overlay_file']}" if p.get('overlay_file') else None)
 
 
 def footage(cfg):
@@ -113,7 +113,7 @@ def incident_event(incident_id, scenario):
                           camera_id=cfg['camera_id'], clip_time_seconds=alert['pts_seconds'], mode='model_inference',
                           timestamp_utc=datetime.fromisoformat(scenario['start_utc'])+timedelta(seconds=seconds),
                           origin_polygon=fixture['origin_polygon'], confidence=None,
-                          provenance=dict(source_kind='inferred', source_dataset='gasvid-MOV_1242',
+                          provenance=dict(source_kind='inferred', source_dataset=f"gasvid-{cfg['clip_id']}",
                                           generator_version=run['model'].get('method', 'pretrained'),
                                           reference=f"detection/runs/{cfg['run_id']}#{cfg['clip_id']}@{alert['pts_seconds']:.3f}"))
 

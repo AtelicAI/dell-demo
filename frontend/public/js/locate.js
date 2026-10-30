@@ -155,7 +155,8 @@
     D = { box: first ? first.bbox_normalized : null };
     // Plume already colourised in the clip -> no browser heat map on top of it.
     const heat = meta.plume_rendering !== 'burned_in';
-    $('cam-badge').innerHTML = badge(prov, 'Clip') + (first ? badge('manual_annotation', 'Plume region') + (heat ? badge('model_estimated', 'Heat map') : '') : '');
+    const annProv = ann.provenance === 'model_estimated' ? 'model_estimated' : 'manual_annotation';
+    $('cam-badge').innerHTML = badge(prov, 'Clip') + (first && annProv !== prov ? badge(annProv, 'Plume region') : '') + (first && heat ? badge('model_estimated', 'Heat map') : '');
 
     const times = d.frame_times && d.frame_times.frame_start_s;
     const f = first ? first.frame : 0;

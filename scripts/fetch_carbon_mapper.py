@@ -18,7 +18,7 @@ from PIL import Image
 
 API = "https://api.carbonmapper.org/api/v1"
 PORTAL = "https://data.carbonmapper.org"
-DEFAULT_PLUME = "tan20260512t084612c49s4001-A"  # CH4, oil and gas (1B2), Bahrain: regional context only
+DEFAULT_PLUME = "tan20251104t082038c10s4001-A"  # CH4, oil and gas (1B2), inland Eastern Province, Saudi Arabia: regional context only
 # Source cluster as linked from the portal; without one, the API picks the plume's 100 m cluster.
 DEFAULT_SOURCE = None  # the plume's own 100 m cluster (3 quantified detections)
 OUT = Path(__file__).resolve().parent.parent / "data" / "carbon_mapper"

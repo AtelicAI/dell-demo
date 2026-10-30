@@ -49,8 +49,8 @@ def schedule(start, end):
                     episodes.append((at + timedelta(minutes=rng.randint(0, 15)), timedelta(minutes=rng.randint(45, 150)),
                                      growth * rng.uniform(.8, 1.2) / 1000, 'packing leak during load change, growing after WO-009'))
         day += timedelta(days=1)
-    final = datetime(2026, 10, 23, 6, 0, tzinfo=timezone.utc)
-    episodes.append((final, end - final, WEEP_G_H / 1000, 'weep from the 06:00 load change, continuing into SCN-001'))
+    final = datetime(2026, 10, 23, 17, 30, tzinfo=timezone.utc)
+    episodes.append((final, end - final, WEEP_G_H / 1000, 'weep from the 17:30 load change, continuing into SCN-001'))
     return [(s, s + d, q, note) for s, d, q, note in episodes if s < end]
 
 

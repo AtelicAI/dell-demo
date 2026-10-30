@@ -9,8 +9,8 @@
   // The incident this tab is working on (the one the incident screens show).
   const activeTag = (id) => (id === INCIDENT_ID ? '<span class="cur-tag" title="The incident screens in this tab show this incident">Active</span>' : '');
   const STAGE = { detect: ['Detect', 'detection'], locate: ['Locate', 'locate'], quantify: ['Quantify', 'quantify'],
-    plan: ['Plan', 'plan'], approve: ['Approve', 'review'], report: ['Report', 'report'] };
-  const STATUS = { not_started: 'Not started', in_progress: 'In progress', ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked' };
+    plan: ['Plan', 'plan'], approve: ['Approve', 'review'], report: ['Report', 'report'], close: ['Close', 'report'] };
+  const STATUS = { not_started: 'Not started', in_progress: 'In progress', ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked', not_needed: 'Not needed' };
   const STATUS_KIND = { in_progress: 'good', ready_for_review: 'warn', completed: 'good', blocked: 'bad' };
   const OUTCOME_KIND = { repaired: 'good', no_leak_found: '', false_alarm: '' };
   const DECISION = { approve: 'Approved', request_changes: 'Changes requested', reject: 'Rejected', dismissed: 'Dismissed' };
@@ -121,7 +121,7 @@
             ['Review', rv ? `${DECISION[rv.decision]} by ${esc(rv.reviewer)}${rv.reason ? `<br><span style="color:var(--ink-mute)">“${esc(rv.reason)}”</span>` : ''}` : 'Not decided'],
           ])}
           <h4>Stages</h4>
-          ${kv(l.stages.map((s) => [`<a href="${incLink(l, STAGE[s.stage][1])}" style="font-family:var(--mono);color:var(--accent);text-decoration:none">${STAGE[s.stage][0]}</a>`,
+          ${kv(l.stages.filter((s) => STAGE[s.stage]).map((s) => [`<a href="${incLink(l, STAGE[s.stage][1])}" style="font-family:var(--mono);color:var(--accent);text-decoration:none">${STAGE[s.stage][0]}</a>`,
             chip(STATUS[s.status], STATUS_KIND[s.status])]))}
           <p><a class="btn primary" href="${incLink(l, c.page)}">${c.stage ? `Continue at ${STAGE[c.stage][0]}` : 'Open report'} →</a></p>
         </div>`;
@@ -143,7 +143,7 @@
             ...(d.reason ? [['Reason', esc(d.reason)]] : []),
             ...(h.comment ? [['What was seen', esc(h.comment)]] : []),
             ['Work order', h.work_order ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : 'None'],
-            ['Emission rate', h.rate != null ? `${h.rate} kg CH₄/h ${badge('model_estimated')}` : 'Not recorded'],
+            ['Emission rate', h.rate != null ? esc(h.rate) : 'Not recorded'], // the API already gives unit and "(model estimate)"
           ])}
           <h4>Timeline</h4>
           <ul class="tl">${(h.timeline || []).map((t) => `<li>${esc(t.event)}<small>${when(t.at_utc)}</small></li>`).join('')}</ul>

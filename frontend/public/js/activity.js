@@ -20,7 +20,7 @@
 
   // Where each step's result is shown in the app (for "Shown on …" links and the back link).
   const SCREEN = {
-    camera_event: ['detection.html', 'Camera'], equipment_mapping: ['locate.html', 'Locate'], graph: ['graph.html', 'Knowledge graph'],
+    camera_event: ['detection.html', 'Detect'], equipment_mapping: ['locate.html', 'Locate'], graph: ['graph.html', 'Knowledge graph'],
     procedure_passages: ['plan.html', 'Plan'], emission_estimate: ['quantify.html', 'Quantify'], work_order: ['plan.html', 'Plan'],
     approval: ['review.html', 'Approve'], investigation: ['plan.html', 'Plan'], answer: ['review.html', 'Approve'],
     verification: ['report.html', 'Report'], closure: ['report.html', 'Report'],
