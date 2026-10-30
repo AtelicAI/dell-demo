@@ -34,10 +34,26 @@ def get(url):
         return r.read()
 
 
+# The overview legend's ramp (low -> high), as in index.html .legend .bar.
+RAMP = [(255, 255, 178), (254, 204, 92), (253, 141, 60), (240, 59, 32), (189, 0, 38)]
+
+
+def ramp(x):
+    i = min(int(x * (len(RAMP) - 1)), len(RAMP) - 2)
+    f = x * (len(RAMP) - 1) - i
+    return tuple(round(a + (b - a) * f) for a, b in zip(RAMP[i], RAMP[i + 1]))
+
+
 def transparent_png(raw):
-    # Carbon Mapper plume PNGs are RGB on black; black = no enhancement detected.
+    # Carbon Mapper plume PNGs are RGB on black; black = no enhancement detected. Their colour map grows brighter with
+    # enhancement, so brightness is recoloured onto the legend's ramp, scaled to this plume's own range.
     im = Image.open(io.BytesIO(raw)).convert("RGBA")
-    im.putdata([(r, g, b, 0 if r + g + b < 24 else 255) for r, g, b, _ in im.getdata()])
+    px = list(im.getdata())
+    lit = [r + g + b for r, g, b, _ in px if r + g + b >= 24]
+    lo, hi = min(lit), max(lit)
+    im.putdata([(0, 0, 0, 0) if r + g + b < 24 else
+                (*ramp((r + g + b - lo) / max(hi - lo, 1)), round(170 + 85 * (r + g + b - lo) / max(hi - lo, 1)))
+                for r, g, b, _ in px])
     buf = io.BytesIO()
     im.save(buf, "PNG")
     return buf.getvalue()
