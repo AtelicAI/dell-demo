@@ -293,6 +293,18 @@ def stages_for(s):
     return stages
 
 
+def closure_of(s, rec=None):
+    """The engineer's closure of this incident (who, why, when), or None while it is open."""
+    rec = rec or record(s)
+    c = rec and rec.get("closure")
+    if not c or c.get("decision") != "close":
+        return None
+    by, _, why = (c.get("rationale") or "").partition(": ")
+    ui = CLOSED.get(s["engine_id"], {})
+    return {"by": ui.get("closed_by") or (by if why else "Engineer"), "rationale": ui.get("rationale") or why or c.get("rationale"),
+            "at": utc(c["recorded_at"])}
+
+
 def view(s):
     sync(s)
     orch = orchestration(s)
@@ -328,7 +340,7 @@ def list_incidents():
                      "clip_available": True, "triggered_at": s["triggered_at"], "stages": v["stages"],
                      "asset_id": selected_asset(s), "asset_provenance": "hypothesis",
                      "rate_kg_ch4_h": q and q.get("rate_kg_ch4_h"), "review": latest_review(s),
-                     "dismissal": s["dismissal"], "engine_incident_id": s["engine_id"],
+                     "dismissal": s["dismissal"], "closure": closure_of(s), "engine_incident_id": s["engine_id"],
                      "frame_anchor": EVENTS[iid]["anchor"]})
     return {"live": live, "history": incident_history()}
 
@@ -665,7 +677,7 @@ def get_detections(incident_id: str):
         "annotations": {"status": "verified", "provenance": "model_estimated", "ogi_clip_id": mon["clip_id"],
                         "reviewed_by": None, "frames": [], "ranges": a["ranges"], "run_id": mon["run_id"],
                         "note": "Executed detector samples from the alarm on, each held until the next sample"},
-        "triggered": bool(s["engine_id"]), "dismissal": s["dismissal"], "clip_available": True,
+        "triggered": bool(s["engine_id"]), "dismissal": s["dismissal"], "closure": closure_of(s, rec), "clip_available": True,
         "before_available": True, "original_available": True, "frame_times": None,
         "camera_wall": read_json("skid", "camera_wall.json"), "monitor": m,
         "camera_equipment": read_json("skid", "camera_equipment.json"),

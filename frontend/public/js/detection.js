@@ -23,7 +23,7 @@
   }
   // Simulated / synthetic provenance is tracked in the data but not shown.
 
-  let CAM = 'CAM-01', live = [], raised = false, dismissal = null, meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
+  let CAM = 'CAM-01', live = [], raised = false, dismissal = null, closure = null, meta, ann, prov, annP, fps = null, times = null, total = 0, firstFrame = null, observedNow = null, byFrame = new Map(), video = null, frame = -1;
 
   // ----- data rules -----
   const hasRegion = (a) => a && ((a.mask_polygon_normalized || []).length > 2 || a.bbox_normalized || a.origin_normalized);
@@ -101,6 +101,8 @@
     const el = $('status-block');
     if (!el) return;
     if (dismissal) { renderClosed(el); return; }
+    if (closure) { renderResolved(el); return; }
+    $('btn-investigate').hidden = false;
     let by;
     if (now) {
       by = annP === 'manual_annotation'
@@ -142,6 +144,21 @@
       <div class="said">“${esc(d.comment)}”</div>
       <div class="reopen"><button class="linkish" type="button" id="btn-reopen">Reopen incident</button></div>`;
     $('btn-reopen').addEventListener('click', () => window.AtelicShell.reopenDialog(window.AtelicShell.INCIDENT_ID, () => location.reload()));
+  }
+
+  // Repaired, verified and closed by an engineer: the recording still plays, but the alert is over.
+  function renderResolved(el) {
+    const c = closure;
+    setAlert(false);
+    document.querySelector('.meta-panel').classList.remove('waiting');
+    $('btn-investigate').hidden = true;
+    $('btn-dismiss').hidden = true;
+    el.className = 'status closed';
+    el.innerHTML = `<div class="lbl">Status</div>
+      <div class="big"><span class="sig"></span>Incident closed</div>
+      <div class="by">Repaired and verified · closed by ${esc(c.by)} · ${esc(String(c.at).slice(11, 16))} UTC</div>
+      ${c.rationale ? `<div class="said">“${esc(c.rationale)}”</div>` : ''}
+      <div class="reopen"><a class="linkish" href="${window.AtelicShell.incHref('report', window.AtelicShell.INCIDENT_ID)}">Open the report →</a></div>`;
   }
 
   function applyReplay(f) {
@@ -260,7 +277,7 @@
   // ----- active alarms -----
   // Open alarms (raised, not closed), oldest first. Listed when another incident's alarm is open, so you can see
   // them side by side and pick which one to investigate.
-  const openAlarms = () => live.filter((l) => l.triggered && !l.dismissal)
+  const openAlarms = () => live.filter((l) => l.triggered && !l.dismissal && !l.closure)
     .sort((a, b) => String(a.triggered_at).localeCompare(String(b.triggered_at)));
   function renderAlarms() {
     const box = $('alarms'), open = openAlarms(), me = window.AtelicShell.INCIDENT_ID;
@@ -279,8 +296,9 @@
     const c = document.querySelector('.cell.cam1');
     if (!c) return;
     const bare = raised && !byFrame.size;
-    c.classList.toggle('alert', !dismissal && (!!now || bare));
-    c.querySelector('.sv').textContent = dismissal ? 'Closed · false alarm' : now ? 'ALERT · Plume observed' : bare ? 'ALERT · no recording' : 'Watching';
+    c.classList.toggle('alert', !dismissal && !closure && (!!now || bare));
+    c.querySelector('.sv').textContent = dismissal ? 'Closed · false alarm' : closure ? 'Closed · repaired'
+      : now ? 'ALERT · Plume observed' : bare ? 'ALERT · no recording' : 'Watching';
   }
 
   // ----- incident camera before/after: original infrared (left) vs Atelic detection output (right) -----
@@ -652,6 +670,7 @@
       CAM = d.camera_id || CAM;
       raised = d.triggered;
       dismissal = d.dismissal || null;
+      closure = d.closure || null;
       live = list.live || [];
       meta = d.metadata; ann = d.annotations; wall = d.camera_wall; equipment = d.camera_equipment || null;
       prov = clipProv(meta);
