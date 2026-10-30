@@ -107,6 +107,11 @@
       $('fu-body').innerHTML = S.followUp(fu, readName());
       $('fu-meta').textContent = fu.state.replace(/_/g, ' ');
     }
+    // After the repair, the engineer can question the verifier's evidence before closing.
+    $('qa').hidden = !(fu && fu.repair);
+    if (fu && fu.repair && !(document.activeElement && document.activeElement.id === 'qa-text')) {
+      $('qa').innerHTML = S.questions(fu.questions, fu.can_ask, { offText: fu.closure ? 'The incident is closed; questions are closed.' : 'Questions open once the verifier has finished.' });
+    }
     $('ak-panel').hidden = !R || R.status !== 'final';
     if (R && R.status === 'final') {
       const em = R.sections.find((x) => x.id === 'emissions');
@@ -133,8 +138,20 @@
     const c = e.target.closest('[data-close]');
     if (c) act('/close', { by: $('fu-cby').value.trim(), decision: c.dataset.close, rationale: $('fu-why').value.trim() }, 'fu-cmsg');
   });
-  // Live while the verifier works.
-  const waiting = (r) => r && r.follow_up && (r.follow_up.state === 'repair_recorded' || (r.follow_up.agent && r.follow_up.agent.status === 'running'));
+  document.addEventListener('click', async (e) => {
+    if (e.target.id !== 'qa-send') return;
+    e.target.disabled = true;
+    const data = await window.AtelicStory.ask(INCIDENT_ID, readName());
+    e.target.disabled = false;
+    if (!data) return;
+    R = await get(`/incidents/${INCIDENT_ID}/report`);
+    renderAll();
+    $('qa-msg').textContent = 'Sent. The answer appears here in about a minute.';
+    startPoll();
+  });
+  // Live while the verifier works or an answer is pending.
+  const waiting = (r) => r && r.follow_up && (r.follow_up.state === 'repair_recorded' || (r.follow_up.agent && r.follow_up.agent.status === 'running')
+    || (r.follow_up.questions || []).some((q) => q.status !== 'answered'));
   let stop = null;
   function startPoll() {
     if (stop) stop();

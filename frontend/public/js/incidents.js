@@ -1,5 +1,5 @@
 // Incidents — every camera alert at the site. Reads GET /incidents: live incidents (state from this
-// backend) and the closed history (incidents/history.json, read-only records). ?id=<incident> preselects one.
+// backend), closed incidents remembered in the knowledge graph, and the station's work-order history from the graph. ?id=<incident> preselects one.
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +15,9 @@
   const OUTCOME_KIND = { repaired: 'good', no_leak_found: '', false_alarm: '' };
   const DECISION = { approve: 'Approved', request_changes: 'Changes requested', reject: 'Rejected', dismissed: 'Dismissed' };
 
-  let open = [], closed = [], selected = null;
+  // Commitment status as recorded in the graph; open/not done are the ones still waiting.
+  const COMMIT = { done: ['Done', 'good'], open: ['Open', 'warn'], not_done: ['Not done', 'bad'], deferred: ['Deferred', 'warn'] };
+  let open = [], closed = [], past = [], selected = null;
   const params = new URLSearchParams(location.search);
   const when = (iso) => (iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : '—');
   const chip = (text, kind, live) => `<span class="chip ${kind || ''}${live ? ' live' : ''}"><i></i>${esc(text)}</span>`;
@@ -60,6 +62,45 @@
           <td class="mono mute">${esc((h.closed_utc || '').slice(0, 10))}</td>
         </tr>`).join('')}</tbody></table>`
       : '<div class="empty-row">No closed incidents on file.</div>';
+  }
+
+  function renderPast() {
+    $('past-meta').textContent = `${past.length} work orders`;
+    $('past').innerHTML = past.length ? `<table class="inc"><thead><tr><th>Work order</th><th>Date</th><th>Asset</th><th>What happened</th><th>Follow-ups</th></tr></thead><tbody>
+      ${past.map((w) => {
+        const waiting = w.commitments.filter((c) => c.status !== 'done').length;
+        return `<tr ${rowAttrs(w.id)}>
+          <td class="id">${esc(w.id)}</td>
+          <td class="mono mute">${esc(w.date)}</td>
+          <td>${w.asset_id ? `<span class="mono">${esc(w.asset_id)}</span>` : '<span class="dim">Site</span>'}</td>
+          <td class="wrap">${esc(w.issue)}<small class="wt">${esc(w.work_type)}</small></td>
+          <td>${w.commitments.length ? chip(waiting ? `${waiting} open` : 'All done', waiting ? 'warn' : 'good') : '<span class="dim">None</span>'}</td>
+        </tr>`;
+      }).join('')}</tbody></table>`
+      : '<div class="empty-row">No station history in the knowledge graph.</div>';
+  }
+
+  function renderPastDetail(w) {
+    const fr = w.field_report;
+    return `
+      <div class="d-head"><div class="d-id">${esc(w.id)}</div><div class="d-sub">${chip(w.work_type, '')} ${chip(w.status === 'closed' ? 'Closed' : w.status, w.status === 'closed' ? 'good' : 'warn')}</div></div>
+      <div class="d-body">
+        <p><b>${esc(w.issue)}</b></p>
+        ${kv([
+          ['Date', `<span class="mono">${esc(w.date)}${w.time_utc ? ` ${esc(w.time_utc)} UTC` : ''}</span>`],
+          ['Asset', w.asset_id ? `<a href="graph.html?asset=${encodeURIComponent(w.asset_id)}&from=incidents">${esc(w.asset_id)}</a>` : 'Site'],
+          ...(w.finding ? [['Finding', esc(w.finding)]] : []),
+          ...(w.action ? [['Action', esc(w.action)]] : []),
+          ...(w.document_id ? [['Reference', `<span class="mono">${esc(w.document_id)}</span>`]] : []),
+        ])}
+        ${w.commitments.length ? `<h4>Commitments</h4><ul class="cm">${w.commitments.map((c) => {
+          const [t, k] = COMMIT[c.status] || [c.status, ''];
+          return `<li>${chip(t, k)}<span><span class="mono">${esc(c.id)}</span> ${esc(c.text)}${c.fulfilled_by ? ` · done in <span class="mono">${esc(c.fulfilled_by)}</span>` : ''}</span></li>`;
+        }).join('')}</ul>` : ''}
+        ${w.related.length ? `<h4>Related work orders</h4>${kv(w.related.map((r) => [esc(r.type), `<a href="#" data-goto="${esc(r.id)}">${esc(r.id)}</a>`]))}` : ''}
+        ${fr ? `<h4>Field report · ${esc(fr.id)}</h4><p>${esc(fr.title)}<br><span style="color:var(--ink-mute)">${esc(fr.author_role)}</span></p><blockquote>${esc(fr.body)}</blockquote>` : '<h4>Field report</h4><p class="dim">No field report linked.</p>'}
+      </div>
+      <div class="d-foot">Station record from the knowledge graph. Read-only. The agents read these records when they investigate.</div>`;
   }
 
   const kv = (rows) => `<div class="kv">${rows.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v}</div>`).join('')}</div>`;
@@ -115,6 +156,8 @@
       if (ro) ro.addEventListener('click', () => window.AtelicShell.reopenDialog(h.incident_id, () => { location.href = `incidents.html?id=${encodeURIComponent(h.incident_id)}`; }));
       return;
     }
+    const w = past.find((x) => x.id === selected);
+    if (w) { box.innerHTML = renderPastDetail(w); return; }
     box.innerHTML = '<div class="d-empty">Select an incident to see what happened.</div>';
   }
 
@@ -127,6 +170,8 @@
   }
 
   document.addEventListener('click', (e) => {
+    const g = e.target.closest('[data-goto]');
+    if (g) { e.preventDefault(); select(g.dataset.goto); const row = document.querySelector(`tr[data-id="${g.dataset.goto}"]`); if (row) row.scrollIntoView({ block: 'nearest' }); return; }
     const r = e.target.closest('tr[data-id]');
     if (r && !e.target.closest('a')) select(r.dataset.id);
   });
@@ -151,6 +196,7 @@
           { at_utc: l.dismissal.at, event: `Closed as a false alarm by ${l.dismissal.by}` }],
       }));
       closed = [...closedLive, ...(d.history ? d.history.incidents : [])].sort((a, b) => b.opened_utc.localeCompare(a.opened_utc));
+      past = (d.history && d.history.past_events) || [];
     } catch (e) {
       console.error(e);
       $('open').innerHTML = '<div class="empty-row">Incidents are unavailable: backend is not reachable.</div>';
@@ -159,9 +205,10 @@
     }
     $('counts').textContent = `${open.length} open · ${closed.length} closed`;
     const want = params.get('id');
-    selected = [...open, ...closed].some((x) => x.incident_id === want) ? want : (open.find((x) => x.incident_id === INCIDENT_ID) || open[0] || closed[0] || {}).incident_id || null;
+    selected = [...open, ...closed].some((x) => x.incident_id === want) || past.some((x) => x.id === want) ? want : (open.find((x) => x.incident_id === INCIDENT_ID) || open[0] || closed[0] || {}).incident_id || null;
     renderOpen();
     renderClosed();
+    renderPast();
     renderDetail();
   }
 
