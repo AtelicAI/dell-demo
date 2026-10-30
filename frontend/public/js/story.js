@@ -111,9 +111,10 @@
       ${(q.claims || []).length ? `<ul class="qa-cl">${q.claims.map((c) => `<li>${esc(c.statement)}${sup(c.evidence_ids)}</li>`).join('')}</ul>` : ''}
       ${n ? `<details class="qa-srcs"><summary>Sources <b>${n}</b></summary><ol class="qa-src">${Object.keys(no).map((id) => { const e = src[id] || {}, p = SHOWN_PROV[e.provenance];
         return `<li value="${no[id]}"><b>${esc(e.group || id)}</b> ${esc(e.label && e.label !== id ? e.label : '')}${p ? ` <span class="qa-prov">${p}</span>` : ''}</li>`; }).join('')}</ol></details>` : ''}
-      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span>${esc(t)}</span>${canAsk ? `<button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}${tray ? (picked.has(t)
-        ? '<span class="qa-added">✓ Added</span>'
-        : `<button type="button" class="btn sm ghost" data-tray-add="${esc(t)}" data-tray-from="${esc(q.asked_by)}">+ Add to plan</button>`) : ''}</li>`).join('')}</ul></div>` : ''}
+      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span class="qa-fu-t">${esc(t)}</span>
+        <span class="qa-fu-acts">${canAsk ? `<button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}${tray ? (picked.has(t)
+          ? `<button type="button" class="btn sm qa-added" data-tray-undo="${esc(t)}" title="Remove from the changes to ask for"><span class="on">✓ Added</span><span class="off">Undo</span></button>`
+          : `<button type="button" class="btn sm ghost" data-tray-add="${esc(t)}" data-tray-from="${esc(q.asked_by)}">+ Add to plan</button>`) : ''}</span></li>`).join('')}</ul></div>` : ''}
     </div>`;
   }
 
@@ -170,6 +171,12 @@
       const k = add.closest('[data-tray-key]') && add.closest('[data-tray-key]').dataset.trayKey;
       const items = trayGet(k);
       if (k && !items.some((x) => x.text === add.dataset.trayAdd)) traySet(k, [...items, { text: add.dataset.trayAdd, from: `answer to ${add.dataset.trayFrom || 'Engineer'}` }]);
+      return;
+    }
+    const undo = e.target.closest('[data-tray-undo]');
+    if (undo) {
+      const k = undo.closest('[data-tray-key]') && undo.closest('[data-tray-key]').dataset.trayKey;
+      traySet(k, trayGet(k).filter((x) => x.text !== undo.dataset.trayUndo));
       return;
     }
     const rm = e.target.closest('[data-tray-remove]');
