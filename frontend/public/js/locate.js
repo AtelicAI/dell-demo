@@ -130,8 +130,8 @@
     cav.textContent = MISSING_CAM;
 
     const eq = (G.camera_equipment || {}).equipment || [];
-    $('eq-list').innerHTML = eq.length ? eq.map((e) => `<span class="eqchip${e.kind === 'release_point' ? ' lp' : ''}" title="OWLv2 saw “${esc(e.detector_prompt.replace(/^an? /, ''))}” (score ${e.detector_score}), checked by eye">${esc(e.label)}${e.stands_in_for ? ` <em>→ ${esc(e.stands_in_for)} in the plant model</em>` : ''}</span>`).join('') : '<span class="note">None recognised</span>';
-    $('eq-row').hidden = !eq.length;
+    if ($('eq-list')) $('eq-list').innerHTML = eq.length ? eq.map((e) => `<span class="eqchip${e.kind === 'release_point' ? ' lp' : ''}" title="OWLv2 saw “${esc(e.detector_prompt.replace(/^an? /, ''))}” (score ${e.detector_score}), checked by eye">${esc(e.label)}${e.stands_in_for ? ` <em>→ ${esc(e.stands_in_for)} in the plant model</em>` : ''}</span>`).join('') : '<span class="note">None recognised</span>';
+    if ($('eq-row')) $('eq-row').hidden = !eq.length;
 
     const svg = $('cam-svg');
     if (!svg) return;
