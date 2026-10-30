@@ -180,10 +180,10 @@ class Orchestrator:
         candidates = result['localization']['candidates']
         if not candidates:
             raise StepFailed('No camera-mapped candidate equipment: ' + result['localization']['status'])
-        # Deterministic choice: highest illustrative overlap; alternatives stay in the evidence.
+        # Deterministic choice: highest approximate overlap; alternatives stay in the evidence.
         return dict(status=result['localization']['status'], selected_asset_id=candidates[0]['asset_id'],
                     candidates=[dict(asset_id=c['asset_id'], overlap_fraction=c['overlap_fraction']) for c in candidates],
-                    selection_rule='highest illustrative origin-region overlap; not a confirmed source')
+                    selection_rule='highest approximate origin-region overlap; not a confirmed source')
 
     def quantify(self, asset_id, alert_seconds):
         scenario = self.main.scenario_for(self.incident_id)

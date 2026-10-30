@@ -178,7 +178,7 @@
         "[supporting] 57 of 64 historical episodes start within 90 min of K-201 load changes (expected 12.5% by chance); episodes cluster at 06:00-07:00 and 17:00-19:00 UTC.",
         "[contradiction] WO-009 re-torqued XV-2104 gland follower per DS-XV-2104 but WO-008-C2 (repeat OGI during load change) remains not_done; soap test was at steady load only.",
         "[contradiction] WO-004 F-205 gasket replacement closed with exception; bolt torque verification sheet not attached; commitment WO-004-C1 still open.",
-        "[gap] Camera-to-equipment mapping for CAM-01 is illustrative and uncalibrated; long-term history fits cannot separate XV-2104 from F-205 (30 vs 31 of 36 testable episodes)."
+        "[gap] Camera-to-equipment mapping for CAM-01 is approximate and uncalibrated; long-term history fits cannot separate XV-2104 from F-205 (30 vs 31 of 36 testable episodes)."
       ]
     },
     {
@@ -477,7 +477,7 @@
                 }
               ],
               "elapsed_ms": 267.6,
-              "selection_rule": "highest illustrative origin-region overlap; not a confirmed source",
+              "selection_rule": "highest approximate origin-region overlap; not a confirmed source",
               "selected_asset_id": "XV-2104"
             }
           },
@@ -1904,9 +1904,9 @@
                 "origin_type": "simulated",
                 "scenario_seconds": 850,
                 "video_clock_mapping": {
-                  "basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                  "basis": "Approximate demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                   "clip_id": "MOV_1242",
-                  "mapping_kind": "synthetic_illustrative",
+                  "mapping_kind": "synthetic_approximate",
                   "source_time_synchronized": false
                 },
                 "source_timestamp_utc": "2026-10-23T08:14:10+00:00",
@@ -2212,8 +2212,8 @@
                   {
                     "asset_id": "XV-2104",
                     "camera_id": "CAM-01",
-                    "provenance": "synthetic_illustrative_mapping",
-                    "relationship": "ILLUSTRATES"
+                    "provenance": "synthetic_approximate_mapping",
+                    "relationship": "OBSERVES"
                   }
                 ],
                 "field_reports": [
@@ -2333,7 +2333,7 @@
               },
               "candidates": [
                 {
-                  "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+                  "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
                   "asset_id": "XV-2104",
                   "evidence": [
                     "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -2345,7 +2345,7 @@
                   "overlap_fraction": 0.6154
                 },
                 {
-                  "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+                  "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
                   "asset_id": "F-205",
                   "evidence": [
                     "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -2415,7 +2415,7 @@
                 },
                 {
                   "kind": "procedure",
-                  "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or illustrative. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
+                  "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or approximate. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
                   "title": "Observation and source verification",
                   "section": "complete_example",
                   "citation": "document:PROC-001#complete_example",
@@ -49561,7 +49561,7 @@
                           ]
                         ],
                         "asset_id": "XV-2104",
-                        "provenance": "synthetic_illustrative_mapping"
+                        "provenance": "synthetic_approximate_mapping"
                       },
                       {
                         "polygon": [
@@ -49583,7 +49583,7 @@
                           ]
                         ],
                         "asset_id": "F-205",
-                        "provenance": "synthetic_illustrative_mapping"
+                        "provenance": "synthetic_approximate_mapping"
                       },
                       {
                         "polygon": [
@@ -49605,7 +49605,7 @@
                           ]
                         ],
                         "asset_id": "P-201",
-                        "provenance": "synthetic_illustrative_mapping"
+                        "provenance": "synthetic_approximate_mapping"
                       }
                     ],
                     "position": [
@@ -49619,7 +49619,7 @@
                       720
                     ],
                     "fov_degrees": 60.0,
-                    "calibration_status": "illustrative_uncalibrated",
+                    "calibration_status": "approximate_uncalibrated",
                     "orientation_degrees": [
                       0.0,
                       25.0,
@@ -49635,9 +49635,9 @@
                   "origin_type": "simulated",
                   "scenario_seconds": 850,
                   "video_clock_mapping": {
-                    "basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                    "basis": "Approximate demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                     "clip_id": "MOV_1242",
-                    "mapping_kind": "synthetic_illustrative",
+                    "mapping_kind": "synthetic_approximate",
                     "source_time_synchronized": false
                   },
                   "source_timestamp_utc": "2026-10-23T08:14:10+00:00",
@@ -51732,7 +51732,7 @@
               "reference_documents": [
                 {
                   "kind": "datasheet",
-                  "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are illustrative; use the actual manufacturer datasheet for any field work.\n",
+                  "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are approximate; use the actual manufacturer datasheet for any field work.\n",
                   "title": "Discharge isolation valve datasheet",
                   "section": "complete_example",
                   "citation": "document:DS-XV-2104#complete_example",
@@ -51749,7 +51749,7 @@
                 },
                 {
                   "kind": "drawing",
-                  "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is illustrative and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
+                  "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is approximate and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
                   "title": "Compression skid P&ID narrative",
                   "section": "complete_example",
                   "citation": "document:PID-001#complete_example",
@@ -71897,7 +71897,7 @@
                   },
                   {
                     "kind": "gap",
-                    "statement": "Camera-to-equipment mapping for CAM-01 is illustrative and uncalibrated; long-term history fits cannot separate XV-2104 from F-205 (30 vs 31 of 36 testable episodes).",
+                    "statement": "Camera-to-equipment mapping for CAM-01 is approximate and uncalibrated; long-term history fits cannot separate XV-2104 from F-205 (30 vs 31 of 36 testable episodes).",
                     "evidence_ids": [
                       "document:PID-001#complete_example",
                       "document:PROC-001#complete_example",
@@ -72027,9 +72027,9 @@
             "origin_type": "simulated",
             "scenario_seconds": 850,
             "video_clock_mapping": {
-              "basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+              "basis": "Approximate demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
               "clip_id": "MOV_1242",
-              "mapping_kind": "synthetic_illustrative",
+              "mapping_kind": "synthetic_approximate",
               "source_time_synchronized": false
             },
             "source_timestamp_utc": "2026-10-23T08:14:10+00:00",
@@ -72335,8 +72335,8 @@
               {
                 "asset_id": "XV-2104",
                 "camera_id": "CAM-01",
-                "provenance": "synthetic_illustrative_mapping",
-                "relationship": "ILLUSTRATES"
+                "provenance": "synthetic_approximate_mapping",
+                "relationship": "OBSERVES"
               }
             ],
             "field_reports": [
@@ -72456,7 +72456,7 @@
           },
           "candidates": [
             {
-              "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+              "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
               "asset_id": "XV-2104",
               "evidence": [
                 "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -72468,7 +72468,7 @@
               "overlap_fraction": 0.6154
             },
             {
-              "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+              "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
               "asset_id": "F-205",
               "evidence": [
                 "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -72538,7 +72538,7 @@
             },
             {
               "kind": "procedure",
-              "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or illustrative. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
+              "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or approximate. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
               "title": "Observation and source verification",
               "section": "complete_example",
               "citation": "document:PROC-001#complete_example",
@@ -119684,7 +119684,7 @@
                       ]
                     ],
                     "asset_id": "XV-2104",
-                    "provenance": "synthetic_illustrative_mapping"
+                    "provenance": "synthetic_approximate_mapping"
                   },
                   {
                     "polygon": [
@@ -119706,7 +119706,7 @@
                       ]
                     ],
                     "asset_id": "F-205",
-                    "provenance": "synthetic_illustrative_mapping"
+                    "provenance": "synthetic_approximate_mapping"
                   },
                   {
                     "polygon": [
@@ -119728,7 +119728,7 @@
                       ]
                     ],
                     "asset_id": "P-201",
-                    "provenance": "synthetic_illustrative_mapping"
+                    "provenance": "synthetic_approximate_mapping"
                   }
                 ],
                 "position": [
@@ -119742,7 +119742,7 @@
                   720
                 ],
                 "fov_degrees": 60.0,
-                "calibration_status": "illustrative_uncalibrated",
+                "calibration_status": "approximate_uncalibrated",
                 "orientation_degrees": [
                   0.0,
                   25.0,
@@ -119758,9 +119758,9 @@
               "origin_type": "simulated",
               "scenario_seconds": 850,
               "video_clock_mapping": {
-                "basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                "basis": "Approximate demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                 "clip_id": "MOV_1242",
-                "mapping_kind": "synthetic_illustrative",
+                "mapping_kind": "synthetic_approximate",
                 "source_time_synchronized": false
               },
               "source_timestamp_utc": "2026-10-23T08:14:10+00:00",
@@ -121855,7 +121855,7 @@
           "reference_documents": [
             {
               "kind": "datasheet",
-              "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are illustrative; use the actual manufacturer datasheet for any field work.\n",
+              "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are approximate; use the actual manufacturer datasheet for any field work.\n",
               "title": "Discharge isolation valve datasheet",
               "section": "complete_example",
               "citation": "document:DS-XV-2104#complete_example",
@@ -121872,7 +121872,7 @@
             },
             {
               "kind": "drawing",
-              "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is illustrative and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
+              "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is approximate and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
               "title": "Compression skid P&ID narrative",
               "section": "complete_example",
               "citation": "document:PID-001#complete_example",
@@ -122233,9 +122233,9 @@
               "origin_type": "simulated",
               "scenario_seconds": 850,
               "video_clock_mapping": {
-                "basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                "basis": "Approximate demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                 "clip_id": "MOV_1242",
-                "mapping_kind": "synthetic_illustrative",
+                "mapping_kind": "synthetic_approximate",
                 "source_time_synchronized": false
               },
               "source_timestamp_utc": "2026-10-23T08:14:10+00:00",
@@ -122541,8 +122541,8 @@
                 {
                   "asset_id": "XV-2104",
                   "camera_id": "CAM-01",
-                  "provenance": "synthetic_illustrative_mapping",
-                  "relationship": "ILLUSTRATES"
+                  "provenance": "synthetic_approximate_mapping",
+                  "relationship": "OBSERVES"
                 }
               ],
               "field_reports": [
@@ -122662,7 +122662,7 @@
             },
             "candidates": [
               {
-                "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+                "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
                 "asset_id": "XV-2104",
                 "evidence": [
                   "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -122674,7 +122674,7 @@
                 "overlap_fraction": 0.6154
               },
               {
-                "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+                "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
                 "asset_id": "F-205",
                 "evidence": [
                   "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -122744,7 +122744,7 @@
               },
               {
                 "kind": "procedure",
-                "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or illustrative. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
+                "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or approximate. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
                 "title": "Observation and source verification",
                 "section": "complete_example",
                 "citation": "document:PROC-001#complete_example",
@@ -169890,7 +169890,7 @@
                         ]
                       ],
                       "asset_id": "XV-2104",
-                      "provenance": "synthetic_illustrative_mapping"
+                      "provenance": "synthetic_approximate_mapping"
                     },
                     {
                       "polygon": [
@@ -169912,7 +169912,7 @@
                         ]
                       ],
                       "asset_id": "F-205",
-                      "provenance": "synthetic_illustrative_mapping"
+                      "provenance": "synthetic_approximate_mapping"
                     },
                     {
                       "polygon": [
@@ -169934,7 +169934,7 @@
                         ]
                       ],
                       "asset_id": "P-201",
-                      "provenance": "synthetic_illustrative_mapping"
+                      "provenance": "synthetic_approximate_mapping"
                     }
                   ],
                   "position": [
@@ -169948,7 +169948,7 @@
                     720
                   ],
                   "fov_degrees": 60.0,
-                  "calibration_status": "illustrative_uncalibrated",
+                  "calibration_status": "approximate_uncalibrated",
                   "orientation_degrees": [
                     0.0,
                     25.0,
@@ -169964,9 +169964,9 @@
                 "origin_type": "simulated",
                 "scenario_seconds": 850,
                 "video_clock_mapping": {
-                  "basis": "Illustrative demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                  "basis": "Approximate demonstration alignment: GasVid workbook candidate Leak 0 / Leak 1 boundary (185 s) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                   "clip_id": "MOV_1242",
-                  "mapping_kind": "synthetic_illustrative",
+                  "mapping_kind": "synthetic_approximate",
                   "source_time_synchronized": false
                 },
                 "source_timestamp_utc": "2026-10-23T08:14:10+00:00",
@@ -172061,7 +172061,7 @@
             "reference_documents": [
               {
                 "kind": "datasheet",
-                "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are illustrative; use the actual manufacturer datasheet for any field work.\n",
+                "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are approximate; use the actual manufacturer datasheet for any field work.\n",
                 "title": "Discharge isolation valve datasheet",
                 "section": "complete_example",
                 "citation": "document:DS-XV-2104#complete_example",
@@ -172078,7 +172078,7 @@
               },
               {
                 "kind": "drawing",
-                "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is illustrative and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
+                "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is approximate and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
                 "title": "Compression skid P&ID narrative",
                 "section": "complete_example",
                 "citation": "document:PID-001#complete_example",
@@ -192407,7 +192407,7 @@
                 },
                 {
                   "kind": "gap",
-                  "statement": "Camera-to-equipment mapping for CAM-01 is illustrative and uncalibrated; long-term history fits cannot separate XV-2104 from F-205 (30 vs 31 of 36 testable episodes).",
+                  "statement": "Camera-to-equipment mapping for CAM-01 is approximate and uncalibrated; long-term history fits cannot separate XV-2104 from F-205 (30 vs 31 of 36 testable episodes).",
                   "evidence_ids": [
                     "document:PID-001#complete_example",
                     "document:PROC-001#complete_example",
@@ -212672,7 +212672,7 @@
                 }
               ],
               "elapsed_ms": 228.8,
-              "selection_rule": "highest illustrative origin-region overlap; not a confirmed source",
+              "selection_rule": "highest approximate origin-region overlap; not a confirmed source",
               "selected_asset_id": "XV-2104"
             }
           },
@@ -212929,7 +212929,7 @@
             "detail": {
               "gaps": 1,
               "model": "nvidia/nemotron-3-ultra-550b-a55b",
-              "summary": "Two camera candidates (XV-2104, F-205) with illustrative uncalibrated mappings. XV-2104 showed intermittent OGI indication at stem packing during load change; gland re-torqued but load-change re-survey not done. F-205 gasket replaced but torque verification missing. Long-term episodes correlate with K-201 load changes; both assets fit comparably, rarely separable. Key commitments (WO-004-C1, WO-008-C2, WO-012-C1) remain open.",
+              "summary": "Two camera candidates (XV-2104, F-205) with approximate uncalibrated mappings. XV-2104 showed intermittent OGI indication at stem packing during load change; gland re-torqued but load-change re-survey not done. F-205 gasket replaced but torque verification missing. Long-term episodes correlate with K-201 load changes; both assets fit comparably, rarely separable. Key commitments (WO-004-C1, WO-008-C2, WO-012-C1) remain open.",
               "findings": 6,
               "elapsed_ms": 83086.2,
               "source_origin": "llm",
@@ -213074,9 +213074,9 @@
             "origin_type": "simulated",
             "scenario_seconds": 660,
             "video_clock_mapping": {
-              "basis": "Same illustrative alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+              "basis": "Same approximate alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
               "clip_id": "MOV_1242",
-              "mapping_kind": "synthetic_illustrative",
+              "mapping_kind": "synthetic_approximate",
               "source_time_synchronized": false
             },
             "source_timestamp_utc": "2026-10-23T08:11:00+00:00",
@@ -213382,8 +213382,8 @@
               {
                 "asset_id": "XV-2104",
                 "camera_id": "CAM-01",
-                "provenance": "synthetic_illustrative_mapping",
-                "relationship": "ILLUSTRATES"
+                "provenance": "synthetic_approximate_mapping",
+                "relationship": "OBSERVES"
               }
             ],
             "field_reports": [
@@ -213535,7 +213535,7 @@
           },
           "candidates": [
             {
-              "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+              "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
               "asset_id": "XV-2104",
               "evidence": [
                 "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -213547,7 +213547,7 @@
               "overlap_fraction": 0.6154
             },
             {
-              "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+              "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
               "asset_id": "F-205",
               "evidence": [
                 "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -213617,7 +213617,7 @@
             },
             {
               "kind": "procedure",
-              "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or illustrative. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
+              "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or approximate. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
               "title": "Observation and source verification",
               "section": "complete_example",
               "citation": "document:PROC-001#complete_example",
@@ -260763,7 +260763,7 @@
                       ]
                     ],
                     "asset_id": "XV-2104",
-                    "provenance": "synthetic_illustrative_mapping"
+                    "provenance": "synthetic_approximate_mapping"
                   },
                   {
                     "polygon": [
@@ -260785,7 +260785,7 @@
                       ]
                     ],
                     "asset_id": "F-205",
-                    "provenance": "synthetic_illustrative_mapping"
+                    "provenance": "synthetic_approximate_mapping"
                   },
                   {
                     "polygon": [
@@ -260807,7 +260807,7 @@
                       ]
                     ],
                     "asset_id": "P-201",
-                    "provenance": "synthetic_illustrative_mapping"
+                    "provenance": "synthetic_approximate_mapping"
                   }
                 ],
                 "position": [
@@ -260821,7 +260821,7 @@
                   720
                 ],
                 "fov_degrees": 60.0,
-                "calibration_status": "illustrative_uncalibrated",
+                "calibration_status": "approximate_uncalibrated",
                 "orientation_degrees": [
                   0.0,
                   25.0,
@@ -260837,9 +260837,9 @@
               "origin_type": "simulated",
               "scenario_seconds": 660,
               "video_clock_mapping": {
-                "basis": "Same illustrative alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                "basis": "Same approximate alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                 "clip_id": "MOV_1242",
-                "mapping_kind": "synthetic_illustrative",
+                "mapping_kind": "synthetic_approximate",
                 "source_time_synchronized": false
               },
               "source_timestamp_utc": "2026-10-23T08:11:00+00:00",
@@ -262360,7 +262360,7 @@
           "reference_documents": [
             {
               "kind": "datasheet",
-              "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are illustrative; use the actual manufacturer datasheet for any field work.\n",
+              "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are approximate; use the actual manufacturer datasheet for any field work.\n",
               "title": "Discharge isolation valve datasheet",
               "section": "complete_example",
               "citation": "document:DS-XV-2104#complete_example",
@@ -262377,7 +262377,7 @@
             },
             {
               "kind": "drawing",
-              "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is illustrative and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
+              "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is approximate and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
               "title": "Compression skid P&ID narrative",
               "section": "complete_example",
               "citation": "document:PID-001#complete_example",
@@ -262439,7 +262439,7 @@
         "work_order": {
           "id": "d05b34dc-7797-4efb-8de1-778b2dcf1fce",
           "plan": {
-            "text": "{\"title\": \"INC-003-M001 Source Investigation: XV-2104 vs F-205 Discharge Area\", \"observed_evidence\": [{\"statement\": \"CAM-01 image-to-equipment mapping is illustrative and uncalibrated for both XV-2104 and F-205; overlap fractions (0.615, 0.538) are not probabilities.\", \"evidence_ids\": [\"camera:CAM-01/region/XV-2104\", \"camera:CAM-01/region/F-205\", \"document:PID-001#complete_example\"]}, {\"statement\": \"Quarterly OGI survey (WO-008) detected faint intermittent plume at XV-2104 stem packing during K-201 load ramp; no indication at F-205 flange; not reproduced at steady load.\", \"evidence_ids\": [\"field_report:FR-008\", \"maintenance:WO-008\", \"commitment:WO-008-C1\"]}, {\"statement\": \"Gland follower re-torqued per DS-XV-2104 (WO-009) and soap test at steady load showed no bubbles, but required repeat OGI during load change (WO-008-C2) was deferred and not done.\", \"evidence_ids\": [\"field_report:FR-009\", \"commitment:WO-008-C2\", \"maintenance:WO-009\"]}, {\"statement\": \"F-205 bolt torque verification (WO-004-C1) remains open since 2026-08-19; contractor torque sheet not attached, leaving gasket replacement unverified.\", \"evidence_ids\": [\"commitment:WO-004-C1\", \"field_report:FR-004\", \"maintenance:WO-004\"]}, {\"statement\": \"Long-term history (Sep 6\\u2013Oct 23) shows 64 episodes, 57 starting within 90 min of K-201 load changes; both assets have comparable fits in testable episodes; nearby locations rarely separable on 5-min averages.\", \"evidence_ids\": [\"history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00\", \"operations:K-201:load-change-log\"]}], \"hypotheses\": [{\"statement\": \"XV-2104 stem packing leaks intermittently during K-201 load changes due to pressure/temperature cycling, consistent with OGI indication and DS-XV-2104 design note on load-dependent packing leakage.\", \"evidence_ids\": [\"field_report:FR-008\", \"document:DS-XV-2104#complete_example\", \"history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00\"]}, {\"statement\": \"F-205 flange gasket replacement (WO-004) may be incomplete without torque verification; potential leak path during load transients despite no OGI indication at steady state.\", \"evidence_ids\": [\"commitment:WO-004-C1\", \"field_report:FR-004\", \"maintenance:WO-004\"]}, {\"statement\": \"Both assets may contribute; CAM-01 uncalibrated mapping and co-located emissions prevent separation on 5-min averages; operator hissing report (WO-012) could not pinpoint source.\", \"evidence_ids\": [\"camera:CAM-01/region/XV-2104\", \"camera:CAM-01/region/F-205\", \"field_report:FR-012\", \"history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00\"]}], \"recommended_checks\": [{\"statement\": \"Perform repeat OGI survey during a scheduled K-201 load change to verify XV-2104 gland re-torque effectiveness (WO-008-C2).\", \"evidence_ids\": [\"commitment:WO-008-C2\", \"field_report:FR-009\", \"document:DS-XV-2104#complete_example\"]}, {\"statement\": \"Complete F-205 bolt torque verification per WO-004-C1; obtain contractor torque sheet to close gasket replacement exception.\", \"evidence_ids\": [\"commitment:WO-004-C1\", \"field_report:FR-004\", \"maintenance:WO-004\"]}, {\"statement\": \"Calibrate CAM-01 image-to-equipment mapping using surveyed coordinates to resolve XV-2104 vs F-205 ambiguity as required by INC-001-M001.\", \"evidence_ids\": [\"camera:CAM-01/region/XV-2104\", \"camera:CAM-01/region/F-205\", \"incident_record:INC-001-M001\"]}, {\"statement\": \"Conduct simultaneous acoustic/optical survey during scheduled load change to resolve WO-012 hissing report location between XV-2104 and F-205.\", \"evidence_ids\": [\"field_report:FR-012\", \"commitment:WO-012-C1\", \"operations:K-201:load-change-log\"]}, {\"statement\": \"Review PROC-001/002/003 requirements: separate hypotheses from observations, verify isolation boundaries via approved P&ID, and draft scoped inspection request with uncertainty.\", \"evidence_ids\": [\"document:PROC-001#complete_example\", \"document:PROC-002#complete_example\", \"document:PROC-003#complete_example\"]}], \"unresolved_questions\": [\"Will the repeat OGI survey during a K-201 load change (WO-008-C2) be performed to verify XV-2104 gland re-torque effectiveness?\", \"When will F-205 bolt torque verification (WO-004-C1) be completed to close the exception from the 2026-08-19 gasket replacement?\", \"Can CAM-01 image-to-equipment mapping be calibrated using surveyed coordinates to resolve XV-2104 vs F-205 ambiguity as required by INC-001-M001?\", \"Will a simultaneous acoustic/optical survey during a scheduled load change resolve the WO-012 hissing report location between XV-2104 and F-205?\"], \"safety_prerequisites\": [\"Authorized site engineer must identify actual equipment and connectivity from approved drawings before any isolation (PROC-002).\", \"Applicable permits and hazard assessment required before field execution; synthetic connectivity insufficient (PROC-002).\", \"Any repair method must come from approved site/manufacturer procedure, not synthetic examples (PROC-003, DS-XV-2104).\", \"Fixed methane detectors CH4-01 to CH4-05 and weather station MET-01 must be verified operational for independent validation (PID-001).\"]}",
+            "text": "{\"title\": \"INC-003-M001 Source Investigation: XV-2104 vs F-205 Discharge Area\", \"observed_evidence\": [{\"statement\": \"CAM-01 image-to-equipment mapping is approximate and uncalibrated for both XV-2104 and F-205; overlap fractions (0.615, 0.538) are not probabilities.\", \"evidence_ids\": [\"camera:CAM-01/region/XV-2104\", \"camera:CAM-01/region/F-205\", \"document:PID-001#complete_example\"]}, {\"statement\": \"Quarterly OGI survey (WO-008) detected faint intermittent plume at XV-2104 stem packing during K-201 load ramp; no indication at F-205 flange; not reproduced at steady load.\", \"evidence_ids\": [\"field_report:FR-008\", \"maintenance:WO-008\", \"commitment:WO-008-C1\"]}, {\"statement\": \"Gland follower re-torqued per DS-XV-2104 (WO-009) and soap test at steady load showed no bubbles, but required repeat OGI during load change (WO-008-C2) was deferred and not done.\", \"evidence_ids\": [\"field_report:FR-009\", \"commitment:WO-008-C2\", \"maintenance:WO-009\"]}, {\"statement\": \"F-205 bolt torque verification (WO-004-C1) remains open since 2026-08-19; contractor torque sheet not attached, leaving gasket replacement unverified.\", \"evidence_ids\": [\"commitment:WO-004-C1\", \"field_report:FR-004\", \"maintenance:WO-004\"]}, {\"statement\": \"Long-term history (Sep 6\\u2013Oct 23) shows 64 episodes, 57 starting within 90 min of K-201 load changes; both assets have comparable fits in testable episodes; nearby locations rarely separable on 5-min averages.\", \"evidence_ids\": [\"history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00\", \"operations:K-201:load-change-log\"]}], \"hypotheses\": [{\"statement\": \"XV-2104 stem packing leaks intermittently during K-201 load changes due to pressure/temperature cycling, consistent with OGI indication and DS-XV-2104 design note on load-dependent packing leakage.\", \"evidence_ids\": [\"field_report:FR-008\", \"document:DS-XV-2104#complete_example\", \"history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00\"]}, {\"statement\": \"F-205 flange gasket replacement (WO-004) may be incomplete without torque verification; potential leak path during load transients despite no OGI indication at steady state.\", \"evidence_ids\": [\"commitment:WO-004-C1\", \"field_report:FR-004\", \"maintenance:WO-004\"]}, {\"statement\": \"Both assets may contribute; CAM-01 uncalibrated mapping and co-located emissions prevent separation on 5-min averages; operator hissing report (WO-012) could not pinpoint source.\", \"evidence_ids\": [\"camera:CAM-01/region/XV-2104\", \"camera:CAM-01/region/F-205\", \"field_report:FR-012\", \"history:HIST-FAC-001:2026-09-06:2026-10-23T07:55:00+00:00\"]}], \"recommended_checks\": [{\"statement\": \"Perform repeat OGI survey during a scheduled K-201 load change to verify XV-2104 gland re-torque effectiveness (WO-008-C2).\", \"evidence_ids\": [\"commitment:WO-008-C2\", \"field_report:FR-009\", \"document:DS-XV-2104#complete_example\"]}, {\"statement\": \"Complete F-205 bolt torque verification per WO-004-C1; obtain contractor torque sheet to close gasket replacement exception.\", \"evidence_ids\": [\"commitment:WO-004-C1\", \"field_report:FR-004\", \"maintenance:WO-004\"]}, {\"statement\": \"Calibrate CAM-01 image-to-equipment mapping using surveyed coordinates to resolve XV-2104 vs F-205 ambiguity as required by INC-001-M001.\", \"evidence_ids\": [\"camera:CAM-01/region/XV-2104\", \"camera:CAM-01/region/F-205\", \"incident_record:INC-001-M001\"]}, {\"statement\": \"Conduct simultaneous acoustic/optical survey during scheduled load change to resolve WO-012 hissing report location between XV-2104 and F-205.\", \"evidence_ids\": [\"field_report:FR-012\", \"commitment:WO-012-C1\", \"operations:K-201:load-change-log\"]}, {\"statement\": \"Review PROC-001/002/003 requirements: separate hypotheses from observations, verify isolation boundaries via approved P&ID, and draft scoped inspection request with uncertainty.\", \"evidence_ids\": [\"document:PROC-001#complete_example\", \"document:PROC-002#complete_example\", \"document:PROC-003#complete_example\"]}], \"unresolved_questions\": [\"Will the repeat OGI survey during a K-201 load change (WO-008-C2) be performed to verify XV-2104 gland re-torque effectiveness?\", \"When will F-205 bolt torque verification (WO-004-C1) be completed to close the exception from the 2026-08-19 gasket replacement?\", \"Can CAM-01 image-to-equipment mapping be calibrated using surveyed coordinates to resolve XV-2104 vs F-205 ambiguity as required by INC-001-M001?\", \"Will a simultaneous acoustic/optical survey during a scheduled load change resolve the WO-012 hissing report location between XV-2104 and F-205?\"], \"safety_prerequisites\": [\"Authorized site engineer must identify actual equipment and connectivity from approved drawings before any isolation (PROC-002).\", \"Applicable permits and hazard assessment required before field execution; synthetic connectivity insufficient (PROC-002).\", \"Any repair method must come from approved site/manufacturer procedure, not synthetic examples (PROC-003, DS-XV-2104).\", \"Fixed methane detectors CH4-01 to CH4-05 and weather station MET-01 must be verified operational for independent validation (PID-001).\"]}",
             "model_run": {
               "model": "nvidia/nemotron-3-ultra-550b-a55b",
               "run_id": "96f20426-f31b-4269-b36e-ae6718b2e3d0",
@@ -262488,7 +262488,7 @@
                 ],
                 "observed_evidence": [
                   {
-                    "statement": "CAM-01 image-to-equipment mapping is illustrative and uncalibrated for both XV-2104 and F-205; overlap fractions (0.615, 0.538) are not probabilities.",
+                    "statement": "CAM-01 image-to-equipment mapping is approximate and uncalibrated for both XV-2104 and F-205; overlap fractions (0.615, 0.538) are not probabilities.",
                     "evidence_ids": [
                       "camera:CAM-01/region/XV-2104",
                       "camera:CAM-01/region/F-205",
@@ -262629,9 +262629,9 @@
               "origin_type": "simulated",
               "scenario_seconds": 660,
               "video_clock_mapping": {
-                "basis": "Same illustrative alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                "basis": "Same approximate alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                 "clip_id": "MOV_1242",
-                "mapping_kind": "synthetic_illustrative",
+                "mapping_kind": "synthetic_approximate",
                 "source_time_synchronized": false
               },
               "source_timestamp_utc": "2026-10-23T08:11:00+00:00",
@@ -262937,8 +262937,8 @@
                 {
                   "asset_id": "XV-2104",
                   "camera_id": "CAM-01",
-                  "provenance": "synthetic_illustrative_mapping",
-                  "relationship": "ILLUSTRATES"
+                  "provenance": "synthetic_approximate_mapping",
+                  "relationship": "OBSERVES"
                 }
               ],
               "field_reports": [
@@ -263090,7 +263090,7 @@
             },
             "candidates": [
               {
-                "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+                "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
                 "asset_id": "XV-2104",
                 "evidence": [
                   "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -263102,7 +263102,7 @@
                 "overlap_fraction": 0.6154
               },
               {
-                "why": "Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
+                "why": "Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the CAM-01 mapping for this asset. Graph confirms canonical asset and connections, not leak causality",
                 "asset_id": "F-205",
                 "evidence": [
                   "detection/runs/monitor-mov1242-125-305-001#MOV_1242@194.002",
@@ -263172,7 +263172,7 @@
               },
               {
                 "kind": "procedure",
-                "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or illustrative. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
+                "text": "# PROC-001: Observation and source verification\n\nOrigin: synthetic example; operational_approval: false; version: 2.\n\nRecord the incident and asset identifiers, camera/annotation provenance, observation time and unresolved alternatives. Review independent methane and wind sensor quality flags and timestamps. Check whether the camera-to-equipment mapping is calibrated or approximate. A drifting plume alone does not establish the leaking fitting. Separate hypotheses from recorded observations. Escalate missing or contradictory evidence to the reviewing engineer.\n",
                 "title": "Observation and source verification",
                 "section": "complete_example",
                 "citation": "document:PROC-001#complete_example",
@@ -310318,7 +310318,7 @@
                         ]
                       ],
                       "asset_id": "XV-2104",
-                      "provenance": "synthetic_illustrative_mapping"
+                      "provenance": "synthetic_approximate_mapping"
                     },
                     {
                       "polygon": [
@@ -310340,7 +310340,7 @@
                         ]
                       ],
                       "asset_id": "F-205",
-                      "provenance": "synthetic_illustrative_mapping"
+                      "provenance": "synthetic_approximate_mapping"
                     },
                     {
                       "polygon": [
@@ -310362,7 +310362,7 @@
                         ]
                       ],
                       "asset_id": "P-201",
-                      "provenance": "synthetic_illustrative_mapping"
+                      "provenance": "synthetic_approximate_mapping"
                     }
                   ],
                   "position": [
@@ -310376,7 +310376,7 @@
                     720
                   ],
                   "fov_degrees": 60.0,
-                  "calibration_status": "illustrative_uncalibrated",
+                  "calibration_status": "approximate_uncalibrated",
                   "orientation_degrees": [
                     0.0,
                     25.0,
@@ -310392,9 +310392,9 @@
                 "origin_type": "simulated",
                 "scenario_seconds": 660,
                 "video_clock_mapping": {
-                  "basis": "Same illustrative alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
+                  "basis": "Same approximate alignment as the leak profile, replayed against synthetic SCN-003 telemetry in which wind readings are missing from 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution.",
                   "clip_id": "MOV_1242",
-                  "mapping_kind": "synthetic_illustrative",
+                  "mapping_kind": "synthetic_approximate",
                   "source_time_synchronized": false
                 },
                 "source_timestamp_utc": "2026-10-23T08:11:00+00:00",
@@ -311915,7 +311915,7 @@
             "reference_documents": [
               {
                 "kind": "datasheet",
-                "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are illustrative; use the actual manufacturer datasheet for any field work.\n",
+                "text": "# DS-XV-2104: Discharge isolation valve datasheet\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nTag XV-2104, discharge isolation valve on line L-201 between P-201 and F-205, with a normally closed branch to XV-2105. Synthetic design: 4-inch PN40 trunnion ball valve, bolted bonnet, braided graphite stem packing with live-loaded gland follower. Design gas service: natural gas, operating about 12.5 bar(a) and 303 K downstream of the aftercooler.\n\nPotential external emission points: stem packing, bonnet joint, body/end flange joints. Packing leakage can be intermittent and load-dependent, increasing during pressure or temperature changes. Example gland follower torque: 35 N\u00b7m per nut, tightened evenly in two passes. A soap test is a spot check and does not replace a repeat optical gas imaging survey. Values are approximate; use the actual manufacturer datasheet for any field work.\n",
                 "title": "Discharge isolation valve datasheet",
                 "section": "complete_example",
                 "citation": "document:DS-XV-2104#complete_example",
@@ -311932,7 +311932,7 @@
               },
               {
                 "kind": "drawing",
-                "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is illustrative and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
+                "text": "# PID-001: Compression skid P&ID narrative\n\nOrigin: synthetic example; operational_approval: false; version: 1.\n\nMain line L-201: inlet separator V-101, P-101, XV-104, P-102, compressor K-201, discharge pipe P-201, discharge isolation valve XV-2104, discharge flange F-205, P-202, export isolation valve XV-2110, export pipe P-203. Vent line L-VENT: V-101 to XV-105 and P-105; XV-2104 branch to normally closed XV-2105 and VENT-01; XV-2110 branch to normally closed XV-2111.\n\nInstrumentation: PT-101 and TT-101 on V-101; PT-201 and TT-201 on K-201; FT-201 on P-201; PT-2104 at XV-2104. Fixed methane detectors CH4-01 to CH4-03 east of the discharge area, CH4-04 and CH4-05 near the compressor. Weather station MET-01 on the compressor shelter reports wind speed and direction. Camera CAM-01 views the discharge area; its image-to-equipment mapping is approximate and uncalibrated. This narrative is synthetic and is not an approved drawing.\n",
                 "title": "Compression skid P&ID narrative",
                 "section": "complete_example",
                 "citation": "document:PID-001#complete_example",
@@ -332039,11 +332039,11 @@
             "model": "nvidia/nemotron-3-ultra-550b-a55b",
             "origin": "model_generated_draft",
             "content": {
-              "summary": "Two camera candidates (XV-2104, F-205) with illustrative uncalibrated mappings. XV-2104 showed intermittent OGI indication at stem packing during load change; gland re-torqued but load-change re-survey not done. F-205 gasket replaced but torque verification missing. Long-term episodes correlate with K-201 load changes; both assets fit comparably, rarely separable. Key commitments (WO-004-C1, WO-008-C2, WO-012-C1) remain open.",
+              "summary": "Two camera candidates (XV-2104, F-205) with approximate uncalibrated mappings. XV-2104 showed intermittent OGI indication at stem packing during load change; gland re-torqued but load-change re-survey not done. F-205 gasket replaced but torque verification missing. Long-term episodes correlate with K-201 load changes; both assets fit comparably, rarely separable. Key commitments (WO-004-C1, WO-008-C2, WO-012-C1) remain open.",
               "findings": [
                 {
                   "kind": "context",
-                  "statement": "CAM-01 image-to-equipment mapping is illustrative and uncalibrated for both XV-2104 and F-205; overlap fractions are not probabilities.",
+                  "statement": "CAM-01 image-to-equipment mapping is approximate and uncalibrated for both XV-2104 and F-205; overlap fractions are not probabilities.",
                   "evidence_ids": [
                     "camera:CAM-01/region/XV-2104",
                     "camera:CAM-01/region/F-205",

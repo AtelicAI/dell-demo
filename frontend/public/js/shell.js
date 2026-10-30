@@ -352,8 +352,7 @@
     const s = lastStatus, now = replayNow(), el = $('pill-sys');
     if (!el) return;
     const live = s && s.dell_edge === 'running' && s.nvidia_inference !== 'not_connected';
-    // Offline laptop build: say so on every screen, so a replayed agent run is never taken for a live one.
-    pill(el, `${s && s.offline ? 'Offline demo · recorded agent runs' : 'System'}${now ? ` · <span class="mono">${fmtUtc(now)}</span>` : ''}`, live ? 'ok' : 'off');
+    pill(el, `System${now ? ` · <span class="mono">${fmtUtc(now)}</span>` : ''}`, live ? 'ok' : 'off');
     if (s) el.title = `Dell Edge: ${DELL_LABELS[s.dell_edge] || 'Unknown'} · NVIDIA inference: ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}${now ? ` · Replay ${fmtUtc(now, true)}` : ''}`;
   }
 

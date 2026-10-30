@@ -80,6 +80,12 @@ start() {
     sleep 2
   done
   [[ "$(curl -s -o /dev/null -w '%{http_code}' "$url/login.html")" == 200 ]] || die "The demo did not come up. Try: $0 logs"
+  # Every start is a clean slate: no open or closed incidents, cameras watching.
+  local jar="$STATE/cookies"
+  curl -s -c "$jar" -H 'Content-Type: application/json' -d "{\"username\":\"$LOGIN_USER\",\"password\":\"$LOGIN_PASSWORD\"}" "$url/api/login" >/dev/null \
+    && curl -s -b "$jar" -X POST -H 'Content-Type: application/json' -d '{}' "$url/api/demo/reset" >/dev/null \
+    || echo "Could not reset the demo; use Reset demo in the app."
+  rm -f "$jar"
   say "Ready: $url   (sign in: $LOGIN_USER / $LOGIN_PASSWORD)"
   open "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || true
 }

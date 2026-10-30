@@ -341,7 +341,7 @@ class OfflineProvider(Provider):
         return False
 
     def complete(self, messages, tools=None):
-        raise ModelUnavailable(f"Offline demo: no recorded agent run for this {self.task} step, and no model is called offline")
+        raise ModelUnavailable(f"No recorded agent run for this {self.task} step; no model is called in this build")
 
 
 class _Transient(Exception):
@@ -478,7 +478,7 @@ def deterministic_draft(asset_id, evidence_id, procedures, quantification, local
     """Useful offline work-order skeleton, never advertised as an AI investigation."""
     return dict(origin="deterministic_template_not_llm", model=None, activity=[], content={
         "title": f"Engineering investigation draft for {asset_id}",
-        "observed_evidence": [{"statement": "A synthetic camera observation and illustrative mapping identify candidate equipment; exact source remains unconfirmed.", "evidence_ids": localization_evidence_ids or [evidence_id]}],
+        "observed_evidence": [{"statement": "A synthetic camera observation and approximate mapping identify candidate equipment; exact source remains unconfirmed.", "evidence_ids": localization_evidence_ids or [evidence_id]}],
         "hypotheses": [{"statement": "A release from this component or a nearby connected component requires investigation; attribution is unresolved.", "evidence_ids": [evidence_id]}],
         "recommended_checks": [{"statement": "An authorized engineer should review equipment identity, independent observations and applicable site procedures before authorizing field work.", "evidence_ids": [p['citation'] for p in procedures] or [evidence_id]}],
         "unresolved_questions": ["Representative footage and synthetic telemetry describe different physical scenes.",

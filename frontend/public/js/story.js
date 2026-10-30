@@ -146,7 +146,7 @@
     const chips = (opts.chips || CHIPS).filter((c) => !asked.has(c));
     const off = opts.offline;
     return `<div class="qa-box">
-      <div class="qa-h"><span class="lbl">Ask the agent</span><span>${off ? 'Offline demo: pick a question; the agent\'s recorded answer to it replays here.'
+      <div class="qa-h"><span class="lbl">Ask the agent</span><span>${off ? 'Pick a question. Answers use the frozen evidence and never change the draft.'
         : 'Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.'}</span></div>
       ${canAsk ? `<div class="qa-form"${off ? ' data-offline' : ''}>${chips.length ? `<div class="qa-chips">${chips.map((c) => `<button type="button" class="qa-chip" data-qa-chip="${esc(c)}">${esc(c)}</button>`).join('')}</div>`
           : off ? '<p class="qa-off">Every recorded question has been asked.</p>' : ''}

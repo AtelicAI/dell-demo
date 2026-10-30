@@ -12,7 +12,7 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 | `ogi/frame_times.json` | 2 Detect | — | generated | Run `python3 scripts/ogi_inspect.py` after changing the clip |
 | `skid/equipment.json` | 3 Locate | synthetic | draft | Team-reviewed asset list |
 | `skid/layout.json` | 3 Locate | synthetic | draft | Team-reviewed 2D layout |
-| `skid/camera_rois.json` | 2, 3 | manual_illustrative | draft, polygons empty | Polygons drawn on the approved clip |
+| `skid/camera_rois.json` | 2, 3 | manual_approximate | draft, polygons empty | Polygons drawn on the approved clip |
 | `skid/camera_wall.json` | 2 Detect | simulated | **sample** (CAM-02…04 loop recorded METEC clips, picked as plume-free) | Team-reviewed camera list; real feeds if any |
 | `ogi/cam02_MOV_2571.mp4`, `cam03_MOV_2583.mp4`, `cam04_MOV_2570.mp4` | 2 Detect | — | local only (gitignored) | From the GasVid Drive folder, cut and converted: `avconvert -s MOV_2571.mp4 -p PresetHighestQuality -o data/ogi/cam02_MOV_2571.mp4 --start 0 --duration 280` (MOV_2583: 300 s, MOV_2570: 230 s) |
 | `skid/candidates.json` | 3 Locate | simulated | **sample (mock)** | Graph agent output over Neo4j |
@@ -22,7 +22,7 @@ All files here are either **synthetic** (Atelic-authored for the representative 
 | `scenario/geometry.json` | 4 | synthetic | **draft** (assumed positions, heights, stability) | Team-reviewed skid geometry |
 | `scenario/sensors.csv`, `weather.csv` | 4 | synthetic | generated (GD-01 from the Gaussian plume model in `backend/app/plume.py`) | Run `python3 scripts/gen_scenario.py` |
 | `docs/maintenance_procedure.md`, `docs/valve_procedure.md`, `docs/isolation_checklist.md` | 5 | synthetic | draft | Team-authored procedures (the drafter uses the one that names the likely source) |
-| `skid/camera_rois_cam02.json` | 3 | manual_illustrative | draft, polygons empty | CAM-02 polygons on an approved CAM-02 leak clip |
+| `skid/camera_rois_cam02.json` | 3 | manual_approximate | draft, polygons empty | CAM-02 polygons on an approved CAM-02 leak clip |
 | `incidents/history.json` | Incidents | synthetic | **sample** (3 closed incidents tied to `maintenance/history.json`; fictional reviewers; no rates) | Team-authored incident history |
 | `incidents/INC-002/candidates.json`, `geometry.json`, `release_truth.json` | 3, 4 | simulated / synthetic | **sample / draft** (XV-101 stem packing, GD-02, 4.5 kg/h simulated) | Team review of the second scenario |
 | `incidents/INC-002/sensors.csv` | 4 | synthetic | generated | `python3 scripts/gen_scenario.py INC-002` (shares `scenario/weather.csv`) |

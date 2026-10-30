@@ -33,7 +33,7 @@ class Connection(Contract):
 class Region(Contract):
     asset_id: str
     polygon: list[tuple[float, float]] = Field(min_length=3)
-    provenance: Literal["synthetic_illustrative_mapping"] = "synthetic_illustrative_mapping"
+    provenance: Literal["synthetic_approximate_mapping"] = "synthetic_approximate_mapping"
 
     @model_validator(mode="after")
     def normalized(self):
@@ -53,7 +53,7 @@ class Camera(Contract):
     orientation_degrees: tuple[float,float,float]  # roll, pitch (up positive), heading clockwise from north
     fov_degrees: float = Field(gt=0,lt=180)
     resolution: tuple[int,int]
-    calibration_status: Literal["illustrative_uncalibrated"]
+    calibration_status: Literal["approximate_uncalibrated"]
     video_id: str | None
     regions: list[Region]
 

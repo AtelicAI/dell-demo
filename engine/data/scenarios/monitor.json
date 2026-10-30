@@ -16,5 +16,5 @@
     "max_sample_age_seconds": 1.5
   },
   "origin_region_reference": "scenarios/detections.json#DET-001",
-  "mapping_basis": "Illustrative demonstration alignment: GasVid workbook Leak 0 / Leak 1 boundary of MOV_1237 (199 s, metered 5.3 -> 277.7 g/h) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
+  "mapping_basis": "Approximate demonstration alignment: GasVid workbook Leak 0 / Leak 1 boundary of MOV_1237 (199 s, metered 5.3 -> 277.7 g/h) placed at the synthetic SCN-001 scenario clock 600 s. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
 }

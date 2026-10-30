@@ -25,8 +25,8 @@ def generate():
     # Placed as if the cameras recorded the GasVid clips on site: GF-320 320x240, 24 deg, 0.5 m high, pitched 10 deg up
     # (release point against sky). CAM-01 = MOV_1237 at its logged 6.9 m on heading 80 deg; CAM-02 = MOV_1239 at 12.6 m
     # looking north. A west wind carries the plume to the right of both frames, as in the recordings.
-    cameras=[dict(id="CAM-01",position=[11.2,4.8,.5],orientation_degrees=[0,10,80],fov_degrees=24,resolution=[320,240],calibration_status="illustrative_uncalibrated",video_id="MOV_1237",regions=regions),
-             dict(id="CAM-02",position=[18,-6.6,.5],orientation_degrees=[0,10,0],fov_degrees=24,resolution=[320,240],calibration_status="illustrative_uncalibrated",video_id="MOV_1239",regions=regions)]
+    cameras=[dict(id="CAM-01",position=[11.2,4.8,.5],orientation_degrees=[0,10,80],fov_degrees=24,resolution=[320,240],calibration_status="approximate_uncalibrated",video_id="MOV_1237",regions=regions),
+             dict(id="CAM-02",position=[18,-6.6,.5],orientation_degrees=[0,10,0],fov_degrees=24,resolution=[320,240],calibration_status="approximate_uncalibrated",video_id="MOV_1239",regions=regions)]
     sensors=[]
     for i,(x,y) in enumerate([(25,6),(30,6),(35,8),(18,0),(8,6)],1):
         sensors.append(dict(id=f"CH4-{i:02}",asset_id="XV-2104" if i<4 else "K-201",variable="methane",unit="ppm",position=[x,y,1.2],sample_interval_seconds=1,uncertainty=.12,detection_limit=.1,lag_seconds=8))

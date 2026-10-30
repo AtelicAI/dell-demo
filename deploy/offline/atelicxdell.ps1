@@ -80,6 +80,12 @@ function Start-Demo {
     try { $up = (Invoke-WebRequest -Uri "$url/login.html" -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200 } catch { Start-Sleep -Seconds 2 }
   }
   if (-not $up) { Die "The demo did not come up. Try: .\atelicxdell.ps1 logs" }
+  # Every start is a clean slate: no open or closed incidents, cameras watching.
+  try {
+    $login = @{ username = $LoginUser; password = $LoginPassword } | ConvertTo-Json
+    Invoke-WebRequest -Uri "$url/api/login" -Method Post -ContentType "application/json" -Body $login -SessionVariable web -UseBasicParsing | Out-Null
+    Invoke-WebRequest -Uri "$url/api/demo/reset" -Method Post -ContentType "application/json" -Body "{}" -WebSession $web -UseBasicParsing | Out-Null
+  } catch { Write-Host "Could not reset the demo; use Reset demo in the app." }
   Say "Ready: $url   (sign in: $LoginUser / $LoginPassword)"
   Start-Process $url
 }
