@@ -1,0 +1,160 @@
+{
+ "_comment": "Equipment the camera recognises in its own footage: OWLv2 open-vocabulary detections (google/owlv2-base-patch16-ensemble, threshold 0.12) on one frame per fixed tripod camera, kept only after a visual check. Labels name the real METEC equipment in the recording (Wang et al., Applied Energy 2020; arXiv 1904.08500, Figure 1). 'stands_in_for' is the synthetic plant item the demo maps it to; it is not a physical identity.",
+ "provenance": "model_detected",
+ "reviewed": "visual check of each box against the frame",
+ "model": "google/owlv2-base-patch16-ensemble",
+ "cameras": {
+  "CAM-01": {
+   "clip": "MOV_1237",
+   "scene": "METEC pad 1 separator package (GasVid separator 1)",
+   "imaging_distance_m": 6.9,
+   "equipment": [
+    {
+     "label": "Release pipe \u00b7 leak point",
+     "kind": "release_point",
+     "box_normalized": [
+      0.5273,
+      0.5158,
+      0.5967,
+      0.9914
+     ],
+     "detector_prompt": "a thin vertical pipe",
+     "detector_score": 0.286,
+     "stands_in_for": "XV-2104",
+     "note": "METEC metered release point: the plume leaves the top of this pipe"
+    },
+    {
+     "label": "Separator vessel",
+     "kind": "vessel",
+     "box_normalized": [
+      0.7831,
+      0.7096,
+      0.8981,
+      0.9985
+     ],
+     "detector_prompt": "a vertical pressure vessel",
+     "detector_score": 0.315
+    }
+   ]
+  },
+  "CAM-02": {
+   "clip": "MOV_1239",
+   "scene": "METEC pad 1 separator package (GasVid separator 1)",
+   "imaging_distance_m": 12.6,
+   "equipment": [
+    {
+     "label": "Release pipe \u00b7 leak point",
+     "kind": "release_point",
+     "box_normalized": [
+      0.5332,
+      0.6206,
+      0.575,
+      0.9813
+     ],
+     "detector_prompt": "a thin vertical pipe",
+     "detector_score": 0.179,
+     "stands_in_for": "XV-2104",
+     "note": "METEC metered release point: the plume leaves the top of this pipe"
+    },
+    {
+     "label": "Separator vessel",
+     "kind": "vessel",
+     "box_normalized": [
+      0.6763,
+      0.7201,
+      0.742,
+      0.9984
+     ],
+     "detector_prompt": "a vertical pressure vessel",
+     "detector_score": 0.167
+    },
+    {
+     "label": "Valve and regulator assembly",
+     "kind": "valve",
+     "box_normalized": [
+      0.3247,
+      0.8023,
+      0.4068,
+      0.9936
+     ],
+     "detector_prompt": "a valve",
+     "detector_score": 0.19
+    },
+    {
+     "label": "Valves",
+     "kind": "valve",
+     "box_normalized": [
+      0.5943,
+      0.7943,
+      0.6749,
+      0.9075
+     ],
+     "detector_prompt": "a valve",
+     "detector_score": 0.2
+    }
+   ]
+  },
+  "CAM-03": {
+   "clip": "MOV_2583",
+   "scene": "METEC pad 2 separator package (GasVid separator 2)",
+   "imaging_distance_m": 18.6,
+   "equipment": [
+    {
+     "label": "Vertical tank",
+     "kind": "vessel",
+     "box_normalized": [
+      0.3295,
+      0.5367,
+      0.6349,
+      0.9204
+     ],
+     "detector_prompt": "a vertical pressure vessel",
+     "detector_score": 0.322
+    },
+    {
+     "label": "Horizontal vessel",
+     "kind": "vessel",
+     "box_normalized": [
+      0.3651,
+      0.8888,
+      0.8176,
+      0.999
+     ],
+     "detector_prompt": "a horizontal pressure vessel",
+     "detector_score": 0.147
+    },
+    {
+     "label": "Small vessel",
+     "kind": "vessel",
+     "box_normalized": [
+      0.2076,
+      0.8316,
+      0.3938,
+      0.9996
+     ],
+     "detector_prompt": "a vertical pressure vessel",
+     "detector_score": 0.181
+    }
+   ]
+  },
+  "CAM-04": {
+   "clip": "MOV_2570",
+   "scene": "METEC pad 2 separator package (GasVid separator 2)",
+   "imaging_distance_m": 15.6,
+   "equipment": [
+    {
+     "label": "Vertical vessel",
+     "kind": "vessel",
+     "box_normalized": [
+      0.7528,
+      0.5603,
+      0.8136,
+      0.7964
+     ],
+     "detector_prompt": "a vertical pressure vessel",
+     "detector_score": 0.215
+    }
+   ]
+  }
+ }
+}

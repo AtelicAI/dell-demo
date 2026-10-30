@@ -631,6 +631,7 @@ def get_detections(incident_id: str):
         "triggered": bool(s["engine_id"]), "dismissal": s["dismissal"], "clip_available": True,
         "before_available": True, "original_available": True, "frame_times": None,
         "camera_wall": read_json("skid", "camera_wall.json"), "monitor": m,
+        "camera_equipment": read_json("skid", "camera_equipment.json"),
         "alert": ev and {"clip_time_seconds": ev.get("clip_time_seconds"), "timestamp_utc": ev.get("timestamp_utc"),
                          "reference": (ev.get("provenance") or {}).get("reference")},
     }
@@ -815,6 +816,23 @@ def schematic(fac):
     for x, k in reversed(row):
         pos[k]["x"] = min(x, limit)
         limit = pos[k]["x"] - 7
+    # Process instruments (pressure, temperature, flow) just above the line beside what they measure, at least 6 % apart;
+    # the weather mast (its wind and stability channels are PART_OF it) above the compressor it stands by.
+    phys_asset = {sn["id"]: sn.get("asset_id") for sn in fac["sensors"]}
+    taken = []
+    for sid in sorted(sn["id"] for sn in fac["sensors"] if sn["variable"] != "methane" and not sn["id"].startswith("MET-")):
+        a = phys_asset.get(sid)
+        if a not in pos:
+            continue
+        px = pos[a]["x"] + 4
+        while any(abs(px - q) < 6 for q in taken):
+            px += 6
+        taken.append(px)
+        pos[sid] = {"x": min(px, 97), "y": 59}
+    masts = sorted({sn["id"].rsplit("-", 1)[0] for sn in fac["sensors"] if sn["id"].startswith("MET-")})
+    for i, m in enumerate(masts):
+        near = phys_asset.get(f"{m}-WS")
+        pos[m] = {"x": max(4, pos.get(near, {"x": 20})["x"] - 14 + i * 7), "y": 26}
     for i, c in enumerate(fac.get("cameras", [])):
         target = c["regions"][0]["asset_id"] if c.get("regions") else order[len(order) // 2]
         pos[c["id"]] = {"x": pos.get(target, {"x": 50})["x"] + (i - 0.5) * 12, "y": 94}
@@ -827,7 +845,9 @@ def get_graph(incident_id: str):
     g = plant_graph()
     # Locate shows what this incident's camera can see.
     regions = [r for r in g["camera_rois"]["regions"] if r.get("camera_id", s["camera_id"]) == s["camera_id"]]
-    return {**g, "camera_rois": {**g["camera_rois"], "camera_id": s["camera_id"], "regions": regions}}
+    eq = read_json("skid", "camera_equipment.json")
+    return {**g, "camera_rois": {**g["camera_rois"], "camera_id": s["camera_id"], "regions": regions},
+            "camera_equipment": {**(eq["cameras"].get(s["camera_id"]) or {}), "model": eq["model"], "provenance": eq["provenance"]}}
 
 
 @app.get("/graph/summary")

@@ -129,10 +129,32 @@
     cav.hidden = drawn.length === regions.length && regions.length > 0;
     cav.textContent = MISSING_CAM;
 
+    const eq = (G.camera_equipment || {}).equipment || [];
+    $('eq-list').innerHTML = eq.length ? eq.map((e) => `<span class="eqchip${e.kind === 'release_point' ? ' lp' : ''}" title="OWLv2 saw “${esc(e.detector_prompt.replace(/^an? /, ''))}” (score ${e.detector_score}), checked by eye">${esc(e.label)}${e.stands_in_for ? ` <em>→ ${esc(e.stands_in_for)} in the plant model</em>` : ''}</span>`).join('') : '<span class="note">None recognised</span>';
+    $('eq-row').hidden = !eq.length;
+
     const svg = $('cam-svg');
     if (!svg) return;
-    // The plume itself is shown by the heat map canvas; the SVG only carries equipment ROIs.
-    svg.innerHTML = `${drawn.map((r) => `<polygon class="roi${r.asset_id === selected ? ' sel' : ''}" points="${r.polygon_normalized.map((p) => p.join(',')).join(' ')}"/>`).join('')}`;
+    // The plume itself is shown by the heat map canvas; the SVG carries equipment ROIs and the recognised equipment.
+    svg.innerHTML = `${drawn.map((r) => `<polygon class="roi${r.asset_id === selected ? ' sel' : ''}" points="${r.polygon_normalized.map((p) => p.join(',')).join(' ')}"/>`).join('')}
+      ${eq.map((e) => { const [x0, y0, x1, y1] = e.box_normalized; return `<rect class="eqb${e.kind === 'release_point' ? ' lp' : ''}" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}"/>`; }).join('')}`;
+  }
+
+  // The camera view, large: what the camera recognises in its own footage, labelled, over the live replay.
+  function bigCam() {
+    const eq = (G && G.camera_equipment) || {};
+    if (!video || !(eq.equipment || []).length) return;
+    const W = 320, H = 240;
+    const boxes = eq.equipment.map((e) => {
+      const [x0, y0, x1, y1] = e.box_normalized.map((v, i) => v * (i % 2 ? H : W));
+      return `<g class="${e.kind === 'release_point' ? 'lp' : ''}"><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}"/><text x="${x0 + 1}" y="${Math.max(7, y0 - 2.5)}">${esc(e.label)}</text></g>`;
+    }).join('');
+    window.AtelicShell.modal({ title: `${CAM} · what the camera recognises`, okLabel: null, cancelLabel: 'Close', html: `<div class="eq-view">
+      <div class="eq-big"><video muted autoplay loop playsinline src="${esc(video.currentSrc || video.src)}"></video>
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${boxes}</svg></div>
+      <p>${esc(eq.scene || '')}${eq.imaging_distance_m ? `, filmed from ${eq.imaging_distance_m} m` : ''}. Boxes are ${esc((eq.model || '').split('/').pop())} open-vocabulary detections on this camera's footage, each checked by eye. The release pipe is where METEC metered the gas out; in the plant model it stands in for XV-2104.</p></div>` });
+    const v = document.querySelector('.eq-big video');
+    if (v) v.addEventListener('loadedmetadata', () => { v.currentTime = video.currentTime || 0; }, { once: true });
   }
 
   function initCam(d) {
@@ -171,6 +193,8 @@
     const m = Math.floor(frameTime / 60), s = (frameTime % 60).toFixed(2).padStart(5, '0');
     $('cam-time').textContent = `· from ${String(m).padStart(2, '0')}:${s}, looped`;
     video = $('cam-video');
+    $('cam-frame').title = 'Open the camera view with the equipment it recognises';
+    $('cam-frame').onclick = bigCam;
     renderCam();
     // Replays from the first annotated frame on a loop, with the same heat map as the Camera screen.
     // The heat map is drawn only on frames that an annotation range covers.

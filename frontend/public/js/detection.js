@@ -171,8 +171,21 @@
   // ----- camera wall -----
   // Every skid camera plays at once, so the viewer sees which one raises something.
   // The incident's camera is the annotated replay; the others loop a recorded segment picked as plume-free.
-  let wall = null;
+  let wall = null, equipment = null;
   const API = () => window.AtelicShell.API;
+
+  // Equipment the camera recognises in its own view (OWLv2 detections, checked by eye): labelled boxes over the footage.
+  // Same crop as the video (object-fit cover anchored top, bottom or centre), so the boxes stay on the equipment.
+  let showEq = (() => { try { return localStorage.getItem('atelic.eqLabels') !== '0'; } catch (e) { return true; } })();
+  function eqLayer(camId, anchor) {
+    const cam = equipment && equipment.cameras[camId];
+    if (!cam || !showEq) return '';
+    const W = 320, H = 240, fit = { top: 'YMin', bottom: 'YMax' }[anchor] || 'YMid';
+    return `<svg class="eq" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMid${fit} slice" aria-hidden="true">${cam.equipment.map((e) => {
+      const [x0, y0, x1, y1] = e.box_normalized.map((v, i) => v * (i % 2 ? H : W));
+      return `<g class="eq-${e.kind}"><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}"/><text x="${x0 + 1}" y="${Math.max(7, y0 - 2.5)}">${esc(e.label)}</text></g>`;
+    }).join('')}</svg>`;
+  }
 
   // Incident camera screen: one continuous recording of the event. The Atelic view (the plume as the model
   // captured it, rendered into the video) with the untouched original infrared on the slider, from the start of the
@@ -183,13 +196,13 @@
   function cam1Screen(mode, clipOk, origOk) {
     const quiet = !raised, auto = quiet ? '' : ' autoplay', inc = window.AtelicShell.INCIDENT_ID;
     const low = meta.frame_anchor === 'bottom';
-    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}${low ? ' anc-b' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip"></video>${quiet ? `<video id="video-quiet" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${inc}/clip/before"></video>` : ''}<canvas class="heat" id="heat" aria-hidden="true"></canvas><svg class="overlay" id="overlay" preserveAspectRatio="xMid${low ? 'YMax' : 'YMin'} slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
+    return clipOk ? `<div class="frame${origOk ? ' cmp-on pre' : ''}${low ? ' anc-b' : ''}" id="frame" style="--cut:50%">${origOk ? `<video id="video-raw" class="raw" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip/original"></video>` : ''}<video id="video" crossorigin="anonymous" muted${auto} playsinline preload="auto" src="${API()}/incidents/${inc}/clip"></video>${quiet ? `<video id="video-quiet" muted autoplay loop playsinline preload="auto" src="${API()}/incidents/${inc}/clip/before"></video>` : ''}<canvas class="heat" id="heat" aria-hidden="true"></canvas>${eqLayer(CAM, low ? 'bottom' : 'top')}<svg class="overlay" id="overlay" preserveAspectRatio="xMid${low ? 'YMax' : 'YMin'} slice" aria-hidden="true"></svg><span class="mon-tag" id="mon-tag"></span><span class="tcx"><i></i><span>--:--</span></span>${origOk ? CMP_UI : ''}</div>`
       : `<div class="no-feed"><b>${esc(CAM)} leak recording not loaded</b><span>Licence status: ${esc(meta.license_status || 'unknown')}</span></div>`;
   }
 
   function renderWall(clipOk, origOk, mode) {
     const cams = wall ? wall.cameras : [{ camera_id: CAM, area: '', watches: [], feed: 'ogi_clip' }];
-    const video = (src, low) => `<div class="frame${low ? ' anc-b' : ''}"><video muted autoplay loop playsinline preload="auto" src="${src}"></video><span class="tcx"><i></i><span>--:--</span></span></div>`;
+    const video = (src, low, camId) => `<div class="frame${low ? ' anc-b' : ''}"><video muted autoplay loop playsinline preload="auto" src="${src}"></video>${eqLayer(camId, low ? 'bottom' : 'centre')}<span class="tcx"><i></i><span>--:--</span></span></div>`;
     $('wall').innerHTML = cams.map((c) => {
       const mine = c.camera_id === CAM;
       // Another live incident on this camera: its normal view, or its alarm with a link to open it.
@@ -197,8 +210,8 @@
       const loop = !mine && !other && c.feed && typeof c.feed === 'object' && c.feed.file;
       const on = mine || other || loop;
       const screen = mine ? cam1Screen(mode, clipOk, origOk)
-        : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`, other.frame_anchor === 'bottom')
-        : loop ? video(`${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}`)
+        : other ? video(`${API()}/incidents/${encodeURIComponent(other.incident_id)}/clip${other.triggered && other.clip_available ? '' : '/before'}`, other.frame_anchor === 'bottom', c.camera_id)
+        : loop ? video(`${API()}/ogi/cams/${encodeURIComponent(c.camera_id)}`, false, c.camera_id)
         : '<div class="no-feed"><b>No feed</b></div>';
       const state = other && other.dismissal ? 'Closed · false alarm'
         : other && other.triggered
@@ -213,7 +226,25 @@
     }).join('');
     tickWall();
     if (!wallTimer) wallTimer = setInterval(tickWall, 1000);
-    $('wall-foot').textContent = `Recorded replays, looped · ${window.AtelicShell.FACILITY.name}, ${window.AtelicShell.FACILITY.location}`;
+    $('wall-foot').innerHTML = `<span>Recorded replays, looped · ${esc(window.AtelicShell.FACILITY.name)}, ${esc(window.AtelicShell.FACILITY.location)}</span>${equipment
+      ? `<button class="linkish eq-tg" type="button" id="eq-tg" aria-pressed="${showEq}" title="Equipment the camera recognises in its own footage (${esc(equipment.model.split('/').pop())}, each box checked by eye)">${showEq ? 'Hide' : 'Show'} recognised equipment</button>` : ''}`;
+    const tg = $('eq-tg');
+    if (tg) tg.addEventListener('click', () => {
+      showEq = !showEq;
+      try { localStorage.setItem('atelic.eqLabels', showEq ? '1' : '0'); } catch (e) { /* per-page only */ }
+      document.querySelectorAll('#wall svg.eq').forEach((el) => el.remove());
+      if (showEq) {
+        document.querySelectorAll('#wall .cell').forEach((cell) => {
+          const camId = cell.querySelector('.cl b').textContent, fr = cell.querySelector('.frame');
+          if (!fr) return;
+          const anchor = fr.id === 'frame' ? (fr.classList.contains('anc-b') ? 'bottom' : 'top') : (fr.classList.contains('anc-b') ? 'bottom' : 'centre');
+          const tcx = fr.querySelector('.tcx');
+          tcx.insertAdjacentHTML('beforebegin', eqLayer(camId, anchor));
+        });
+      }
+      tg.setAttribute('aria-pressed', String(showEq));
+      tg.textContent = `${showEq ? 'Hide' : 'Show'} recognised equipment`;
+    });
   }
 
   // Same replay clock on every feed (the shell's incident clock), not each clip's own position,
@@ -622,7 +653,7 @@
       raised = d.triggered;
       dismissal = d.dismissal || null;
       live = list.live || [];
-      meta = d.metadata; ann = d.annotations; wall = d.camera_wall;
+      meta = d.metadata; ann = d.annotations; wall = d.camera_wall; equipment = d.camera_equipment || null;
       prov = clipProv(meta);
       annP = ann.status === 'sample' ? 'simulated' : (CLIP_PROV.has(ann.provenance) ? ann.provenance : 'pending');
       fps = typeof meta.frame_rate === 'number' && meta.frame_rate > 0 ? meta.frame_rate : null;

@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="css/shell.css?v=101">
 <script src="js/shell.js?v=107" defer></script>
 <script src="js/plumeheat.js?v=101" defer></script>
-<script src="js/locate.js?v=121" defer></script>
+<script src="js/locate.js?v=122" defer></script>
 <style>
 
   /* PRD Screen 3: investigation (camera strip + plant view) | ranked candidates */
@@ -62,6 +62,21 @@
   .cam-frame .roi{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke}
   .cam-frame .roi.sel{fill-opacity:.32;stroke-width:2.2}
   .cam-frame .br,.cam-chip{display:none}
+  .cam-frame{cursor:zoom-in}
+  .cam-frame .eqb{fill:none;stroke:#6EE7B7;stroke-width:1;stroke-dasharray:3 2;vector-effect:non-scaling-stroke}
+  .cam-frame .eqb.lp{stroke:#FBBF24;stroke-width:1.4}
+  .eqchips{display:flex;flex-wrap:wrap;gap:4px}
+  .eqchip{padding:2px 7px;border-radius:3px;border:1px dashed var(--line-strong);font-size:11px;color:var(--ink-mute)}
+  .eqchip.lp{border:1px solid var(--warn);color:var(--ink)}
+  .eqchip em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  .modal:has(.eq-view){max-width:min(880px,94vw)}
+  .eq-view{display:grid;gap:10px}
+  .eq-big{position:relative;aspect-ratio:4/3;width:min(820px,86vw);background:#000;border-radius:4px;overflow:hidden}
+  .eq-big video,.eq-big svg{position:absolute;inset:0;width:100%;height:100%}
+  .eq-big rect{fill:none;stroke:#6EE7B7;stroke-width:.7;stroke-dasharray:3 1.5}
+  .eq-big .lp rect{stroke:#FBBF24;stroke-width:1}
+  .eq-big text{font:600 6px var(--mono);fill:#ECFDF5;paint-order:stroke;stroke:rgba(2,6,23,.8);stroke-width:1.4px}
+  .eq-view p{margin:0;font-size:12.5px;color:var(--ink-mute);line-height:1.5}
   .cam-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:8px;color:rgba(255,255,255,.86);font-size:11px;font-weight:600}
   .cam-info{display:flex;flex-direction:column;gap:6px;min-width:0}
   .cam-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
@@ -225,6 +240,7 @@
         <div class="cam-info">
           <div class="cam-meta"><b id="cam-name">Camera replay</b><span id="cam-clip">—</span><span id="cam-time"></span><span class="badges" id="cam-badge"></span></div>
           <div class="vis-row"><span class="lbl">Camera can see</span><div class="vchips" id="vis-list"></div><div class="vis-sel" id="vis-sel"></div></div>
+          <div class="vis-row" id="eq-row" hidden><span class="lbl">Recognises</span><div class="eqchips" id="eq-list"></div></div>
           <div class="cam-note" id="cam-caveat" hidden></div>
         </div>
       </div>
