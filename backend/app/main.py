@@ -850,19 +850,19 @@ def schematic(fac):
     for x, k in reversed(row):
         pos[k]["x"] = min(x, limit)
         limit = pos[k]["x"] - 7
-    # Process instruments (pressure, temperature, flow) in a row under the line, as close beside what they measure as 8 % spacing allows;
-    # the weather mast (its wind and stability channels are PART_OF it) above the compressor it stands by.
+    # Process instruments (pressure, temperature, flow) in a row under the line, centred under what they measure and
+    # nudged right only where neighbours would sit closer than 7 %; the weather mast (its wind and stability channels
+    # are PART_OF it) above the compressor it stands by.
     phys_asset = {sn["id"]: sn.get("asset_id") for sn in fac["sensors"]}
-    taken = []
+    by_asset = {}
     for sid in sorted(sn["id"] for sn in fac["sensors"] if sn["variable"] != "methane" and not sn["id"].startswith("MET-")):
-        a = phys_asset.get(sid)
-        if a not in pos:
-            continue
-        # nearest free slot beside the asset, alternating right and left
-        px = next((pos[a]["x"] + d for d in (3, -5, 11, -13, 19, -21, 27) if 3 <= pos[a]["x"] + d <= 97
-                   and all(abs(pos[a]["x"] + d - q) >= 8 for q in taken)), pos[a]["x"] + 3)
-        taken.append(px)
-        pos[sid] = {"x": min(px, 97), "y": 84}
+        if phys_asset.get(sid) in pos:
+            by_asset.setdefault(phys_asset[sid], []).append(sid)
+    ideal = sorted((pos[a]["x"] + (j - (len(ids) - 1) / 2) * 7, sid) for a, ids in by_asset.items() for j, sid in enumerate(ids))
+    last = -99.0
+    for x, sid in ideal:
+        last = max(x, last + 7, 3)
+        pos[sid] = {"x": min(last, 97), "y": 84}
     masts = sorted({sn["id"].rsplit("-", 1)[0] for sn in fac["sensors"] if sn["id"].startswith("MET-")})
     for i, m in enumerate(masts):
         near = phys_asset.get(f"{m}-WS")
