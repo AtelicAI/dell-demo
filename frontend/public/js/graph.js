@@ -278,6 +278,17 @@
     // (soft on high-DPI screens); draw each element from its own cache at the current zoom instead.
     const lyr = cy.renderer && cy.renderer().data && cy.renderer().data.lyrTxrCache;
     if (lyr) lyr.getLayers = () => null;
+    // Each element's cache is a bitmap at a power-of-two zoom level, scaled to the real zoom, so labels go soft
+    // between levels. The graph is small (under 100 nodes): draw every node, edge and label as vectors each frame.
+    const rnd = cy.renderer && cy.renderer();
+    if (rnd && rnd.drawCachedElement && rnd.drawElement) {
+      rnd.drawCachedElement = function (ctx, ele, pxRatio, extent) {
+        const bb = ele.boundingBox();
+        if (!bb.w || !bb.h || !ele.visible()) return;
+        if (extent && (bb.x1 > extent.x2 || bb.x2 < extent.x1 || bb.y1 > extent.y2 || bb.y2 < extent.y1)) return;
+        this.drawElement(ctx, ele);
+      };
+    }
     cy.on('mouseover', 'node', (e) => { hover(e.target); $('cy').style.cursor = 'pointer'; });
     cy.on('mouseout', 'node', () => { hover(null); $('cy').style.cursor = ''; });
     cy.on('mouseover', 'edge', (e) => { e.target.addClass('hot'); $('cy').style.cursor = 'pointer'; });
