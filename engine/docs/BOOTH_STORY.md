@@ -10,19 +10,19 @@ What to say at the booth, in plain words. `STORY_RUNBOOK.md` has the beats, endp
 
 An unmanned gas gathering station in open desert, Eastern Province, Saudi Arabia. It is 23:00. Nobody is on site. The station has infrared cameras, methane sensors around the equipment skid and a weather mast with a sonic anemometer. Atelic's agents watch all of it, around the clock.
 
-Why it matters: satellites catch super-emitters of a thousand kg/h and more. The leak we are about to find is 0.28 kg/h, about 3,700 times smaller than the regional plume on the overview screen. Leaks this size add up across thousands of sites and only on-site sensing sees them.
+Why it matters: satellites catch super-emitters of hundreds to thousands of kg/h. The leak we are about to find is 0.28 kg/h, about 2,200 times smaller than the regional plume on the overview screen. Leaks this size add up across thousands of sites and only on-site sensing sees them.
 
 ## Opening: the satellite view (beat 00, about 30 s)
 
-The overview screen shows a real Carbon Mapper plume: Tanager-1, 4 November 2025, oil and gas, inland in the Eastern Province, about 1,040 kg/h, seen on 1 of 15 passes. It is a real detection in the same region as our (anonymous) station, but not our station; keep the label visible.
+The overview screen shows a real Carbon Mapper plume: Tanager-1, 9 December 2025, oil and gas, a small fenced site in the Eastern Province, about 630 kg/h, seen on 1 of 18 passes. It is a real detection in the same region as our (anonymous) station, but not our station; keep the label visible.
 
 Use it to set up the problem, not to show off the image. Make three points:
 
-1. **Scale.** That plume is about 1,040 kg/h. Our leak is 0.28 kg/h, about 3,700 times smaller. Satellites find the super-emitters; they cannot see leaks this size.
-2. **Timing.** It was seen on 1 of 15 passes. A satellite takes a snapshot every few days; leaks start and stop in between, and fourteen passes saw nothing. On-site sensors watch every second.
-3. **Night.** Satellite methane imaging needs reflected sunlight. Our incident happens at 23:00, when no satellite can see it at all.
+1. **Scale.** That plume is about 630 kg/h. Our leak is 0.28 kg/h, about 2,200 times smaller. Tanager-1 needs about 100 kg/h to see a leak at all. Satellites find the super-emitters; they cannot see leaks this size.
+2. **Timing.** It was seen on 1 of 18 passes. A satellite takes a snapshot at most once a day; leaks start and stop in between, and seventeen passes saw nothing. On-site sensors watch every second.
+3. **Night.** Satellite methane imaging needs reflected sunlight. Our incident happens at 23:00, when no methane-leak satellite can see it at all.
 
-*Say:* "This is what space sees: a real plume in this region, over a tonne an hour, caught on one pass out of fifteen. It's essential for finding the giants. The leak we're about to find is nearly four thousand times smaller, and it starts at eleven at night, when satellites are blind. That's the gap on-site sensing and Atelic fill."
+*Say:* "This is what space sees: a real plume in this region, over six hundred kilos an hour from a small site, caught on one pass out of eighteen. It's essential for finding the big ones. The leak we're about to find is two thousand times smaller, and it starts at eleven at night, when satellites are blind. That's the gap on-site sensing and Atelic fill."
 
 Then cut to the station. The bridge is "satellites tell you which region to worry about; Atelic tells you which valve, how much, and what to do about it."
 
