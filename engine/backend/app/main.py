@@ -266,6 +266,12 @@ def graph_plant():
     try:return app.state.graph.plant(app.state.facility.id)
     except (Neo4jError,DriverError,OSError) as exc:raise HTTPException(503,"Neo4j unavailable") from exc
 
+@app.post('/incident-memory/reset', dependencies=OPERATOR)
+def reset_incident_memory():
+    """Forget every closed incident written to the graph for this facility (demo reset). Plant records stay."""
+    try:return dict(removed=app.state.graph.forget_incidents(app.state.facility.id))
+    except (Neo4jError,DriverError,OSError) as exc:raise HTTPException(503,"Neo4j unavailable") from exc
+
 @app.get('/assets/{asset_id}/incident-memory')
 def incident_memory(asset_id:str):
     """Closed incidents that considered this asset (written at closure). Agents see them only through the
