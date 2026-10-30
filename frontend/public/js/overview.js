@@ -108,8 +108,7 @@
       : '<span class="r na">Not available</span>';
 
     // Regional context only: a public detection near the (anonymous) demo site, never its history.
-    const context = `<div class="ctx-note"><b>Methane satellites need sunlight and about 100 kg/h, and pass once a day at most. Our leak is 0.28 kg/h at 23:00: Atelic finds it around the clock.</b>
-      Regional context, not this site: a public ${esc((rec.sector_label || 'oil and gas').toLowerCase())} detection in Saudi Arabia's Eastern Province, seen by ${esc(rec.instrument || 'Tanager-1')}.</div>`;
+    const context = `<div class="ctx-note"><b>Methane satellites need sunlight and about 100 kg/h, and pass once a day at most.</b></div>`;
     $('src-body').innerHTML = `${flag}${context}${rate}${historyBlock(rec, $('src-body').clientWidth)}
       <div class="facts">
         ${fact('Observed', obsDate || null, obsTime && `${obsTime} UTC`)}
