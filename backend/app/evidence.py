@@ -82,8 +82,8 @@ class Evidence:
             return dict(kind="operations", group="Operations log · K-201", label="Compressor K-201 load-change log",
                         excerpt="Daily load changes at 06:00 and 17:30 UTC")
         if kind == "camera":
-            return dict(kind="detection", group="Camera · CAM-01", label=f"Illustrative camera region {rest.split('/')[-1]}", screen="detection.html",
-                        excerpt="Camera-to-equipment mapping is illustrative and uncalibrated")
+            return dict(kind="detection", group="Camera · CAM-01", label=f"Approximate camera region {rest.split('/')[-1]}", screen="detection.html",
+                        excerpt="Camera-to-equipment mapping is approximate and uncalibrated")
         if kind == "neo4j":
             return dict(kind="candidates", group="Knowledge graph", label=rest, screen="graph.html")
         if kind == "measurements":

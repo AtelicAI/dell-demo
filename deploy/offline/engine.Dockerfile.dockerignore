@@ -1,0 +1,14 @@
+# Context is the repo root: send only what the image copies, never secrets.
+**
+!engine/backend/requirements.txt
+!engine/backend/app
+!engine/scripts
+!engine/data
+engine/data/ground_truth
+!deploy/offline/compose.yml
+!deploy/offline/atelicxdell.sh
+!deploy/offline/atelicxdell.ps1
+!backend/requirements.txt
+!backend/app
+!data
+**/__pycache__

@@ -53,13 +53,13 @@ def _number(value):
 
 
 def scenario_to_clip_time(clip_id, scenario_id, scenario_seconds, data_dir=None):
-    """Affine illustrative mapping, no looping/clamping or real-world sync claim."""
+    """Affine approximate mapping, no looping/clamping or real-world sync claim."""
     clip = lookup_clip(clip_id, data_dir)
     mappings = [m for m in clip['scenario_mappings'] if m['scenario_id'] == scenario_id]
     if len(mappings) != 1:
         raise KeyError(scenario_id)
     m = mappings[0]
-    if m.get('kind') != 'synthetic_illustrative':
+    if m.get('kind') != 'synthetic_approximate':
         raise ValueError('Unsupported mapping provenance')
     t = _number(scenario_seconds)
     start = _number(m['scenario_start_seconds'])

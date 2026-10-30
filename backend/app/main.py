@@ -27,6 +27,8 @@ from app.evidence import Evidence
 DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
 STATE_FILE = Path(os.getenv("UI_STATE_FILE", DATA_DIR.parent / ".ui-state" / "state.json"))
 DEPLOYMENT = os.getenv("DEPLOYMENT_LABEL", "Local backend process")
+# Offline laptop build: agents replay recorded runs and the UI offers scripted questions instead of free text.
+OFFLINE = os.getenv("OFFLINE", "0") == "1"
 
 app = FastAPI(title="Atelic x Dell x NVIDIA — Methane Incident Intelligence (UI API)")
 # Same-origin behind the web proxy (/api); CORS stays open only for local development on :8000.
@@ -244,6 +246,7 @@ def status():
         "replay_time_utc": None,
         "replay_start_utc": at_seconds(mon["scenario_seconds_at_clip_start"]),
         "deployment": DEPLOYMENT,
+        "offline": OFFLINE,
         "services": {k: h.get(k) for k in ("graph", "historian", "historian_status", "documents", "workflow", "nvidia")},
     }
 
@@ -732,7 +735,7 @@ def ogi_cam_clip(camera_id: str, request: Request):
 
 ASSET_TYPE = {"separator": "Vessel", "compressor": "Compressor", "valve": "Valve", "flange": "Flange", "pipe": "PipeSegment",
               "vent": "Vent", "cooler": "Vessel"}
-EDGE_TYPE = {"FLOWS_TO": "CONNECTED_TO", "ILLUSTRATES": "CAN_OBSERVE"}
+EDGE_TYPE = {"FLOWS_TO": "CONNECTED_TO", "OBSERVES": "CAN_OBSERVE"}
 
 
 def plant_graph():
@@ -783,15 +786,15 @@ def plant_graph():
                 t, a, b = "HAS_WORK_ORDER", b, a
             else:
                 t = EDGE_TYPE.get(t, t)
-            # The engine tags designed/fixture links synthetic_design, simulated, synthetic_illustrative_mapping: all synthetic.
+            # The engine tags designed/fixture links synthetic_design, simulated, synthetic_approximate_mapping: all synthetic.
             prov = (e.get("props") or {}).get("provenance") or "synthetic"
             prov = "synthetic" if prov.startswith(("synthetic", "simulated")) else prov
             edges.append({"type": t, "from": a, "to": b, "source": src, "provenance": prov,
                           "relationship_basis": (e.get("props") or {}).get("provenance"),
-                          "method": "manual_illustrative" if t == "CAN_OBSERVE" else "graph relationship", "mapping_version": ver})
+                          "method": "manual_approximate" if t == "CAN_OBSERVE" else "graph relationship", "mapping_version": ver})
         positions = schematic(fac)
         cams = fac.get("cameras", [])
-        rois = {"camera_id": cams[0]["id"] if cams else "CAM-01", "clip_id": "MOV_1242", "mapping_method": "manual_illustrative",
+        rois = {"camera_id": cams[0]["id"] if cams else "CAM-01", "clip_id": "MOV_1242", "mapping_method": "manual_approximate",
                 "mapping_version": ver,
                 "regions": [{"asset_id": r["asset_id"], "polygon_normalized": r["polygon"], "camera_id": c["id"]} for c in cams for r in c.get("regions", [])]}
         return {"nodes": nodes, "edges": edges, "layout": {"positions": positions, "mapping_version": ver},
@@ -917,10 +920,10 @@ def get_candidates(incident_id: str):
         loc = step_event(orchestration(s), "locate")
         if not loc:
             return {**empty, "status": "pending", "method": "Locate agent running"}
-        return {"status": "verified", "provenance": "model_estimated", "method": "Camera origin-region overlap (illustrative mapping)",
+        return {"status": "verified", "provenance": "model_estimated", "method": "Camera origin-region overlap (approximate mapping)",
                 "assessment": {"result": "likely_source", "asset_id": loc["detail"]["selected_asset_id"]}, "invalid_ids": [],
                 "candidates": [{"asset_id": c["asset_id"], "status": "candidate",
-                                "rationale": [f"Camera origin region overlaps {c['asset_id']} by {c['overlap_fraction']:.0%} (illustrative mapping, not a probability)."],
+                                "rationale": [f"Camera origin region overlaps {c['asset_id']} by {c['overlap_fraction']:.0%} (approximate mapping, not a probability)."],
                                 "supporting": [], "contradicting": [], "missing": ["Emission fit (Quantify agent running)", "Investigation agent findings"]}
                                for c in loc["detail"]["candidates"]]}
     snap = rec["snapshot"]
@@ -934,7 +937,7 @@ def get_candidates(incident_id: str):
     for c in snap["candidates"]:
         aid, fit, sup, con = c["asset_id"], fits.get(c["asset_id"], {}), [], []
         sup.append({"id": f"{aid}-cam", "source_id": "CAM-01", "provenance": "model_estimated",
-                    "label": f"CAM-01 plume origin region overlaps {aid} by {c['overlap_fraction']:.0%} (illustrative mapping, not a probability)"})
+                    "label": f"CAM-01 plume origin region overlaps {aid} by {c['overlap_fraction']:.0%} (approximate mapping, not a probability)"})
         if fit.get("fit_status") in ("best_fit", "comparable_fit"):
             sup.append({"id": f"{aid}-fit", "source_id": sensors[0], "provenance": "model_estimated",
                         "label": f"Methane sensors {sensors[0]}–{sensors[-1]} fit a source at {aid}: {fit['fit_status'].replace('_', ' ')}"
@@ -1451,7 +1454,7 @@ def work_order_view(s):
     base = {"generator": generator(rec), "can_draft": False, "missing": [] if s["engine_id"] else ["No alert raised yet (Detect screen)"],
             "inputs": draft_inputs(s, rec), "nvidia_inference": nvidia_status(), "agent": agent_status(s),
             "investigation": investigation_view(rec, s["names"]), "questions": questions_view(s, rec),
-            "can_ask": can_ask(rec),
+            "can_ask": can_ask(rec), "offline": OFFLINE,
             "field_notes": field_notes_view(s, rec), "research": research_view(s, rec),
             "engine_state": rec and rec["state"], "engine_incident_id": s["engine_id"], "agent_activity": agent_activity(rec)}
     if not s["versions"]:
@@ -1709,7 +1712,7 @@ def follow_up(s, rec):
             "closure": rec.get("closure") and {"decision": rec["closure"]["decision"], "rationale": rec["closure"]["rationale"],
                                                "at": utc(rec["closure"]["recorded_at"])},
             "agent": agent_status(s), "graph_memory": s.get("graph_memory"),
-            "questions": questions_view(s, rec), "can_ask": can_ask(rec)}
+            "questions": questions_view(s, rec), "can_ask": can_ask(rec), "offline": OFFLINE}
 
 
 def make_report(s):

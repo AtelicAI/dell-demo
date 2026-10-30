@@ -33,7 +33,7 @@
             0.72
           ]
         ],
-        "provenance": "synthetic_illustrative_mapping"
+        "provenance": "synthetic_approximate_mapping"
       },
       {
         "asset_id": "F-205",
@@ -55,7 +55,7 @@
             0.7
           ]
         ],
-        "provenance": "synthetic_illustrative_mapping"
+        "provenance": "synthetic_approximate_mapping"
       }
     ],
     "fov_degrees": 24.0,
@@ -63,7 +63,7 @@
       320,
       240
     ],
-    "calibration_status": "illustrative_uncalibrated"
+    "calibration_status": "approximate_uncalibrated"
   },
   {
     "id": "CAM-02",
@@ -99,7 +99,7 @@
             0.72
           ]
         ],
-        "provenance": "synthetic_illustrative_mapping"
+        "provenance": "synthetic_approximate_mapping"
       },
       {
         "asset_id": "F-205",
@@ -121,7 +121,7 @@
             0.7
           ]
         ],
-        "provenance": "synthetic_illustrative_mapping"
+        "provenance": "synthetic_approximate_mapping"
       }
     ],
     "fov_degrees": 24.0,
@@ -129,6 +129,6 @@
       320,
       240
     ],
-    "calibration_status": "illustrative_uncalibrated"
+    "calibration_status": "approximate_uncalibrated"
   }
 ]

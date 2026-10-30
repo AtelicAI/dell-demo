@@ -3,7 +3,7 @@
   "mapping_version": "rois-v0.1-draft",
   "camera_id": "CAM-01",
   "clip_id": null,
-  "mapping_method": "manual_illustrative",
+  "mapping_method": "manual_approximate",
   "regions": [
     { "asset_id": "VENT-01", "polygon_normalized": [] },
     { "asset_id": "XV-104",  "polygon_normalized": [] },

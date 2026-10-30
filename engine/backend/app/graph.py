@@ -48,8 +48,8 @@ class Graph:
             tx.run("UNWIND $rows AS r MATCH (a:Asset {id:r.from_id}), (b:Asset {id:r.to_id}) CREATE (a)-[:FLOWS_TO {line_id:r.line_id, provenance:r.verification}]->(b)",rows=[c.model_dump() for c in facility.connections]).consume()
             tx.run("UNWIND $rows AS r MATCH (a:Asset {id:r.asset_id}) CREATE (s:Sensor {id:r.id, variable:r.variable, unit:r.unit, facility_id:$facility}) CREATE (s)-[:MONITORS {provenance:'synthetic_design'}]->(a)",rows=[s.model_dump() for s in facility.sensors],facility=facility.id).consume()
             for camera in facility.cameras:
-                tx.run("CREATE (:Camera {id:$id, calibration_status:'illustrative_uncalibrated', fov_degrees:$fov, x_m:$p[0], y_m:$p[1], z_m:$p[2], facility_id:$facility})",id=camera.id,fov=camera.fov_degrees,p=list(camera.position),facility=facility.id).consume()
-                tx.run("UNWIND $rows AS r MATCH (c:Camera {id:$camera}), (a:Asset {id:r.asset_id}) CREATE (c)-[:ILLUSTRATES {provenance:r.provenance}]->(a)",camera=camera.id,rows=[r.model_dump() for r in camera.regions]).consume()
+                tx.run("CREATE (:Camera {id:$id, calibration_status:'approximate_uncalibrated', fov_degrees:$fov, x_m:$p[0], y_m:$p[1], z_m:$p[2], facility_id:$facility})",id=camera.id,fov=camera.fov_degrees,p=list(camera.position),facility=facility.id).consume()
+                tx.run("UNWIND $rows AS r MATCH (c:Camera {id:$camera}), (a:Asset {id:r.asset_id}) CREATE (c)-[:OBSERVES {provenance:r.provenance}]->(a)",camera=camera.id,rows=[r.model_dump() for r in camera.regions]).consume()
             tx.run("UNWIND $rows AS r MATCH (a:Asset {id:r.asset_id}) CREATE (w:WorkOrder) SET w=r, w.facility_id=$facility CREATE (w)-[:ON_ASSET {provenance:'simulated'}]->(a)",rows=flat,facility=facility.id).consume()
             for relation in self.WORK_ORDER_RELATIONS:
                 tx.run(f"UNWIND $rows AS r MATCH (a:WorkOrder {{id:r.id}}), (b:WorkOrder {{id:r.target}}) CREATE (a)-[:{relation} {{provenance:'simulated'}}]->(b)",
@@ -91,7 +91,7 @@ class Graph:
         ids=[asset_id]+[a['id'] for a in result['neighbors']]
         result['sensors']=self.query("MATCH (s:Sensor)-[:MONITORS]->(a:Asset) WHERE a.id IN $ids RETURN s{.*, asset_id:a.id} AS sensor", ids=ids)
         result['maintenance']=self.query("MATCH (w:WorkOrder)-[:ON_ASSET]->(a:Asset {id:$id}) RETURN w{.*} AS record ORDER BY w.date DESC", id=asset_id)
-        result['camera_paths']=self.query("MATCH (c:Camera)-[r:ILLUSTRATES]->(a:Asset {id:$id}) RETURN c.id AS camera_id, type(r) AS relationship, a.id AS asset_id, r.provenance AS provenance",id=asset_id)
+        result['camera_paths']=self.query("MATCH (c:Camera)-[r:OBSERVES]->(a:Asset {id:$id}) RETURN c.id AS camera_id, type(r) AS relationship, a.id AS asset_id, r.provenance AS provenance",id=asset_id)
         result['process_paths']=self.query("MATCH (a:Asset {id:$id})-[r:FLOWS_TO]-(n:Asset) RETURN startNode(r).id AS from_id, type(r) AS relationship, endNode(r).id AS to_id, r.provenance AS provenance",id=asset_id)
         result['documents']=self.query("MATCH (a:Asset {id:$id})-[:HAS_DOCUMENT]->(d:Document) RETURN d{.*} AS document ORDER BY d.id",id=asset_id)
         result['field_reports']=self.query("MATCH (f:FieldReport)-[:ON_ASSET]->(a:Asset {id:$id}) OPTIONAL MATCH (f)-[:DOCUMENTS]->(w:WorkOrder) RETURN f{.*, work_order_id:w.id} AS report ORDER BY f.date",id=asset_id)

@@ -14,7 +14,7 @@
   const EQUIP = new Set(['Vessel', 'Valve', 'Vent', 'Compressor', 'Flange']);
   const TYPE_NAME = { PipeSegment: 'Line segment', EquipmentArea: 'Area', WorkOrder: 'Work order', FieldReport: 'Field report', IncidentRecord: 'Closed incident',
     Sensor: 'Instrument', Camera: 'Camera', Document: 'Document', Commitment: 'Commitment' };
-  const METHOD = { manual_illustrative: 'Manually configured', 'manually configured': 'Manually configured' };
+  const METHOD = { manual_approximate: 'Manually configured', 'manually configured': 'Manually configured' };
   const WO_ST = { closed: ['Closed', ''], open: ['Open', 'warn'], deferred: ['Deferred', 'warn'], closed_with_exception: ['Closed with exception', 'warn'] };
   const CM_ST = { done: ['Done', 'good'], not_done: ['Not done', 'bad'], open: ['Open', 'warn'], deferred: ['Deferred', 'warn'] };
   const LINK = { FOLLOWS_UP: ['Follows up', 'Followed up by'], REVIEWS: ['Reviews', 'Reviewed by'],

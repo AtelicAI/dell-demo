@@ -4,7 +4,7 @@
   "rights": "unverified",
   "default_clip_id": "MOV_1242",
   "source": "Local GasVid 2 recordings; not model inference",
-  "mapping": "synthetic_illustrative",
+  "mapping": "synthetic_approximate",
   "clips": [
     {
       "id": "MOV_1237",
@@ -241,12 +241,12 @@
       "scenario_mappings": [
         {
           "scenario_id": "SCN-004",
-          "kind": "synthetic_illustrative",
+          "kind": "synthetic_approximate",
           "scenario_start_seconds": 0,
           "scenario_end_seconds": 1199,
           "clip_start_seconds": 0,
           "clip_seconds_per_scenario_second": 1,
-          "basis": "Illustrative playback only; no correspondence to synthetic incident, assets, sensors or UTC"
+          "basis": "Approximate playback only; no correspondence to synthetic incident, assets, sensors or UTC"
         }
       ]
     },

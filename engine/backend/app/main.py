@@ -116,7 +116,7 @@ def clock(scenario, seconds):
     profile=monitor.profile_for(scenario['incident_id'])
     if profile:
         clip_seconds=monitor.to_clip_seconds(seconds,profile)
-        return dict(scenario_seconds=seconds,source_timestamp_utc=(datetime.fromisoformat(scenario['start_utc'])+timedelta(seconds=seconds)).isoformat(),video_timestamp_seconds=clip_seconds,video_clock_mapping=dict(clip_id=profile['clip_id'],mapping_kind='synthetic_illustrative',source_time_synchronized=False,basis=profile['mapping_basis']),origin_type="simulated")
+        return dict(scenario_seconds=seconds,source_timestamp_utc=(datetime.fromisoformat(scenario['start_utc'])+timedelta(seconds=seconds)).isoformat(),video_timestamp_seconds=clip_seconds,video_clock_mapping=dict(clip_id=profile['clip_id'],mapping_kind='synthetic_approximate',source_time_synchronized=False,basis=profile['mapping_basis']),origin_type="simulated")
     from .video import get_video_manifest, scenario_to_clip_time
     manifest=get_video_manifest()
     clip_id=manifest.get('default_clip_id')
@@ -124,7 +124,7 @@ def clock(scenario, seconds):
     if clip_id:
         try:mapped=scenario_to_clip_time(clip_id,scenario['id'],seconds)
         except (KeyError,ValueError):pass
-    return dict(scenario_seconds=seconds,source_timestamp_utc=(datetime.fromisoformat(scenario['start_utc'])+timedelta(seconds=seconds)).isoformat(),video_timestamp_seconds=mapped['clip_seconds'] if mapped else None,video_clock_mapping=mapped or 'No illustrative mapping for this scenario',origin_type="simulated")
+    return dict(scenario_seconds=seconds,source_timestamp_utc=(datetime.fromisoformat(scenario['start_utc'])+timedelta(seconds=seconds)).isoformat(),video_timestamp_seconds=mapped['clip_seconds'] if mapped else None,video_clock_mapping=mapped or 'No approximate mapping for this scenario',origin_type="simulated")
 
 def graph_context(asset_id):
     try:
@@ -202,9 +202,9 @@ def candidates(incident_id:str,as_of_seconds:int=Query(760,ge=0)):
         started=time.perf_counter();context=graph_context(region.asset_id)
         context=maintenance_as_of(context,datetime.fromisoformat(c['source_timestamp_utc']))
         traces.append(dict(tool='query_asset_graph',asset_id=region.asset_id,backend='neo4j',elapsed_ms=round((time.perf_counter()-started)*1000,2),status='completed'))
-        results.append(dict(asset_id=region.asset_id,overlap_fraction=round(score,4),score_kind='origin bounding-region overlap; not a probability',confirmed=False,why=(f"Model alert on recorded footage triggered this incident; the illustrative synthetic origin region overlaps the {event.camera_id} mapping for this asset. Graph confirms canonical asset and connections, not leak causality" if event.mode=='model_inference' else f"Synthetic origin region overlaps illustrative {event.camera_id} mapping; graph confirms canonical asset and connections, not leak causality"),evidence=[event.provenance.reference,f"camera:{camera.id}/region/{region.asset_id}",context['evidence_reference']],context=context))
+        results.append(dict(asset_id=region.asset_id,overlap_fraction=round(score,4),score_kind='origin bounding-region overlap; not a probability',confirmed=False,why=(f"Model alert on recorded footage triggered this incident; the approximate synthetic origin region overlaps the {event.camera_id} mapping for this asset. Graph confirms canonical asset and connections, not leak causality" if event.mode=='model_inference' else f"Synthetic origin region overlaps approximate {event.camera_id} mapping; graph confirms canonical asset and connections, not leak causality"),evidence=[event.provenance.reference,f"camera:{camera.id}/region/{region.asset_id}",context['evidence_reference']],context=context))
     results.sort(key=lambda x:(-x['overlap_fraction'],x['asset_id']))
-    return dict(candidates=results,status='ambiguous_unconfirmed' if len(results)>1 else 'unconfirmed',warning='Camera mapping is illustrative; source not confirmed.',event=event.model_dump(mode='json'),clock=c,tool_activity=traces)
+    return dict(candidates=results,status='ambiguous_unconfirmed' if len(results)>1 else 'unconfirmed',warning='Camera mapping is approximate; source not confirmed.',event=event.model_dump(mode='json'),clock=c,tool_activity=traces)
 
 @app.get('/assets/{asset_id}/context')
 def asset_context(asset_id:str,incident_id:str='INC-001',as_of_seconds:int=Query(760,ge=0)):

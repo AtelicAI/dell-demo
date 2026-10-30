@@ -1,7 +1,7 @@
 """Camera monitoring replay: causal alerts from executed model predictions on recorded footage.
 
 The alert time comes only from saved model predictions and a fixed persistence policy.
-The origin region used for candidate equipment is the illustrative synthetic mapping,
+The origin region used for candidate equipment is the approximate synthetic mapping,
 never a drifting plume extent from the recorded scene.
 """
 from .routes import OPERATOR  # human/operator credential on state-changing routes
@@ -132,7 +132,7 @@ def monitor(profile: str = DEFAULT_PROFILE):
     run, samples = predictions(cfg)
     return {**cfg, 'playback_url': f"/videos/{cfg['clip_id']}/playback", 'sample_count': len(samples),
             'model': run['model'], 'execution': 'replay of previously executed model inference on recorded footage; not a live camera',
-            'labels': {'video': 'Recorded METEC footage, illustrative feed', 'facility': 'Synthetic facility and telemetry'}}
+            'labels': {'video': 'Recorded METEC footage', 'facility': 'Synthetic facility and telemetry'}}
 
 
 @router.get('/monitor/footage')

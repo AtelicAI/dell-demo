@@ -193,7 +193,7 @@
     // Keep anything typed but not sent across re-renders.
     const typed = ['qa-text', 'fn-text', 'rs-focus'].map((id) => [id, $(id) ? $(id).value : '']);
     // "Add to plan" only while a draft waits for this reviewer; the tray goes out with Request changes.
-    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: W.submitted ? trayKey() : null }) + S.research(W);
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: W.submitted && !W.offline ? trayKey() : null, offline: W.offline }) + S.research(W);
     typed.forEach(([id, v]) => { if ($(id)) $(id).value = v; });
     $('rev-diff').innerHTML = S.revisionDiff(W);
     $('rev-diff').hidden = !$('rev-diff').innerHTML;
@@ -292,9 +292,13 @@
         'Approve draft', 'go', () => decide('approve', null));
     } else {
       const rej = t.dataset.decide === 'reject';
+      // Offline, a revision can only replay a recorded one, so Request changes offers the recorded reasons.
+      const field = W.offline && !rej
+        ? `<select id="rv-reason">${window.AtelicStory.REVIEW_REASONS.map((r) => `<option>${esc(r)}</option>`).join('')}</select>`
+        : '<textarea id="rv-reason" rows="3"></textarea>';
       openModal(rej ? 'Reject this draft?' : 'Request changes to this draft?', `${kv}
         <label for="rv-reason">Reason (required, shown on Plan and in the audit log)</label>
-        <textarea id="rv-reason" rows="3"></textarea>
+        ${field}
         <p>${rej ? 'A rejected draft cannot close the incident.' : 'The draft goes back to Plan for editing.'} No physical plant action will occur.</p>`,
         rej ? 'Reject draft' : 'Request changes', rej ? 'no' : '', () => decide(t.dataset.decide, $('rv-reason').value.trim()));
     }

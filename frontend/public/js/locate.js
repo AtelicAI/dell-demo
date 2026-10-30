@@ -10,7 +10,7 @@
   // Provenances a verified camera clip may carry (same rule as Screen 2).
   const CLIP_PROV = new Set(['experimental_setpoint', 'manual_annotation', 'model_estimated', 'simulated', 'synthetic', 'hypothesis', 'pending']);
   // Simulated / synthetic provenance is tracked in the data but not shown.
-  const METHOD = { manual_illustrative: 'Manually configured', 'manually configured': 'Manually configured' };
+  const METHOD = { manual_approximate: 'Manually configured', 'manually configured': 'Manually configured' };
   const MISSING_CAM = 'Camera coverage has not been calibrated.';
   const MAP_DISC = 'Equipment relationships and camera coverage are manually configured.';
   const NO_REL = 'No verified relationship is available for this asset.';

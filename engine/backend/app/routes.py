@@ -1,6 +1,7 @@
 """Backend workflow and source APIs; no frontend dependency or physical controls."""
 import hashlib
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
@@ -10,7 +11,7 @@ from .contracts import Contract
 from .data import load_json
 from .historian import HistorianUnavailable
 from .investigation import (Investigator, Provider, ModelUnavailable, ToolDenied, INVESTIGATE, REINVESTIGATE, ANSWER, VERIFY,
-                            recorded_provider, recording_status,
+                            recorded_provider, recording_status, text_key,
                             deterministic_draft, deterministic_findings, deterministic_reinvestigation, deterministic_answer,
                             deterministic_verification)
 from .process import solve_process
@@ -500,9 +501,16 @@ def run_draft_plan(incident_id, body, observer=None):
                 'reviewer':review['engineer_id'],'decision':review['decision'],'feedback':review['rationale'],
                 'previous_draft_version':review['draft_version'],'previous_draft':draft,
                 'answered_questions':[dict(question=q['question'],answer=(q.get('answer') or {}).get('answer',{}).get('content')) for q in record.get('questions',[])]}
-        # Only the first draft of the automatic chain is recorded/replayed; revisions answer live feedback.
-        first = not (basis or revising)
-        engine = Investigator(tools, allowed_evidence(record), (first and recorded_provider(incident_id, 'plan')) or Provider(), observer)
+        # The first draft replays the chain's recording; a revision replays the one recorded for the same feedback text.
+        if basis:
+            feedback = f"research round {basis['round']}: {basis['focus'] or ''}"
+        elif revising:
+            # Keyed by the reviewer's reason only: the UI adds the reviewer's name, priority, edits and flags around it.
+            rationale = record['review']['rationale']
+            feedback = re.sub(r" Priority .*$", "", re.sub(r"^Reviewer [^:]*: ", "", rationale), flags=re.S)
+        provider = (recorded_provider(incident_id, 'revise', text_key(feedback), feedback) if basis or revising
+                    else recorded_provider(incident_id, 'plan'))
+        engine = Investigator(tools, allowed_evidence(record), provider or Provider(), observer)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('quantified_or_unavailable','plan_drafted'),
                          lambda plan: save({"text": json.dumps(plan["content"]), "source_origin": "llm", "generation_method": "bounded_read_only_tool_calling",
                                             "model_run": model_run(engine), "evidence_backed_draft":plan}), 'plan')
@@ -599,7 +607,9 @@ def run_reinvestigation(incident_id, body, observer=None):
                                                   'round':record['investigation'].get('round', 1),'findings':found['content'],
                                                   'answered_questions':answered(record)}
         focus = request['focus'].strip()
-        engine = Investigator(tools, allowed_evidence(record), Provider(), observer, task=REINVESTIGATE,
+        key = f"round {request['round']}: {focus}"
+        engine = Investigator(tools, allowed_evidence(record), recorded_provider(incident_id, 'reinvestigate', text_key(key), key) or Provider(),
+                              observer, task=REINVESTIGATE,
                               question=f"Research round {request['round']}. Engineer's focus: {focus or 'none given; re-check everything'}")
         return run_agent(durable, incident_id, body, record['version'], engine, ('pending_review',),
                          lambda result: save(provenance(result, engine)), 'reinvestigate')
@@ -640,7 +650,8 @@ def run_answer(incident_id, question_id, body, observer=None):
             tools['get_post_repair_readings'] = lambda: {'evidence_ids':[e['id'] for e in verification['evidence_references']],'verification':verification}
         earlier = answered(record, before=question_id)[-4:]
         thread = ''.join(f"Earlier question: {q['question']}\nEarlier answer: {q['answer']}\n" for q in earlier)
-        engine = Investigator(tools, allowed, Provider(), observer, task=ANSWER,
+        provider = recorded_provider(incident_id, 'answer', text_key(question['question']), question['question'])
+        engine = Investigator(tools, allowed, provider or Provider(), observer, task=ANSWER,
                               question=thread + ('Engineer follow-up question: ' if thread else 'Engineer question: ') + question['question'])
         return run_agent(durable, incident_id, body, record['version'], engine, None, lambda result: save(provenance(result, engine)), f'answer:{question_id}')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
@@ -730,7 +741,7 @@ def run_verification(incident_id, body, observer=None):
                  'get_recovery_check': lambda: {**check, 'evidence_reference': refs['check']},
                  'get_approved_work_order': lambda: {'evidence_ids':[work_order, repair], 'approved_plan':plan['evidence_backed_draft']['content'],
                                                      'review':record['review'], 'repair_record':record['repair']}}
-        engine = Investigator(tools, [e['id'] for e in evidence], Provider(), observer, task=VERIFY)
+        engine = Investigator(tools, [e['id'] for e in evidence], recorded_provider(incident_id, 'verify') or Provider(), observer, task=VERIFY)
         return run_agent(durable, incident_id, body, body.expected_version, engine, ('repair_recorded',), lambda result: save(provenance(result, engine)), 'verify')
     raise HTTPException(422, "mode must explicitly be model or deterministic")
 

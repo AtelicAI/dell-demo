@@ -8,7 +8,7 @@
     "clip_start_seconds": 20,
     "clip_end_seconds": 184,
     "scenario_seconds_at_clip_start": 435,
-    "mapping_basis": "Illustrative demonstration alignment on the same clock as the leak profile (clip 125 s at scenario 540 s), using footage before the GasVid workbook Leak 1 boundary (185 s): GasVid class 0, a metered 5.3 g/h release below camera detection, matched by a 5.3 g/h release in SCN-002. The segment boundary is an unverified reading of the workbook. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
+    "mapping_basis": "Approximate demonstration alignment on the same clock as the leak profile (clip 125 s at scenario 540 s), using footage before the GasVid workbook Leak 1 boundary (185 s): GasVid class 0, a metered 5.3 g/h release below camera detection, matched by a 5.3 g/h release in SCN-002. The segment boundary is an unverified reading of the workbook. Recorded footage is from a different physical scene; not a shared capture time, calibration or source attribution."
   },
   {
     "profile": "wind_outage",
@@ -16,7 +16,7 @@
     "scenario_id": "SCN-003",
     "incident_prefix": "INC-003-M",
     "origin_region_reference": "scenarios/detections.json#DET-003",
-    "mapping_basis": "Illustrative demonstration alignment: MOV_1239 from 525 s on the synthetic SCN-003 clock (clip 525 s = scenario 591 s). The plant releases what the footage shows: GasVid class 2 (713.1 g/h) from 600 s and class 3 (958.8 g/h) from 611 s (clip 545 s). The weather mast, sonic included, stops reporting at 600 s. Different physical scene; not a shared capture time, calibration or source attribution.",
+    "mapping_basis": "Approximate demonstration alignment: MOV_1239 from 525 s on the synthetic SCN-003 clock (clip 525 s = scenario 591 s). The plant releases what the footage shows: GasVid class 2 (713.1 g/h) from 600 s and class 3 (958.8 g/h) from 611 s (clip 545 s). The weather mast, sonic included, stops reporting at 600 s. Different physical scene; not a shared capture time, calibration or source attribution.",
     "camera_id": "CAM-02",
     "monitor_id": "MON-CAM-02",
     "clip_id": "MOV_1239",
