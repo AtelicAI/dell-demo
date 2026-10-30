@@ -816,7 +816,7 @@ def schematic(fac):
     for x, k in reversed(row):
         pos[k]["x"] = min(x, limit)
         limit = pos[k]["x"] - 7
-    # Process instruments (pressure, temperature, flow) in a row under the line beside what they measure, 8 % apart;
+    # Process instruments (pressure, temperature, flow) in a row under the line, as close beside what they measure as 8 % spacing allows;
     # the weather mast (its wind and stability channels are PART_OF it) above the compressor it stands by.
     phys_asset = {sn["id"]: sn.get("asset_id") for sn in fac["sensors"]}
     taken = []
@@ -824,9 +824,9 @@ def schematic(fac):
         a = phys_asset.get(sid)
         if a not in pos:
             continue
-        px = pos[a]["x"] + 3
-        while any(abs(px - q) < 8 for q in taken):
-            px += 8
+        # nearest free slot beside the asset, alternating right and left
+        px = next((pos[a]["x"] + d for d in (3, -5, 11, -13, 19, -21, 27) if 3 <= pos[a]["x"] + d <= 97
+                   and all(abs(pos[a]["x"] + d - q) >= 8 for q in taken)), pos[a]["x"] + 3)
         taken.append(px)
         pos[sid] = {"x": min(px, 97), "y": 84}
     masts = sorted({sn["id"].rsplit("-", 1)[0] for sn in fac["sensors"] if sn["id"].startswith("MET-")})
