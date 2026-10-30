@@ -119,6 +119,11 @@ class Graph:
     def forget_workflow(self, schema):
         """Remove incident memory written from a disposable workflow schema (tests, rehearsals)."""
         self.query("MATCH (r:IncidentRecord {workflow_schema:$schema}) DETACH DELETE r", schema=schema)
+    def forget_incidents(self, facility_id):
+        """Remove every closed incident remembered for this facility (presenter's demo reset)."""
+        rows=self.query("MATCH (r:IncidentRecord {facility_id:$f}) WITH collect(r) AS rs "
+                        "FOREACH (r IN rs | DETACH DELETE r) RETURN size(rs) AS removed", f=facility_id)
+        return rows[0]['removed'] if rows else 0
     PLANT_LABELS=('Asset','Sensor','Camera','WeatherStation','WorkOrder','Document','FieldReport','Commitment','IncidentRecord')
     def plant(self, facility_id, labels=PLANT_LABELS):
         """Plant subgraph for display: chosen node labels and every relationship between them."""

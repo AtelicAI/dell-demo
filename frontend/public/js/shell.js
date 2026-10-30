@@ -144,7 +144,7 @@
       <button type="button" class="rail-tg" id="rail-tg" aria-label="Collapse menu" title="Collapse menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
-      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator · <button type="button" class="linkish" id="sign-out">Sign out</button></span></div></div>`;
+      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator · <button type="button" class="linkish" id="sign-out">Sign out</button> · <button type="button" class="linkish" id="demo-reset" title="Start a fresh demo">Reset demo</button></span></div></div>`;
     $('rail-tg').addEventListener('click', () => setRailMin(!document.documentElement.classList.contains('rail-min')));
     setRailMin(readRailMin(), true);
   }
@@ -537,6 +537,23 @@
     if (e.target.id !== 'sign-out') return;
     await fetch(`${API}/logout`, { method: 'POST' }).catch(() => null);
     location.replace('/login.html');
+  });
+  // Fresh demo: clears every live incident and the closed ones, then this browser's remembered names and clock.
+  document.addEventListener('click', (e) => {
+    if (e.target.id !== 'demo-reset') return;
+    modal({
+      title: 'Reset the demo?',
+      html: '<p class="dm-lead">Every camera goes back to normal operations, every incident is cleared and the closed incidents are removed from the incident list and the knowledge graph. Plant records and maintenance history stay. This cannot be undone.</p>',
+      okLabel: 'Reset demo', okClass: 'go',
+      onOk: async () => {
+        try { await postJson('/demo/reset', {}); } catch (err) { failed('Could not reset the demo', err); return; }
+        try {
+          ['atelic.reviewer', 'atelic.notesSeen'].forEach((k) => localStorage.removeItem(k));
+          ['atelic.incident', 'atelic.replayT0'].forEach((k) => sessionStorage.removeItem(k));
+        } catch (err) { /* storage blocked: nothing kept */ }
+        location.replace('index.html');
+      },
+    });
   });
   async function get(path) {
     const r = await fetch(API + path);

@@ -502,6 +502,20 @@ def post_reset(incident_id: str):
     return view(SLOTS[incident_id])
 
 
+@app.post("/demo/reset")
+def post_demo_reset():
+    """Fresh demo: every camera back to normal operations and the closed incidents forgotten (graph memory and
+    what this UI kept at closure). Plant records, maintenance history and the engine's workflow records stay."""
+    removed = engine.post("/incident-memory/reset", human=True)["removed"]
+    with _lock:
+        for iid in SLOTS:
+            SLOTS[iid] = _blank(iid)
+        CLOSED.clear()
+        _cache.clear()
+        save()
+    return {"removed_incidents": removed, "live": [view(s) for s in SLOTS.values()]}
+
+
 DISMISS_REASONS = {"steam": "Steam or water vapour", "exhaust": "Hot exhaust or engine heat", "reflection": "Reflection or sun glint",
                    "planned": "Planned venting or maintenance", "other": "Other"}
 
