@@ -251,8 +251,11 @@
       opts = { name: 'concentric', concentric: (n) => max - (hop.get(n.id()) ?? max), levelWidth: () => 1, minNodeSpacing: 34, spacingFactor: 1.05,
         startAngle: (3 / 2) * Math.PI, avoidOverlap: true, animate: true, animationDuration: MOVE, animationEasing: EASE, padding: 36 };
     } else {
-      opts = { name: 'cose', animate: 'end', animationDuration: MOVE, animationEasing: EASE, randomize: fresh, nodeRepulsion: () => (mode === 'site' ? 60000 : 12000),
-        idealEdgeLength: () => (mode === 'site' ? 50 : 80), edgeElasticity: () => 120, gravity: mode === 'site' ? 6 : 1, numIter: 2500, nodeOverlap: 24, componentSpacing: 50, padding: 30 };
+      // Incident: a small graph with long chains (sensor → compressor → pipe, work order → commitment); strong repulsion and
+      // little gravity spread it across the canvas so it fits at a readable zoom instead of a narrow column.
+      const site = mode === 'site';
+      opts = { name: 'cose', animate: 'end', animationDuration: MOVE, animationEasing: EASE, randomize: fresh, nodeRepulsion: () => (site ? 60000 : 90000),
+        idealEdgeLength: () => (site ? 50 : 60), edgeElasticity: () => 120, gravity: site ? 6 : 0.15, numIter: 2500, nodeOverlap: 24, componentSpacing: 50, padding: 30 };
     }
     els.layout(opts).one('layoutstop', () => cy.nodes().scratch('placed', true)).run();
   }
