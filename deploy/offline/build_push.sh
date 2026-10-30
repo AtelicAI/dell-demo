@@ -28,6 +28,7 @@ done
 docker buildx inspect atelic-multi >/dev/null 2>&1 || docker buildx create --name atelic-multi --driver docker-container >/dev/null
 build() {  # name, context, dockerfile
   docker buildx build --builder atelic-multi --platform "$PLATFORMS" --push \
+    --label org.opencontainers.image.source=https://github.com/AtelicAI/dell-demo \
     --label org.opencontainers.image.revision="$SHA" \
     -t "$REGISTRY/dell-demo-$1:$TAG" -t "$REGISTRY/dell-demo-$1:$SHA" -f "$3" "$2"
 }

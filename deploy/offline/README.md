@@ -52,7 +52,8 @@ Running two demos at once needs about 6 GB of memory each; stop one before start
    ```
    It plays INC-001 and INC-002 through the UI API with the same scripted texts the offline buttons send (read from
    `frontend/public/js/story.js`). Recordings are keyed by those texts: change a text and record again.
-2. **Commit**, then **build and push**: `deploy/offline/build_push.sh` (needs `gh auth token` with `write:packages`).
+2. **Push to main.** The GitHub Action "Offline laptop images" (.github/workflows/offline-images.yml) rebuilds and
+   publishes the images, about 10 minutes. To build by hand instead: `deploy/offline/build_push.sh` (needs `gh auth token` with `write:packages`).
    It refuses uncommitted changes and missing recordings, caches the map tiles and pushes
    `ghcr.io/atelicai/dell-demo-{engine,backend,web}:offline` plus a tag per commit.
 3. The laptop picks the update up the next time the launcher runs online, including a newer launcher and compose file

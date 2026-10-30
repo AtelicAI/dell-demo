@@ -1,0 +1,78 @@
+# Offline laptop images: every push to main that touches the app rebuilds them, so a laptop running atelicxdell
+# picks the change up on its next online start. Each architecture builds natively (Intel/AMD laptops, Apple Silicon
+# Macs), then one multi-architecture tag is published. Same images as deploy/offline/build_push.sh.
+name: Offline laptop images
+
+on:
+  push:
+    branches: [main]
+    paths: [engine/**, backend/**, frontend/**, data/**, deploy/offline/**, scripts/cache_basemap.py]
+  workflow_dispatch:
+
+concurrency:
+  group: offline-images
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/atelicai
+  TAG: offline
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every agent step the offline story uses is recorded
+        run: |
+          for f in INC-001.investigate INC-001.plan INC-003.investigate INC-003.plan INC-001.verify INC-003.verify; do
+            test -f engine/data/recorded_runs/$f.json || { echo "Missing recording $f"; exit 1; }
+          done
+      - name: Cache the Overview basemap tiles
+        run: python3 scripts/cache_basemap.py
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push ${{ matrix.arch }}
+        run: |
+          build() {  # name, context, dockerfile
+            docker buildx build --platform linux/${{ matrix.arch }} --push \
+              --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+              --label org.opencontainers.image.revision=${{ github.sha }} \
+              --cache-from type=gha,scope=$1-${{ matrix.arch }} --cache-to type=gha,mode=max,scope=$1-${{ matrix.arch }} \
+              -t $REGISTRY/dell-demo-$1:$TAG-${{ matrix.arch }} -f $3 $2
+          }
+          build engine . deploy/offline/engine.Dockerfile
+          build backend . deploy/offline/backend.Dockerfile
+          build web frontend frontend/Dockerfile
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: One tag for both architectures
+        run: |
+          short=$(echo ${{ github.sha }} | cut -c1-7)
+          for name in engine backend web; do
+            image=$REGISTRY/dell-demo-$name
+            docker buildx imagetools create -t $image:$TAG -t $image:$short $image:$TAG-amd64 $image:$TAG-arm64
+          done
