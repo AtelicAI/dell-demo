@@ -76,7 +76,7 @@
         ${meta.view_note ? row('Camera view', meta.view_note, prov) : ''}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
         ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint', 'v-release') : ''}
-        ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · 3 of 5 one-second samples positive`, 'model_estimated') : ''}
+        ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · ${d.monitor && d.monitor.policy ? `${d.monitor.policy.min_positive_samples} positive one-second checks within ${d.monitor.policy.window_samples} s` : 'plume confirmed'}`, 'model_estimated') : ''}
       </div>
       <details class="more">
         <summary>More details <span>confidence, recording, camera, model, licence</span></summary>
@@ -667,6 +667,11 @@
       // One continuous recording: from the start of the monitored window while no alarm has been raised, from the
       // alarm on once the incident exists.
       const before = !d.triggered;
+      // A tab opened on an incident that is already raised (no Trigger in this session) starts its clock at the alarm,
+      // not in the quiet watch period before it.
+      const mon = d.monitor, now = window.AtelicShell.replayNow();
+      const alarmAt = mon && mon.alert_t != null ? Date.parse(mon.clip_start_utc) + mon.alert_t * 1000 : NaN;
+      if (d.triggered && now && now.getTime() < alarmAt) window.AtelicShell.setReplayNow(alarmAt);
       renderWall(d.clip_available, origOk, 'event');
       renderAlarms();
       renderMeta(d, frames);
