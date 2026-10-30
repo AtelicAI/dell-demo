@@ -187,3 +187,14 @@
 .ag-trace li.now{color:var(--ink)}
 .ag-trace .ag-spin{width:10px;height:10px}
 .qa-a.pending.live{display:block}
+
+/* Jump to "Ask the agent" while it is below the screen */
+.qa-jump{position:fixed;right:28px;bottom:22px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;
+  font:inherit;font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:4px;
+  box-shadow:0 10px 24px -12px rgba(15,23,42,.45);cursor:pointer;animation:qaJumpIn .2s ease-out}
+.qa-jump:hover{filter:brightness(1.08)}
+.qa-jump:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.qa-jump[hidden]{display:none}
+@keyframes qaJumpIn{from{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.qa-jump{animation:none}}
+@media print{.qa-jump{display:none}}

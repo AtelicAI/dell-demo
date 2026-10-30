@@ -216,6 +216,42 @@
     return data;
   }
 
+  // "Ask the agent ↓": floats while the question box is below the screen, scrolls to it on click, and hides as soon
+  // as the box is in view (also when the engineer scrolls there). Sits above Plan's sticky readiness bar.
+  (function jumpToAsk() {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'qa-jump'; btn.hidden = true;
+    btn.innerHTML = '<span>Ask the agent</span><span aria-hidden="true">↓</span>';
+    btn.addEventListener('click', () => {
+      const box = document.getElementById('qa');
+      if (!box) return;
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const t = document.getElementById('qa-text');
+      if (t) setTimeout(() => t.focus({ preventScroll: true }), 450);
+    });
+    let queued = false;
+    const update = () => {
+      queued = false;
+      const box = document.getElementById('qa');
+      const shown = box && box.offsetParent !== null && box.querySelector('.qa-box');
+      const below = shown && box.getBoundingClientRect().top > window.innerHeight - 80;
+      if (btn.hidden === !!below) btn.hidden = !below; // only on change: the observer below watches 'hidden'
+      if (below) {
+        const bar = document.querySelector('.ready');
+        btn.style.bottom = `${bar && bar.offsetParent !== null ? bar.offsetHeight + 26 : 22}px`;
+      }
+    };
+    const later = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(btn);
+      window.addEventListener('scroll', later, { passive: true });
+      window.addEventListener('resize', later);
+      // The box fills in and re-renders as answers arrive.
+      new MutationObserver(later).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+      later();
+    });
+  })();
+
   async function ask(incidentId, name) {
     const box = document.getElementById('qa-text'), msg = document.getElementById('qa-msg');
     const question = box && box.value.trim();
