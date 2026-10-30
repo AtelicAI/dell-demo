@@ -60,29 +60,126 @@
     </div>`;
   }
 
-  function questions(list, canAsk, agent) {
+  // ----- "Add to plan" tray: items an engineer picked from agent answers, kept per tab and per engine incident.
+  // Nothing here changes the draft; a named reviewer sends the items to the planner with Request changes.
+  const trayKey = (k) => `atelic.tray.${k}`;
+  function trayGet(k) {
+    if (!k) return [];
+    try { return JSON.parse(sessionStorage.getItem(trayKey(k)) || '[]'); } catch (e) { return []; }
+  }
+  function traySet(k, items) {
+    try { sessionStorage.setItem(trayKey(k), JSON.stringify(items)); } catch (e) { /* storage blocked: tray lives for this render only */ }
+    document.dispatchEvent(new CustomEvent('atelic:tray'));
+  }
+  const trayText = (items) => items.map((x, i) => `${i + 1}. ${x.text}`).join('\n');
+
+  function trayBox(k, opts = {}) {
+    const items = trayGet(k);
+    if (!items.length) return '';
+    return `<div class="tray" aria-label="Changes to ask the planner for">
+      <div class="tray-h"><span class="lbl">Changes to ask the planner for</span><b>${items.length}</b>
+        <span>Picked from agent answers. They change nothing until a named reviewer sends them with Request changes.</span></div>
+      <ol>${items.map((x, i) => `<li><span>${esc(x.text)}</span>${x.from ? `<span class="tray-from">from ${esc(x.from)}</span>` : ''}
+        <button type="button" class="tray-x" data-tray-remove="${i}" aria-label="Remove">×</button></li>`).join('')}</ol>
+      ${opts.send ? '<div class="tray-acts"><button type="button" class="btn sm" data-tray-send>Request these changes…</button><span class="qa-msg" id="tray-msg" role="status"></span></div>'
+        : opts.sendHref ? `<p class="tray-note">Send them from <a href="${esc(opts.sendHref)}">Approve →</a> with Request changes.</p>` : ''}
+    </div>`;
+  }
+
+  const CHIPS = [
+    'WO-009 says the gland was re-torqued. Why is XV-2104 still the leading candidate?',
+    'Could F-205 be the source instead? What would rule it out?',
+    'What is still unknown, and which check would confirm the source fastest?',
+  ];
+
+  // Simulated / synthetic provenance stays in the data but is not shown (team decision, 26 Oct).
+  const SHOWN_PROV = { model_estimated: 'Model estimated', observed: 'Observed', experimental_setpoint: 'Experimental setpoint', provider_reported: 'Provider reported' };
+  function answerBody(q, tray, canAsk) {
+    const src = q.sources || {}, no = {};
+    let n = 0;
+    (q.claims || []).forEach((c) => (c.evidence_ids || []).forEach((id) => { if (!no[id]) no[id] = ++n; }));
+    const sup = (ids) => (ids || []).map((id) => {
+      const e = src[id] || {};
+      return `<sup class="qa-c" title="${esc([e.group, e.label, e.excerpt].filter(Boolean).join(' · ') || id)}">${no[id]}</sup>`;
+    }).join('');
+    const picked = new Set(trayGet(tray).map((x) => x.text));
+    const fu = (q.suggested_follow_up || []).map((x) => (typeof x === 'string' ? x : x.statement || '')).filter(Boolean);
+    const cd = q.cannot_determine === true ? 'The agent could not answer this from the frozen evidence.'
+      : Array.isArray(q.cannot_determine) ? q.cannot_determine.join('; ') : typeof q.cannot_determine === 'string' ? q.cannot_determine : '';
+    return `<div class="qa-a"><span class="lbl">Agent answer · Nemotron</span><p>${esc(q.answer)}</p>
+      ${cd ? `<p class="qa-cd"><b>Cannot determine from the evidence:</b> ${esc(cd)}</p>` : ''}
+      ${(q.claims || []).length ? `<ul class="qa-cl">${q.claims.map((c) => `<li>${esc(c.statement)}${sup(c.evidence_ids)}</li>`).join('')}</ul>` : ''}
+      ${n ? `<details class="qa-srcs"><summary>Sources <b>${n}</b></summary><ol class="qa-src">${Object.keys(no).map((id) => { const e = src[id] || {}, p = SHOWN_PROV[e.provenance];
+        return `<li value="${no[id]}"><b>${esc(e.group || id)}</b> ${esc(e.label && e.label !== id ? e.label : '')}${p ? ` <span class="qa-prov">${p}</span>` : ''}</li>`; }).join('')}</ol></details>` : ''}
+      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span>${esc(t)}</span>${canAsk ? `<button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}${tray ? (picked.has(t)
+        ? '<span class="qa-added">✓ Added</span>'
+        : `<button type="button" class="btn sm ghost" data-tray-add="${esc(t)}" data-tray-from="${esc(q.asked_by)}">+ Add to plan</button>`) : ''}</li>`).join('')}</ul></div>` : ''}
+    </div>`;
+  }
+
+  // opts.agent: live engine agent (answer trace); opts.tray: the tray key (enables "Add to plan");
+  // opts.offText: why questions are closed right now.
+  function questions(list, canAsk, opts = {}) {
+    const agent = opts.agent;
     // The answer agent works the oldest unanswered question first; its live steps show there.
     const working = agent && agent.current_step === 'answer' ? ((list || []).find((q) => q.status !== 'answered') || {}).id : null;
     const items = (list || []).slice().reverse().map((q) => `<li class="qa ${q.status}">
       <div class="qa-q"><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}<p>${esc(q.question)}</p></div>
       ${q.status === 'answered' && q.source_origin !== 'llm' ? `<div class="qa-a"><span class="lbl">Not answered</span>
         <p>The model was unavailable when this was asked, so no answer was generated.${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(q.question)}">Ask again</button>` : ''}</p></div>`
-      : q.status === 'answered' ? `<div class="qa-a"><span class="lbl">Agent answer · Nemotron</span><p>${esc(q.answer)}</p>
-        ${q.cannot_determine ? `<p class="qa-cd"><b>Cannot determine from the evidence:</b> ${esc(Array.isArray(q.cannot_determine) ? q.cannot_determine.join('; ') : q.cannot_determine)}</p>` : ''}
-        ${(q.suggested_follow_up || []).length ? `<ul class="qa-fu">${q.suggested_follow_up.map((x) => {
-          const t = typeof x === 'string' ? x : x.statement || JSON.stringify(x);
-          return `<li>${esc(t)}${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}</li>`;
-        }).join('')}</ul>` : ''}</div>`
+      : q.status === 'answered' ? answerBody(q, opts.tray, canAsk)
         : q.id === working ? `<div class="qa-a pending live">${trace(agent)}</div>`
-        : '<div class="qa-a pending"><span class="ag-spin"></span>Queued: the agent answers questions in order…</div>'}
+        : `<div class="qa-a pending"><span class="ag-spin"></span>Queued: the agent answers questions in order…<span class="qa-tn">usually 30–80 s each</span></div>`}
     </li>`).join('');
+    const asked = new Set((list || []).map((q) => q.question));
+    const chips = CHIPS.filter((c) => !asked.has(c));
     return `<div class="qa-box">
       <div class="qa-h"><span class="lbl">Ask the agent</span><span>Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.</span></div>
-      ${canAsk ? `<div class="qa-form"><textarea id="qa-text" rows="2" placeholder="e.g. WO-009 says the gland was re-torqued. Why is XV-2104 still the leading candidate?"></textarea>
+      ${canAsk ? `<div class="qa-form">${chips.length ? `<div class="qa-chips">${chips.map((c) => `<button type="button" class="qa-chip" data-qa-chip="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+        <textarea id="qa-text" rows="2" placeholder="Ask about the evidence, the candidates or the draft"></textarea>
         <button class="btn sm" id="qa-send" type="button">Ask</button><span class="qa-msg" id="qa-msg" role="status"></span></div>`
-        : '<p class="qa-off">Questions open while a draft awaits review, and before closure.</p>'}
+        : `<p class="qa-off">${esc(opts.offText || 'Questions open while a draft awaits review, and before closure.')}</p>`}
       ${items ? `<ul class="qa-list">${items}</ul>` : ''}</div>`;
   }
+
+  // What a planner revision changed, line by line per section (text compared after trimming).
+  const SEC = { observed: 'What we observed', uncertain: 'What remains uncertain', inspection: 'Inspection', isolation: 'Isolation', safety: 'Safety' };
+  function revisionDiff(w) {
+    const prev = w && w.previous_draft, cur = w && w.draft;
+    if (!prev || !cur) return '';
+    const norm = (t) => String(t || '').trim().replace(/\s+/g, ' ');
+    let added = 0, removed = 0;
+    const rows = Object.keys(SEC).map((k) => {
+      const a = (prev.sections[k] || []).map((c) => norm(c.text)), b = (cur.sections[k] || []).map((c) => norm(c.text));
+      const plus = b.filter((t) => !a.includes(t)), minus = a.filter((t) => !b.includes(t));
+      added += plus.length; removed += minus.length;
+      if (!plus.length && !minus.length) return '';
+      return `<div class="rd-sec"><h4>${SEC[k]}</h4><ul>${plus.map((t) => `<li class="add"><span>+</span>${esc(t)}</li>`).join('')}${minus.map((t) => `<li class="del"><span>−</span>${esc(t)}</li>`).join('')}</ul></div>`;
+    }).join('');
+    return `<details class="rev-diff" open><summary><span class="lbl">Changed in this revision</span>
+      <b>planner draft ${prev.engine_draft_version} → ${cur.engine_draft_version}</b><span>${added} added · ${removed} removed</span></summary>
+      ${rows || '<p class="qa-off">Same lines as the previous draft.</p>'}</details>`;
+  }
+
+  // Chips and Ask this / Ask again fill the question box; tray add/remove.
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-qa-chip], [data-ask]');
+    if (chip) { const box = document.getElementById('qa-text'); if (box) { box.value = chip.dataset.qaChip || chip.dataset.ask; box.focus(); } return; }
+    const add = e.target.closest('[data-tray-add]');
+    if (add) {
+      const k = add.closest('[data-tray-key]') && add.closest('[data-tray-key]').dataset.trayKey;
+      const items = trayGet(k);
+      if (k && !items.some((x) => x.text === add.dataset.trayAdd)) traySet(k, [...items, { text: add.dataset.trayAdd, from: `answer to ${add.dataset.trayFrom || 'Engineer'}` }]);
+      return;
+    }
+    const rm = e.target.closest('[data-tray-remove]');
+    if (rm) {
+      const k = rm.closest('[data-tray-key]') && rm.closest('[data-tray-key]').dataset.trayKey;
+      traySet(k, trayGet(k).filter((_, i) => i !== Number(rm.dataset.trayRemove)));
+    }
+  });
+
+  const tray = { get: trayGet, set: traySet, box: trayBox, text: trayText, key: (inc, w) => (w && w.engine_incident_id ? `${inc}.${w.engine_incident_id}` : null) };
 
   // Further research before approval: field notes the engineer adds, and another investigation round that the
   // planner turns into a revised draft (which then needs approval again).
@@ -184,5 +281,5 @@
       <p class="ak-src">${esc(f.camera || '')} · ${esc(f.recorded_date || '')} · ${esc(f.release_location || '')} · ${esc(f.source || '')}</p></div>`;
   }
 
-  window.AtelicStory = { agentBanner, investigation, questions, research, send, ask, poll, followUp, answerKey, esc };
+  window.AtelicStory = { agentBanner, investigation, questions, research, send, ask, poll, followUp, answerKey, revisionDiff, tray, esc };
 })();

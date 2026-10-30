@@ -246,10 +246,13 @@
   </section>
 
   <div id="agent-banner"></div>
-  <section class="panel rise" id="inv-panel" aria-label="Investigation agent findings" hidden style="margin-bottom:18px">
+  <section class="panel rise" id="inv-panel" aria-label="Investigation agent findings and questions" hidden style="margin-bottom:18px">
     <div class="panel-head"><h2>Investigation</h2><span class="meta" id="inv-meta"></span><span class="gb-slot" data-trace="investigation" data-trace-text="Agent trace"></span></div>
     <div id="investigation" style="padding:14px 16px"></div>
   </section>
+
+  <div id="tray"></div>
+  <div id="rev-diff"></div>
 
   <div class="p-grid">
     <!-- the work order document -->
@@ -278,6 +281,12 @@
       <div id="evidence"><div class="ev-empty">Sources appear here once the draft cites them.</div></div>
     </aside>
   </div>
+
+  <!-- questions to the agent; picked suggestions go to the tray above the work order -->
+  <section class="panel rise" id="qa-panel" aria-label="Questions to the agent" hidden style="margin-top:18px">
+    <div class="panel-head"><h2>Questions to the agent</h2><span class="meta" id="qa-meta"></span></div>
+    <div id="qa" style="padding:0 16px 14px"></div>
+  </section>
 
   <!-- readiness + submit -->
   <section class="ready" aria-label="Submit for engineer review">

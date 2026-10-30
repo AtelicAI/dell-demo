@@ -88,6 +88,58 @@
 .attr .best{color:var(--good);font-weight:600}
 .attr .poor{color:var(--ink-dim)}
 
+/* Q&A: cited claims, sources, suggested steps, chips, timer */
+.qa-box .btn.sm,.tray .btn.sm{padding:5px 10px;font-size:12px}
+.qa-chips{display:flex;flex-wrap:wrap;gap:6px}
+.qa-chip{font:inherit;font-size:12px;text-align:left;padding:5px 9px;border:1px solid var(--line-strong);border-radius:3px;background:var(--panel);color:var(--ink-mute);cursor:pointer}
+.qa-chip:hover{border-color:var(--accent);color:var(--accent)}
+.qa-chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.qa-t{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.qa-tn{font-size:11.5px;color:var(--ink-dim);margin-left:auto}
+.qa-cl{margin:8px 0 0 18px;padding:0;font-size:12.5px;line-height:1.5}
+.qa-c{font-family:var(--mono);font-size:9.5px;color:var(--accent);margin-left:2px;cursor:help}
+.qa-srcs{margin-top:8px}.qa-srcs summary{cursor:pointer;font-size:12px;color:var(--ink-mute)}.qa-srcs summary b{font-family:var(--mono);font-weight:600}
+.qa-src{margin:6px 0 0 18px;padding:0;font-size:11.5px;color:var(--ink-mute);line-height:1.5}
+.qa-src b{font-weight:600;color:var(--ink)}
+.qa-prov{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim)}
+.qa-a .qa-fu{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line-strong)}
+.qa-fu ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+.qa-fu li{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;font-size:12.5px}
+.qa-fu li .btn{flex:none;background:var(--panel)}
+.qa-added{flex:none;font-size:12px;color:var(--good);font-weight:600}
+
+/* "Add to plan" tray */
+.tray{border:1px solid var(--accent);border-radius:var(--radius-sm);background:var(--accent-glow);padding:10px 12px;margin:0 0 14px;display:grid;gap:8px}
+.tray-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.tray-h .lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:600}
+.tray-h b{font-family:var(--mono);font-size:12px}
+.tray-h span:not(.lbl){font-size:12px;color:var(--ink-mute);flex-basis:100%}
+.tray ol{margin:0 0 0 18px;padding:0;display:grid;gap:4px;font-size:13px}
+.tray li{line-height:1.45}
+.tray li > span:first-child{display:inline}
+.tray li{position:relative;padding-right:22px}
+.tray-x{position:absolute;right:0;top:0}
+.tray-from{display:block;font-size:11px;color:var(--ink-dim)}
+.tray-x{font:inherit;font-size:14px;line-height:1;border:0;background:none;color:var(--ink-dim);cursor:pointer;padding:0 4px;margin-left:4px}
+.tray-x:hover{color:var(--bad)}
+.tray-acts{display:flex;gap:10px;align-items:center}
+.tray-note{margin:0;font-size:12px;color:var(--ink-mute)}
+
+/* What a revision changed */
+.rev-diff{border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--panel);margin:0 0 14px}
+.rev-diff summary{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:9px 12px;cursor:pointer;font-size:13px}
+.rev-diff summary .lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:600}
+.rev-diff summary span:last-child{font-family:var(--mono);font-size:11.5px;color:var(--ink-mute);margin-left:auto}
+.rd-sec{padding:0 12px 10px}
+.rd-sec h4{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--ink-mute)}
+.rd-sec ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.rd-sec li{display:grid;grid-template-columns:14px 1fr;gap:6px;font-size:12.5px;line-height:1.45;padding:3px 6px;border-radius:3px}
+.rd-sec li span{font-family:var(--mono);font-weight:600}
+.rd-sec li.add{background:var(--good-glow)}.rd-sec li.add span{color:var(--good)}
+.rd-sec li.del{color:var(--ink-mute);text-decoration:line-through;text-decoration-color:var(--ink-dim)}
+.rd-sec li.del span{color:var(--bad);text-decoration:none}
+.rev-diff > .qa-off{padding:0 12px 10px}
+#qa-panel .qa-box{margin-top:0;border-top:0}
 .cond{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
 .cond div{border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 11px;display:grid;gap:3px;font-size:12px;color:var(--ink-mute);line-height:1.4}
 .cond b{font-size:13px;color:var(--ink);display:flex;gap:6px;align-items:center}

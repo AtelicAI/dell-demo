@@ -20,6 +20,8 @@
   const FLAG_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 15V2M3 2h9l-2 3.5L12 9H3"/></svg>';
 
   let W = null, editing = false, editPriority = null, fnNo = {}, evById = {}, lineIx = 0;
+  // The name the person typed on Approve (or a dialog) earlier, remembered per browser.
+  function readName() { try { return localStorage.getItem('atelic.reviewer') || ''; } catch (e) { return ''; } }
 
   async function post(path, body) {
     const r = await fetch(`${API}/incidents/${INCIDENT_ID}/work-order${path}`, {
@@ -269,10 +271,20 @@
     const S = window.AtelicStory;
     $('agent-banner').innerHTML = W ? S.agentBanner(W.agent, { restart: true }) : '';
     $('inv-panel').hidden = !(W && W.investigation);
-    if (W && W.investigation) {
-      $('investigation').innerHTML = S.investigation(W.investigation);
-      $('inv-meta').textContent = `${W.investigation.findings.length} findings`;
-    }
+    $('qa-panel').hidden = !(W && W.draft);
+    if (!W) return;
+    const key = S.tray.key(INCIDENT_ID, W), approved = W.review && W.review.decision === 'approve';
+    $('qa-panel').dataset.trayKey = $('tray').dataset.trayKey = key || '';
+    $('investigation').innerHTML = S.investigation(W.investigation);
+    $('inv-meta').textContent = W.investigation ? `${W.investigation.findings.length} findings` : '';
+    $('qa-meta').textContent = (W.questions || []).length ? `${W.questions.length} asked` : '';
+    const typed = $('qa-text') ? $('qa-text').value : '';
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: approved ? null : key, offText: approved
+      ? 'The draft is approved. Questions open again after the repair is recorded (Report).'
+      : 'Questions open once the agents have finished the draft.' });
+    if ($('qa-text')) $('qa-text').value = typed;
+    $('tray').innerHTML = approved ? '' : S.tray.box(key, { sendHref: window.AtelicShell.incHref('review.html', INCIDENT_ID) });
+    $('rev-diff').innerHTML = S.revisionDiff(W);
   }
   function renderAll() { lineIx = 0; if (W && W.draft) indexEvidence(W.draft); renderStory(); renderBrief(); renderDoc(); renderEvidence(); renderReady(); }
 
@@ -382,11 +394,21 @@
   });
 
   // While the agents work (or a revision is coming), keep the page live; stop once nothing is running.
-  const busy = (w) => w && w.agent && w.agent.status === 'running';
+  const busy = (w) => w && ((w.agent && w.agent.status === 'running') || (w.questions || []).some((q) => q.status !== 'answered'));
+  let stopPoll = null;
+  const startPoll = () => { if (stopPoll) stopPoll(); stopPoll = window.AtelicStory.poll(load, busy, 4000); };
+  document.addEventListener('atelic:tray', () => { if (W) renderStory(); });
+  document.addEventListener('click', async (e) => {
+    if (e.target.id !== 'qa-send') return;
+    e.target.disabled = true;
+    const data = await window.AtelicStory.ask(INCIDENT_ID, readName());
+    e.target.disabled = false;
+    if (data) { W = data; renderAll(); $('qa-msg').textContent = 'Sent. The answer appears here in about a minute.'; startPoll(); }
+  });
   async function load() {
     const before = W && W.versions.length;
     const next = await get(`/incidents/${INCIDENT_ID}/work-order`);
-    if (editing) return next;
+    if (editing || (document.activeElement && document.activeElement.id === 'qa-text')) return next;
     W = next;
     renderAll();
     if (before !== undefined && W.versions.length !== before) { reveal(); window.AtelicShell.refresh(); }
@@ -395,7 +417,7 @@
   async function init() {
     try { W = await get(`/incidents/${INCIDENT_ID}/work-order`); } catch (e) { console.error(e); W = null; }
     renderAll();
-    if (W) window.AtelicStory.poll(load, busy, 4000);
+    if (W) startPoll();
   }
   init();
 })();

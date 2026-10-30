@@ -343,7 +343,36 @@ def incident_history():
             "timeline": [x for x in ({"at_utc": opened, "event": "Camera alert raised"},
                                      {"at_utc": closed, "event": "Closed by an engineer; written to graph memory"}) if x["at_utc"]],
         })
-    return {"status": "verified", "provenance": "simulated", "incidents": sorted(rows, key=lambda r: r["opened_utc"], reverse=True)}
+    return {"status": "verified", "provenance": "simulated", "incidents": sorted(rows, key=lambda r: r["opened_utc"], reverse=True),
+            "past_events": past_events(plant)}
+
+
+LINKS = {"FOLLOWS_UP": "Follows up", "REVIEWS": "Reviews", "REPEATS_SURVEY_OF": "Repeats survey of", "SAME_EQUIPMENT_AS": "Same equipment as"}
+LINKS_BACK = {"FOLLOWS_UP": "Followed up by", "REVIEWS": "Reviewed by", "REPEATS_SURVEY_OF": "Survey repeated by", "SAME_EQUIPMENT_AS": "Same equipment as"}
+
+
+def past_events(plant):
+    """The station's maintenance history before this incident: work orders from the knowledge graph with the field
+    report that documents each one, the commitments it made and the work orders it relates to. Read-only records;
+    no reviewer, camera or rate is attached because the records hold none."""
+    by_id = {n["props"].get("id"): n for n in plant["nodes"]}
+    edges = plant["edges"]
+    out = []
+    for n in plant["nodes"]:
+        if n["label"] != "WorkOrder":
+            continue
+        p, wid = n["props"], n["props"]["id"]
+        fr = next((by_id[e["from_id"]]["props"] for e in edges if e["type"] == "DOCUMENTS" and e["to_id"] == wid and e["from_id"] in by_id), None)
+        commitments = [{"id": c["id"], "text": c.get("text"), "status": c.get("status"),
+                        "fulfilled_by": next((e["to_id"] for e in edges if e["type"] == "FULFILLED_BY" and e["from_id"] == c["id"]), None)}
+                       for c in (by_id[e["to_id"]]["props"] for e in edges if e["type"] == "COMMITTED_TO" and e["from_id"] == wid and e["to_id"] in by_id)]
+        related = [{"type": LINKS[e["type"]], "id": e["to_id"]} for e in edges if e["type"] in LINKS and e["from_id"] == wid] + \
+                  [{"type": LINKS_BACK[e["type"]], "id": e["from_id"]} for e in edges if e["type"] in LINKS and e["to_id"] == wid]
+        out.append({"id": wid, "date": p.get("date"), "time_utc": fr and fr.get("time_utc"), "asset_id": p.get("asset_id"),
+                    "work_type": p.get("work_type"), "issue": p.get("issue"), "finding": p.get("finding"), "action": p.get("action"),
+                    "status": p.get("status"), "document_id": p.get("document_id"), "commitments": commitments, "related": related,
+                    "field_report": fr and {k: fr.get(k) for k in ("id", "title", "report_type", "author_role", "body")}})
+    return sorted(out, key=lambda r: (r["date"] or "", r["time_utc"] or ""), reverse=True)
 
 
 @app.get("/audit")
@@ -719,7 +748,10 @@ def plant_graph():
                 t, a, b = "HAS_WORK_ORDER", b, a
             else:
                 t = EDGE_TYPE.get(t, t)
-            edges.append({"type": t, "from": a, "to": b, "source": src, "provenance": "synthetic",
+            # The engine tags designed/fixture links synthetic_design, simulated, synthetic_illustrative_mapping: all synthetic.
+            prov = (e.get("props") or {}).get("provenance") or "synthetic"
+            prov = "synthetic" if prov.startswith(("synthetic", "simulated")) else prov
+            edges.append({"type": t, "from": a, "to": b, "source": src, "provenance": prov,
                           "relationship_basis": (e.get("props") or {}).get("provenance"),
                           "method": "manual_illustrative" if t == "CAN_OBSERVE" else "graph relationship", "mapping_version": ver})
         positions = schematic(fac)
@@ -1309,15 +1341,25 @@ def research_view(s, rec):
 
 
 def questions_view(s, rec):
-    out = []
+    out, ev = [], None
     for q in (rec or {}).get("questions", []):
         a = (q.get("answer") or {}).get("answer") or {}
         c = a.get("content") or {}
+        claims = c.get("claims", [])
+        ids = [i for cl in claims for i in cl.get("evidence_ids", []) if i]
+        if ids and ev is None:
+            ev = evidence_for(rec)
+        # Each cited ID is looked up in the frozen snapshot the agent read; unresolved IDs stay listed as such.
+        sources = {i: ev.entries[ev.add(i)] for i in ids} if ids else {}
         out.append({"id": q["id"], "question": q["question"], "asked_by": s["names"].get(q["id"], "Engineer"),
                     "status": q["status"], "asked_at": utc(q.get("recorded_at")), "answer": c.get("answer"),
-                    "claims": c.get("claims", []), "cannot_determine": c.get("cannot_determine_from_evidence"),
+                    "claims": claims, "sources": sources, "cannot_determine": c.get("cannot_determine_from_evidence"),
                     "suggested_follow_up": c.get("suggested_follow_up", []), "source_origin": a.get("source_origin"), "model": a.get("model")})
     return out
+
+
+def can_ask(rec):
+    return bool(rec) and rec["state"] in ("pending_review", "verification_ready")
 
 
 def agent_activity(rec):
@@ -1355,7 +1397,7 @@ def work_order_view(s):
     base = {"generator": generator(rec), "can_draft": False, "missing": [] if s["engine_id"] else ["No alert raised yet (Detect screen)"],
             "inputs": draft_inputs(s, rec), "nvidia_inference": nvidia_status(), "agent": agent_status(s),
             "investigation": investigation_view(rec, s["names"]), "questions": questions_view(s, rec),
-            "can_ask": bool(rec) and rec["state"] in ("pending_review", "verification_ready"),
+            "can_ask": can_ask(rec),
             "field_notes": field_notes_view(s, rec), "research": research_view(s, rec),
             "engine_state": rec and rec["state"], "engine_incident_id": s["engine_id"], "agent_activity": agent_activity(rec)}
     if not s["versions"]:
@@ -1363,8 +1405,11 @@ def work_order_view(s):
     latest = s["versions"][-1]
     draft = s["drafts"][str(latest["draft_version"])]
     approved = bool(rv and rv["decision"] == "approve")
+    # The planner's previous draft, so the screens can show what a revision changed.
+    prev = s["drafts"].get(str(latest["draft_version"] - 1)) if draft.get("revision_of") else None
     return {**base, "draft": {**draft, "fields": latest["fields"], "version": latest["version"], "hash": latest["hash"],
                               "status": "Approved" if approved else "Draft"},
+            "previous_draft": prev and {"engine_draft_version": prev["engine_draft_version"], "sections": prev["sections"]},
             "versions": [{k: v[k] for k in ("version", "hash", "created_at", "author", "changed", "draft_version")} for v in s["versions"]],
             "flags": s["flags"], "submitted": s["submitted"], "stale": False, "review": rv, "reviews": s["reviews"]}
 
@@ -1609,7 +1654,8 @@ def follow_up(s, rec):
                                              "warning": rc.get("warning"), "source_origin": (v.get("recommendation") or {}).get("source_origin")},
             "closure": rec.get("closure") and {"decision": rec["closure"]["decision"], "rationale": rec["closure"]["rationale"],
                                                "at": utc(rec["closure"]["recorded_at"])},
-            "agent": agent_status(s), "graph_memory": s.get("graph_memory")}
+            "agent": agent_status(s), "graph_memory": s.get("graph_memory"),
+            "questions": questions_view(s, rec), "can_ask": can_ask(rec)}
 
 
 def make_report(s):

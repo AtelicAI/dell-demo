@@ -158,6 +158,7 @@
       <div class="field"><label for="rv-name">Your name</label>
         <input id="rv-name" autocomplete="name" maxlength="80" value="${esc(readName())}" placeholder="Full name">
         <div class="hint">Recorded with the decision. Not tied to the sign-in.</div></div>
+      ${window.AtelicStory.tray.box(trayKey(), { send: true })}
       <div class="acts">
         <button class="btn go" data-decide="approve"${W.stale ? ' disabled title="Evidence changed after drafting"' : ''}>Approve draft</button>
         <button class="btn" data-decide="request_changes">Request changes</button>
@@ -191,8 +192,16 @@
       notes ? `${notes} field note${notes === 1 ? '' : 's'}` : '', round > 1 ? `round ${round}` : ''].filter(Boolean).join(' · ') : '';
     // Keep anything typed but not sent across re-renders.
     const typed = ['qa-text', 'fn-text', 'rs-focus'].map((id) => [id, $(id) ? $(id).value : '']);
-    $('qa').innerHTML = S.questions(W.questions, W.can_ask, W.agent) + S.research(W);
+    // "Add to plan" only while a draft waits for this reviewer; the tray goes out with Request changes.
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: W.submitted ? trayKey() : null }) + S.research(W);
     typed.forEach(([id, v]) => { if ($(id)) $(id).value = v; });
+    $('rev-diff').innerHTML = S.revisionDiff(W);
+    $('rev-diff').hidden = !$('rev-diff').innerHTML;
+  }
+  function trayKey() {
+    const k = window.AtelicStory.tray.key(INCIDENT_ID, W);
+    document.querySelector('main').dataset.trayKey = k || '';
+    return k;
   }
 
   async function decide(decision, reason) {
@@ -207,6 +216,7 @@
       });
       const data = await r.json();
       if (!r.ok) throw new Error(typeof data.detail === 'string' ? data.detail : r.status);
+      if (decision === 'request_changes') window.AtelicStory.tray.set(trayKey(), []);
       W = data;
       justDecided = true;
       renderAll();
@@ -221,10 +231,26 @@
   const openModal = (title, html, okLabel, okClass, onOk) => window.AtelicShell.modal({ title, html, okLabel, okClass, onOk, requireText: true });
 
   document.addEventListener('input', (e) => { if (e.target.id === 'rv-name') syncButtons(); });
+  document.addEventListener('atelic:tray', () => {
+    if (!W) return;
+    const typed = $('rv-name') ? $('rv-name').value : null;
+    renderRail(); renderStory();
+    if (typed !== null && $('rv-name')) { $('rv-name').value = typed; syncButtons(); }
+  });
+  // The tray opens the normal Request changes dialog with the picked items as the reason; the reviewer edits and sends.
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-tray-send]')) return;
+    const btn = document.querySelector('[data-decide="request_changes"]');
+    if (!btn || btn.disabled) { $('tray-msg').textContent = 'Type your name first.'; $('rv-name') && $('rv-name').focus(); return; }
+    btn.click();
+    const box = $('rv-reason');
+    if (box) {
+      box.value = `Please revise the draft to include:\n${window.AtelicStory.tray.text(window.AtelicStory.tray.get(trayKey()))}`;
+      box.dispatchEvent(new Event('input'));
+    }
+  });
   document.addEventListener('click', async (e) => {
     const who = ($('rv-name') && $('rv-name').value.trim()) || readName();
-    const ask = e.target.closest('[data-ask]');
-    if (ask && $('qa-text')) { $('qa-text').value = ask.dataset.ask; $('qa-text').focus(); return; }
     if (e.target.id === 'fn-send' || e.target.id === 'rs-send') {
       const note = e.target.id === 'fn-send';
       const text = (note ? $('fn-text') : $('rs-focus')).value.trim();
