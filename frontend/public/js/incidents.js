@@ -141,6 +141,7 @@
             ['Closed', `<span class="mono">${when(h.closed_utc)}</span>`],
             ['Decision', `${DECISION[d.decision] || esc(d.decision)} by ${esc(d.reviewer)}${d.role ? `, ${esc(d.role)}` : ''}`],
             ...(d.reason ? [['Reason', esc(d.reason)]] : []),
+            ...(h.closure ? [['Closed by', esc(h.closure.by)], ...(h.closure.rationale ? [['Closure reason', esc(h.closure.rationale)]] : [])] : []),
             ...(h.comment ? [['What was seen', esc(h.comment)]] : []),
             ['Work order', h.work_order ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : 'None'],
             ['Emission rate', h.rate != null ? esc(h.rate) : 'Not recorded'], // the API already gives unit and "(model estimate)"
@@ -184,7 +185,8 @@
     try {
       const d = await window.AtelicShell.get('/incidents');
       // An incident is open once its camera raised the alert; a camera with no alert is just watching.
-      open = d.live.filter((l) => l.triggered && !l.dismissal);
+      const engineClosed = (l) => (l.stages.find((s) => s.stage === 'close') || {}).status === 'completed';
+      open = d.live.filter((l) => l.triggered && !l.dismissal && !engineClosed(l));
       // A live incident closed as a false alarm in this run sits with the closed records (it can be reopened).
       const closedLive = d.live.filter((l) => l.triggered && l.dismissal).map((l) => ({
         incident_id: l.incident_id, camera_id: l.camera_id, asset_id: null, live: true,

@@ -34,6 +34,11 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "P
 
 STAGES = ["detect", "locate", "quantify", "plan", "approve", "report", "close"]
 OPERATOR = "Operator (not signed in)"
+
+
+def actor(body):
+    """The name the engineer typed (sent as "by"); the plain operator label only when none was entered."""
+    return ((body or {}).get("by") or "").strip()[:80] or OPERATOR
 AGENT_STEPS = ("investigate", "reinvestigate", "plan", "revise", "answer", "verify")
 SLOT_DEFAULTS = {"INC-001": {"camera_id": "CAM-01", "profile": "leak"},            # event 1: MOV_1237, SCN-001
                  "INC-002": {"camera_id": "CAM-02", "profile": "wind_outage"}}     # event 2: MOV_1239, SCN-003 (wind lost)
@@ -110,17 +115,19 @@ def _load():
         saved = json.loads(STATE_FILE.read_text())
     except (OSError, ValueError):
         saved = {}
-    return {i: {**_blank(i), **saved.get(i, {})} for i in SLOT_DEFAULTS}
+    return {i: {**_blank(i), **saved.get(i, {})} for i in SLOT_DEFAULTS}, saved.get("_closed", {})
 
 
-SLOTS = _load()
+# CLOSED: per engine incident, what only this UI knew at closure (camera, typed reviewer and closer names).
+# The engine's IncidentRecord holds the rest; a slot reset or rebuild keeps this.
+SLOTS, CLOSED = _load()
 
 
 def save():
     with _lock:
         STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
         tmp = STATE_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(SLOTS))
+        tmp.write_text(json.dumps({**SLOTS, "_closed": CLOSED}))
         tmp.replace(STATE_FILE)
 
 
@@ -331,17 +338,28 @@ def incident_history():
         if n["label"] != "IncidentRecord":
             continue
         p = n["props"]
+        ui = CLOSED.get(p["id"], {})
         opened, closed = utc(p.get("occurred_at_utc")), utc(p.get("closed_at_utc"))
+        # The engine stores the closure rationale as "<name>: <reason>" (see post_close).
+        closer, _, why = (p.get("closure_rationale") or "").partition(": ")
+        closer, why = (ui.get("closed_by") or (closer if why else None)), (ui.get("rationale") or why or p.get("closure_rationale"))
+        verified = p.get("verification_recommendation") == "close" and p.get("recovery_check") == "background_restored"
         rows.append({
-            "incident_id": p["id"], "camera_id": "CAM-01", "asset_id": p.get("selected_asset_id"),
+            "incident_id": p["id"], "camera_id": ui.get("camera_id") or "Not recorded", "asset_id": p.get("selected_asset_id"),
             "opened_utc": opened or closed or "", "closed_utc": closed,
-            "outcome": "repaired", "outcome_label": "Repaired and verified",
-            "summary": p.get("summary") or p.get("repair") or "Closed incident written to the knowledge graph at closure.",
-            "decision": {"decision": "approve", "reviewer": "Engineer (authenticated)", "role": None, "reason": None},
+            "outcome": "repaired",
+            "outcome_label": "Repaired and verified" if verified else "Repaired · verifier " + (p.get("verification_recommendation") or "not run").replace("_", " "),
+            "summary": " ".join(x for x in (p.get("approved_plan_title") and f"Plan: {p['approved_plan_title']}.",
+                                             p.get("work_performed") and f"Repair: {p['work_performed']}") if x)
+                       or "Closed incident written to the knowledge graph at closure.",
+            "decision": {"decision": "approve", "reviewer": ui.get("approved_by") or "Engineer (name not kept)", "role": None,
+                         "reason": ui.get("approval_reason")},
+            "closure": {"by": closer or "Engineer (name not kept)", "rationale": why,
+                        "verifier": p.get("verification_recommendation"), "recovery_check": p.get("recovery_check")},
             "work_order": None,
             "rate": f"{p['rate_kg_h']:.2f} kg CH₄/h (model estimate)" if isinstance(p.get("rate_kg_h"), (int, float)) else None,
             "timeline": [x for x in ({"at_utc": opened, "event": "Camera alert raised"},
-                                     {"at_utc": closed, "event": "Closed by an engineer; written to graph memory"}) if x["at_utc"]],
+                                     {"at_utc": closed, "event": f"Closed by {closer or 'an engineer'}; written to graph memory"}) if x["at_utc"]],
         })
     return {"status": "verified", "provenance": "simulated", "incidents": sorted(rows, key=lambda r: r["opened_utc"], reverse=True),
             "past_events": past_events(plant)}
@@ -412,7 +430,9 @@ def sync(s):
                     "answer": "Agent answered an engineer question",
                     "reinvestigate": f"Investigation agent finished research round {d.get('round')}",
                     "verify": f"Verifier recommends {d.get('recommendation')} ({d.get('recovery_check')})"}[e["step"]]
-            audit(s, hit[0], hit[1], text, at=utc(e["recorded_at"]))
+            # Credit the model only when it produced the step; the engine's fallback is named as such.
+            who = hit[1] if hit[1] != "Nemotron agent" or d.get("source_origin") == "llm" else "Deterministic template (model unavailable)"
+            audit(s, hit[0], who, text, at=utc(e["recorded_at"]))
         s["seen_events"] = len(events)
         if rec and rec.get("work_order"):
             wo = rec["work_order"]
@@ -1144,9 +1164,9 @@ def post_quantify(incident_id: str, body: dict = Body(default={})):
         frozen = snap["quantification"].get("rate_kg_h")
         run = {"tool": res.get("primary_tool"), "status": res["status"], "reason": res.get("reason"), "rate_kg_h": res.get("rate_kg_h"),
                "ratio_to_frozen": round(res["rate_kg_h"] / frozen, 3) if res.get("rate_kg_h") and frozen else None,
-               "run_at_utc": now_utc(), "by": OPERATOR}
+               "run_at_utc": now_utc(), "by": actor(body)}
         s.setdefault("tool_runs", {})[res.get("primary_tool") or method] = run
-        audit(s, "quantification_run", OPERATOR, f"Ran {TOOL_SHORT.get(run['tool'], run['tool'])} at the frozen clock: {res['status']}"
+        audit(s, "quantification_run", actor(body), f"Ran {TOOL_SHORT.get(run['tool'], run['tool'])} at the frozen clock: {res['status']}"
               + (f", {res['rate_kg_h']:.3f} kg CH₄/h (model estimated)" if res.get("rate_kg_h") is not None else ""))
         save()
     return get_quantification(incident_id)
@@ -1437,14 +1457,14 @@ def get_work_order(incident_id: str):
 
 
 @app.post("/incidents/{incident_id}/work-order/draft")
-def post_work_order_draft(incident_id: str):
+def post_work_order_draft(incident_id: str, body: dict = Body(default={})):
     """Restart failed agents (completed steps replay idempotently; the planner falls back to the labelled
     template). A healthy run drafts on its own."""
     s = slot_or_404(incident_id)
     orch = orchestration(s)
     if orch and orch["status"] in ("failed", "interrupted"):
         engine.post(f"/incidents/{s['engine_id']}/orchestration", {"plan_mode": "model", "plan_fallback": "deterministic"}, human=True)
-        audit(s, "agents_restarted", OPERATOR, f"Agents restarted after: {(orch.get('result') or {}).get('detail') or orch['status']}")
+        audit(s, "agents_restarted", actor(body), f"Agents restarted after: {(orch.get('result') or {}).get('detail') or orch['status']}")
         forget(s)
         save()
         return work_order_view(s)
@@ -1470,7 +1490,7 @@ def post_work_order_edit(incident_id: str, body: dict = Body(...)):
     if not changed:
         raise HTTPException(status_code=400, detail="No changes")
     with _lock:
-        add_version(s, latest["draft_version"], fields, OPERATOR, changed)
+        add_version(s, latest["draft_version"], fields, actor(body), changed)
         save()
     return work_order_view(s)
 
@@ -1485,10 +1505,10 @@ def post_work_order_flag(incident_id: str, body: dict = Body(...)):
     if cid not in {c["id"] for cs in draft["sections"].values() for c in cs}:
         raise HTTPException(status_code=400, detail="Unknown claim")
     if body.get("flagged", True):
-        s["flags"][cid] = {"note": (body.get("note") or "").strip() or None, "by": OPERATOR, "at": now_utc()}
-        audit(s, "claim_flagged", OPERATOR, f"{cid} flagged as unsupported", latest["version"], latest["hash"])
+        s["flags"][cid] = {"note": (body.get("note") or "").strip() or None, "by": actor(body), "at": now_utc()}
+        audit(s, "claim_flagged", actor(body), f"{cid} flagged as unsupported", latest["version"], latest["hash"])
     elif s["flags"].pop(cid, None):
-        audit(s, "claim_unflagged", OPERATOR, f"{cid} flag cleared", latest["version"], latest["hash"])
+        audit(s, "claim_unflagged", actor(body), f"{cid} flag cleared", latest["version"], latest["hash"])
     s["submitted"] = None
     save()
     return work_order_view(s)
@@ -1508,8 +1528,8 @@ def post_work_order_submit(incident_id: str, body: dict = Body(...)):
     st = state_of(s)
     if st != "pending_review":
         raise HTTPException(status_code=409, detail=f"The engine record is '{st}', not awaiting review yet. Wait for the agents to finish.")
-    s["submitted"] = {"version": latest["version"], "hash": latest["hash"], "at": now_utc(), "by": OPERATOR, "open_flags": sorted(s["flags"])}
-    audit(s, "submitted_for_review", OPERATOR, f"v{latest['version']} submitted, {len(s['flags'])} flagged claims", latest["version"], latest["hash"])
+    s["submitted"] = {"version": latest["version"], "hash": latest["hash"], "at": now_utc(), "by": actor(body), "open_flags": sorted(s["flags"])}
+    audit(s, "submitted_for_review", actor(body), f"v{latest['version']} submitted, {len(s['flags'])} flagged claims", latest["version"], latest["hash"])
     save()
     return work_order_view(s)
 
@@ -1755,10 +1775,10 @@ def post_report_export(incident_id: str, body: dict = Body(...)):
     fmt = body.get("format")
     if fmt not in ("json", "md", "pdf"):
         raise HTTPException(status_code=400, detail="Unknown format")
-    issue_report(s, OPERATOR)  # the first export after approval issues the engine report
+    issue_report(s, actor(body))  # the first export after approval issues the engine report
     report = make_report(s)
     s["exports"].append({"format": fmt, "hash": report["report_hash"], "status": report["status"], "at": report["generated_at"]})
-    audit(s, "report_exported", OPERATOR, f"{report['status'].title()} report exported as {fmt.upper()}, hash {report['report_hash']}")
+    audit(s, "report_exported", actor(body), f"{report['status'].title()} report exported as {fmt.upper()}, hash {report['report_hash']}")
     save()
     name = f"{incident_id}_report_{report['report_hash']}"
     if fmt == "json":
@@ -1819,6 +1839,10 @@ def post_close(incident_id: str, body: dict = Body(...)):
     res = engine.post(f"/incidents/{s['engine_id']}/close",
                       {"decision": decision, "rationale": f"{by}: {why}"[:5000], "expected_version": rec["version"], "idempotency_key": engine.key("close")}, human=True)
     s["graph_memory"] = res.get("graph_memory")
+    if decision == "close":
+        approval = next((r for r in reversed(s["reviews"]) if r["decision"] == "approve"), None)
+        CLOSED[s["engine_id"]] = {"camera_id": s["camera_id"], "closed_by": by, "rationale": why,
+                                  "approved_by": approval and approval["reviewer"], "approval_reason": approval and approval["reason"]}
     audit(s, "incident_closed" if decision == "close" else "incident_kept_open", by, why[:200])
     forget(s)
     for k in (("plant",), ("graph-ui",)):
