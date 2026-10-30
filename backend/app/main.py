@@ -816,7 +816,7 @@ def schematic(fac):
     for x, k in reversed(row):
         pos[k]["x"] = min(x, limit)
         limit = pos[k]["x"] - 7
-    # Process instruments (pressure, temperature, flow) just above the line beside what they measure, at least 6 % apart;
+    # Process instruments (pressure, temperature, flow) in a row under the line beside what they measure, 8 % apart;
     # the weather mast (its wind and stability channels are PART_OF it) above the compressor it stands by.
     phys_asset = {sn["id"]: sn.get("asset_id") for sn in fac["sensors"]}
     taken = []
@@ -824,18 +824,18 @@ def schematic(fac):
         a = phys_asset.get(sid)
         if a not in pos:
             continue
-        px = pos[a]["x"] + 4
-        while any(abs(px - q) < 6 for q in taken):
-            px += 6
+        px = pos[a]["x"] + 3
+        while any(abs(px - q) < 8 for q in taken):
+            px += 8
         taken.append(px)
-        pos[sid] = {"x": min(px, 97), "y": 59}
+        pos[sid] = {"x": min(px, 97), "y": 84}
     masts = sorted({sn["id"].rsplit("-", 1)[0] for sn in fac["sensors"] if sn["id"].startswith("MET-")})
     for i, m in enumerate(masts):
         near = phys_asset.get(f"{m}-WS")
         pos[m] = {"x": max(4, pos.get(near, {"x": 20})["x"] - 14 + i * 7), "y": 26}
     for i, c in enumerate(fac.get("cameras", [])):
         target = c["regions"][0]["asset_id"] if c.get("regions") else order[len(order) // 2]
-        pos[c["id"]] = {"x": pos.get(target, {"x": 50})["x"] + (i - 0.5) * 12, "y": 94}
+        pos[c["id"]] = {"x": pos.get(target, {"x": 50})["x"] + (i - 0.5) * 12, "y": 98}
     return pos
 
 
