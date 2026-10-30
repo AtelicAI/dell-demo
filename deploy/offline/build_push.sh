@@ -20,7 +20,11 @@ for f in INC-001.investigate INC-001.plan INC-003.investigate INC-003.plan INC-0
 done
 python3 scripts/cache_basemap.py
 
-echo "${GHCR_TOKEN:-$(gh auth token)}" | docker login ghcr.io -u "${GHCR_USER:-$(gh api user -q .login)}" --password-stdin
+# Docker Desktop's proxy sometimes times out on ghcr.io: try the login a few times.
+for attempt in 1 2 3 4 5; do
+  echo "${GHCR_TOKEN:-$(gh auth token)}" | docker login ghcr.io -u "${GHCR_USER:-$(gh api user -q .login)}" --password-stdin && break
+  [[ $attempt == 5 ]] && exit 1; sleep 5
+done
 docker buildx inspect atelic-multi >/dev/null 2>&1 || docker buildx create --name atelic-multi --driver docker-container >/dev/null
 build() {  # name, context, dockerfile
   docker buildx build --builder atelic-multi --platform "$PLATFORMS" --push \
