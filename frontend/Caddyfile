@@ -36,8 +36,10 @@
 		root * /srv
 		header /js/* Cache-Control "no-cache"
 		header /css/* Cache-Control "no-cache"
-		# Suffix match: Caddy paths only take a wildcard at the start or end ("/*.html" never matched).
-		header *.html Cache-Control "no-cache"
+		# HTML pages revalidate on every load. A named suffix matcher: an inline matcher must start with "/", and
+		# "/*.html" never matched (path wildcards only go at the start or end).
+		@pages path *.html
+		header @pages Cache-Control "no-cache"
 		header / Cache-Control "no-cache"
 		file_server
 	}
