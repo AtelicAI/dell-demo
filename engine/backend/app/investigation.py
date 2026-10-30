@@ -1,4 +1,5 @@
 """Bounded read-only model tools and honest deterministic work-order baseline."""
+import hashlib
 import json
 import os
 import re
@@ -216,35 +217,46 @@ class Provider:
         return choice["message"]
 
 
-# Recorded runs: the automatic chain (investigate, then the first plan) of each demo incident is recorded from its first
-# successful live Nemotron run, and later triggers replay the recorded model turns at their recorded pace (capped).
-# Tools still execute live on the new incident; only the model's replies come from the recording, with the recorded
-# engine incident ID swapped for the new one. Engineer questions, research rounds and revisions always call the model.
-# Delete a recording (or set MODEL_REPLAY=0) to run live again.
+# Recorded runs: every model step of each demo incident is recorded from its first successful live Nemotron run, and
+# later runs replay the recorded model turns at their recorded pace (capped). Tools still execute live on the new
+# incident; only the model's replies come from the recording, with the recorded engine incident ID swapped for the new
+# one. Steps that answer engineer text (answers, revisions, research rounds) are keyed by that text, so the same
+# question replays its recorded answer and a new one runs live. Delete a recording (or set MODEL_REPLAY=0) to run live.
 # New recordings go to RECORDED_RUNS_DIR (a volume on the host); recordings committed to the repo are read as well.
+# OFFLINE=1 (the laptop build): the model is never called; a step without a recording fails with a stated reason.
 COMMITTED = Path(__file__).resolve().parents[2] / "data" / "recorded_runs"
 RECORDINGS = Path(os.getenv("RECORDED_RUNS_DIR", COMMITTED))
-RECORDED_TASKS = ("investigate", "plan")
+RECORDED_TASKS = ("investigate", "plan", "answer", "revise", "reinvestigate", "verify")
 REPLAY_MAX_TURN_SECONDS = float(os.getenv("REPLAY_MAX_TURN_SECONDS", "6"))
+OFFLINE = os.getenv("OFFLINE", "0") == "1"
 
 
-def _recording_path(incident_id, task):
-    """Where this chain step's recording is (host recordings first, then committed ones), or would be written."""
+def text_key(text):
+    """Recording key for engineer text: case, spacing and trailing punctuation do not matter."""
+    norm = re.sub(r"\s+", " ", (text or "").strip().lower()).rstrip(" ?.!")
+    return hashlib.sha256(norm.encode()).hexdigest()[:12]
+
+
+def _recording_path(incident_id, task, key=None):
+    """Where this step's recording is (host recordings first, then committed ones), or would be written."""
     slot = incident_id.rsplit("-M", 1)[0]
     if not re.fullmatch(r"INC-\d{3}", slot) or task not in RECORDED_TASKS:
         return None
-    name = f"{slot}.{task}.json"
+    name = f"{slot}.{task}.{key}.json" if key else f"{slot}.{task}.json"
     return next((d / name for d in (RECORDINGS, COMMITTED) if (d / name).is_file()), RECORDINGS / name)
 
 
-def recorded_provider(incident_id, task):
-    """Replay of the recorded run for this incident's chain step, else a provider that records a live run, else None."""
-    path = _recording_path(incident_id, task)
+def recorded_provider(incident_id, task, key=None, text=None):
+    """Replay of the recorded run for this step, else a provider that records a live run (None: plain live provider).
+    Offline, a step without a recording gets a provider that refuses instead of calling the model."""
+    path = _recording_path(incident_id, task, key)
+    if path is not None and path.is_file() and os.getenv("MODEL_REPLAY", "1") != "0":
+        return ReplayProvider(json.loads(path.read_text()), incident_id)
+    if OFFLINE:
+        return OfflineProvider(task)
     if path is None or os.getenv("MODEL_REPLAY", "1") == "0":
         return None
-    if path.is_file():
-        return ReplayProvider(json.loads(path.read_text()), incident_id)
-    return RecordingProvider(path, incident_id, task)
+    return RecordingProvider(path, incident_id, task, text)
 
 
 def recording_status():
@@ -257,9 +269,9 @@ def recording_status():
 
 class RecordingProvider(Provider):
     """Live provider that keeps every model reply; saved once the run is accepted (Investigator.run succeeds)."""
-    def __init__(self, path, incident_id, task):
+    def __init__(self, path, incident_id, task, text=None):
         super().__init__()
-        self.path, self.incident_id, self.task, self.turns = path, incident_id, task, []
+        self.path, self.incident_id, self.task, self.text, self.turns = path, incident_id, task, text, []
 
     def complete(self, messages, tools=None):
         started = time.perf_counter()
@@ -278,10 +290,12 @@ class RecordingProvider(Provider):
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
         data = dict(task=self.task, engine_incident_id=self.incident_id, model=self.model, endpoint=self.url,
-                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"), turns=self.turns)
+                    recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    **({"engineer_text": self.text} if self.text else {}), turns=self.turns)
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, suffix=".tmp")
         with os.fdopen(fd, "w") as f:
             json.dump(data, f, indent=1)
+        os.chmod(tmp, 0o644)  # mkstemp makes it owner-only; recordings are copied into images run by another user
         os.replace(tmp, self.path)
 
 
@@ -303,7 +317,31 @@ class ReplayProvider(Provider):
         turn = turns[self.i]
         self.i += 1
         time.sleep(min(turn["elapsed_ms"] / 1000, REPLAY_MAX_TURN_SECONDS))
-        return json.loads(json.dumps(turn["message"]).replace(self.recording["engine_incident_id"], self.incident_id))
+        text = json.dumps(turn["message"]).replace(self.recording["engine_incident_id"], self.incident_id)
+        # Records made during the run (repair, work order, …) get new random IDs each time: a recorded ID becomes this
+        # run's ID of the same kind, when the tools delivered exactly one of that kind.
+        live = json.dumps(messages)
+        for kind, old in set(UUID_ID.findall(text)):
+            new = {i for k, i in UUID_ID.findall(live) if k == kind}
+            if len(new) == 1:
+                text = text.replace(f"{kind}:{old}", f"{kind}:{new.pop()}")
+        return json.loads(text)
+
+
+UUID_ID = re.compile(r"\b([a-z_]+):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b")
+
+
+class OfflineProvider(Provider):
+    """Offline build: a step with no recording never reaches a model."""
+    def __init__(self, task):
+        super().__init__()
+        self.task = task
+
+    def available(self):
+        return False
+
+    def complete(self, messages, tools=None):
+        raise ModelUnavailable(f"Offline demo: no recorded agent run for this {self.task} step, and no model is called offline")
 
 
 class _Transient(Exception):

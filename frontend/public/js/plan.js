@@ -280,7 +280,7 @@
     $('inv-meta').textContent = W.investigation ? `${W.investigation.findings.length} findings` : '';
     $('qa-meta').textContent = (W.questions || []).length ? `${W.questions.length} asked` : '';
     const typed = $('qa-text') ? $('qa-text').value : '';
-    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: approved ? null : key, offText: approved
+    $('qa').innerHTML = S.questions(W.questions, W.can_ask, { agent: W.agent, tray: approved || W.offline ? null : key, offline: W.offline, offText: approved
       ? 'The draft is approved. Questions open again after the repair is recorded (Report).'
       : 'Questions open once the agents have finished the draft.' });
     if ($('qa-text')) $('qa-text').value = typed;

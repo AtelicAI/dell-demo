@@ -91,6 +91,15 @@
     'Could F-205 be the source instead? What would rule it out?',
     'What is still unknown, and which check would confirm the source fastest?',
   ];
+  // After the repair, questions go to the verifier's evidence (Report).
+  const VERIFY_CHIPS = [
+    'Are all the sensors back to the pre-incident baseline?',
+    'What residual risk remains after the repair?',
+  ];
+  // Offline laptop build: Request changes offers these reasons instead of free text (their revisions are recorded).
+  const REVIEW_REASONS = [
+    'Before any packing work, add a check of the missing F-205 bolt torque record from WO-004, and make the OGI re-survey requested in WO-008 the first field check.',
+  ];
 
   // Simulated / synthetic provenance stays in the data but is not shown (team decision, 26 Oct).
   const SHOWN_PROV = { model_estimated: 'Model estimated', observed: 'Observed', experimental_setpoint: 'Experimental setpoint', provider_reported: 'Provider reported' };
@@ -119,7 +128,8 @@
   }
 
   // opts.agent: live engine agent (answer trace); opts.tray: the tray key (enables "Add to plan");
-  // opts.offText: why questions are closed right now.
+  // opts.offText: why questions are closed right now; opts.chips: suggested questions (default CHIPS);
+  // opts.offline: the offline build, where the suggestions are the only questions and send on click.
   function questions(list, canAsk, opts = {}) {
     const agent = opts.agent;
     // The answer agent works the oldest unanswered question first; its live steps show there.
@@ -133,12 +143,15 @@
         : `<div class="qa-a pending"><span class="ag-spin"></span>Queued: the agent answers questions in order…<span class="qa-tn">usually 30–80 s each</span></div>`}
     </li>`).join('');
     const asked = new Set((list || []).map((q) => q.question));
-    const chips = CHIPS.filter((c) => !asked.has(c));
+    const chips = (opts.chips || CHIPS).filter((c) => !asked.has(c));
+    const off = opts.offline;
     return `<div class="qa-box">
-      <div class="qa-h"><span class="lbl">Ask the agent</span><span>Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.</span></div>
-      ${canAsk ? `<div class="qa-form">${chips.length ? `<div class="qa-chips">${chips.map((c) => `<button type="button" class="qa-chip" data-qa-chip="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
-        <textarea id="qa-text" rows="2" placeholder="Ask about the evidence, the candidates or the draft"></textarea>
-        <button class="btn sm" id="qa-send" type="button">Ask</button><span class="qa-msg" id="qa-msg" role="status"></span></div>`
+      <div class="qa-h"><span class="lbl">Ask the agent</span><span>${off ? 'Offline demo: pick a question; the agent\'s recorded answer to it replays here.'
+        : 'Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.'}</span></div>
+      ${canAsk ? `<div class="qa-form"${off ? ' data-offline' : ''}>${chips.length ? `<div class="qa-chips">${chips.map((c) => `<button type="button" class="qa-chip" data-qa-chip="${esc(c)}">${esc(c)}</button>`).join('')}</div>`
+          : off ? '<p class="qa-off">Every recorded question has been asked.</p>' : ''}
+        <textarea id="qa-text" rows="2" placeholder="Ask about the evidence, the candidates or the draft"${off ? ' hidden' : ''}></textarea>
+        <button class="btn sm" id="qa-send" type="button"${off ? ' hidden' : ''}>Ask</button><span class="qa-msg" id="qa-msg" role="status"></span></div>`
         : `<p class="qa-off">${esc(opts.offText || 'Questions open while a draft awaits review, and before closure.')}</p>`}
       ${items ? `<ul class="qa-list">${items}</ul>` : ''}</div>`;
   }
@@ -165,7 +178,14 @@
   // Chips and Ask this / Ask again fill the question box; tray add/remove.
   document.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-qa-chip], [data-ask]');
-    if (chip) { const box = document.getElementById('qa-text'); if (box) { box.value = chip.dataset.qaChip || chip.dataset.ask; box.focus(); } return; }
+    if (chip) {
+      const box = document.getElementById('qa-text');
+      if (!box) return;
+      box.value = chip.dataset.qaChip || chip.dataset.ask;
+      // Offline there is no text box to edit: a suggestion is sent as it is.
+      if (box.closest('[data-offline]')) document.getElementById('qa-send').click(); else box.focus();
+      return;
+    }
     const add = e.target.closest('[data-tray-add]');
     if (add) {
       const k = add.closest('[data-tray-key]') && add.closest('[data-tray-key]').dataset.trayKey;
@@ -192,6 +212,8 @@
   // planner turns into a revised draft (which then needs approval again).
   function research(W) {
     const notes = W.field_notes || [], r = W.research || {};
+    // Offline, research rounds and field notes are left out: their agent runs answer free text, which is not recorded.
+    if (W.offline) return '';
     const canNote = W.can_ask;
     const list = notes.length ? `<ul class="fn-list">${notes.map((n) => `<li><code>${esc(n.id.split(':')[1])}</code><span><b>${esc(n.recorded_by)}</b> · ${hm(n.recorded_at)}<p>${esc(n.text)}</p></span></li>`).join('')}</ul>` : '';
     const running = r.requested ? `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>Research round ${esc(r.round)} under way</b>
@@ -324,5 +346,5 @@
       <p class="ak-src">${esc(f.camera || '')} · ${esc(f.recorded_date || '')} · ${esc(f.release_location || '')} · ${esc(f.source || '')}</p></div>`;
   }
 
-  window.AtelicStory = { agentBanner, investigation, questions, research, send, ask, poll, followUp, answerKey, revisionDiff, tray, esc };
+  window.AtelicStory = { agentBanner, investigation, questions, research, send, ask, poll, followUp, answerKey, revisionDiff, tray, esc, VERIFY_CHIPS, REVIEW_REASONS };
 })();

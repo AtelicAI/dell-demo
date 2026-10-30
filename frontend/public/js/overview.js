@@ -9,6 +9,8 @@
   const CM_TILES = 'https://api.carbonmapper.org/api/v1/layers/scene';
   const BASEMAP = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
   const BASEMAP_ATTR = 'Imagery © Esri, Maxar, Earthstar Geographics';
+  // Offline build: basemap tiles around the plume cached by scripts/cache_basemap.py, described by tiles/basemap.json.
+  const LOCAL_TILES = '/tiles/basemap.json';
 
   // status → provenance. Only a verified record may carry "Provider reported".
   function provenanceOf(rec) {
@@ -128,17 +130,21 @@
     ['toggle-footprint', 'toggle-scene', 'btn-recenter'].forEach((id) => { $(id).disabled = true; });
   }
 
-  function renderMap(rec) {
+  function renderMap(rec, local) {
     if (!window.L) return renderMissing('Map library failed to load.');
     $('map-empty').remove();
     const { lat, lon } = rec.coordinates;
 
-    const map = L.map('map', { zoomSnap: 0.25, attributionControl: true }).setView([lat, lon], 14);
+    // With cached tiles the map stays inside the cached area and zoom range; nothing is fetched from the internet.
+    const map = L.map('map', { zoomSnap: 0.25, attributionControl: true,
+      ...(local ? { minZoom: local.min_zoom, maxZoom: local.max_zoom, maxBounds: L.latLngBounds(local.bounds), maxBoundsViscosity: 1 } : {}) })
+      .setView([lat, lon], 14);
     map.attributionControl.setPrefix(false);
-    L.tileLayer(BASEMAP, { maxZoom: 19, className: 'basemap', attribution: BASEMAP_ATTR }).addTo(map);
+    L.tileLayer(local ? '/tiles/{z}/{y}/{x}.jpg' : BASEMAP, { maxZoom: local ? local.max_zoom : 19, className: 'basemap',
+      attribution: local ? local.attribution : BASEMAP_ATTR, ...(local ? { bounds: L.latLngBounds(local.bounds) } : {}) }).addTo(map);
 
-    // Observation-day true colour from the same Tanager pass. Off by default: coarse (~34 m) pixels.
-    const scene = rec.scene_id ? L.tileLayer(`${CM_TILES}/${encodeURIComponent(rec.scene_id)}/rgb/{z}/{x}/{y}.png`,
+    // Observation-day true colour from the same Tanager pass. Off by default: coarse (~34 m) pixels. Online only.
+    const scene = rec.scene_id && !local ? L.tileLayer(`${CM_TILES}/${encodeURIComponent(rec.scene_id)}/rgb/{z}/{x}/{y}.png`,
       { maxNativeZoom: 15, maxZoom: 19, opacity: 0.9, attribution: 'Scene © Carbon Mapper / Planet' }) : null;
     if (!scene) $('toggle-scene').disabled = true;
 
@@ -216,7 +222,10 @@
         document.title = 'Satellite emissions observations — Atelic';
       }
       renderDetails(rec);
-      renderMap(rec);
+      // Cached tiles are used only by the offline build (they cover the plume's area at a few zoom levels).
+      const status = await window.AtelicShell.get('/status').catch(() => ({}));
+      const local = status.offline ? await fetch(LOCAL_TILES).then((r) => (r.ok ? r.json() : null)).catch(() => null) : null;
+      renderMap(rec, local);
     } catch (e) {
       console.error(e);
       renderMissing();

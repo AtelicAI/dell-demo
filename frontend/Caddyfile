@@ -4,7 +4,7 @@
 	encode gzip
 
 	# Sign-in page and what it needs: public.
-	@public path /login.html /js/login.js /css/theme.css /img/*
+	@public path /login.html /js/login.js /css/theme.css /img/* /fonts/*
 	handle @public {
 		root * /srv
 		file_server

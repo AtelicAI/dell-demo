@@ -110,7 +110,7 @@
     // After the repair, the engineer can question the verifier's evidence before closing.
     $('qa').hidden = !(fu && fu.repair);
     if (fu && fu.repair && !(document.activeElement && document.activeElement.id === 'qa-text')) {
-      $('qa').innerHTML = S.questions(fu.questions, fu.can_ask, { offText: fu.closure ? 'The incident is closed; questions are closed.' : 'Questions open once the verifier has finished.' });
+      $('qa').innerHTML = S.questions(fu.questions, fu.can_ask, { chips: S.VERIFY_CHIPS, offline: fu.offline, offText: fu.closure ? 'The incident is closed; questions are closed.' : 'Questions open once the verifier has finished.' });
     }
     $('ak-panel').hidden = !R || R.status !== 'final';
     if (R && R.status === 'final') {

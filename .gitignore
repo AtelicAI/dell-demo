@@ -31,3 +31,6 @@ data/ogi/*.mp4
 !data/ogi/inc00*_mov12*_atelic.mp4
 !data/ogi/inc00*_mov12*_original.mp4
 engine/data/ground_truth/
+
+# Offline basemap cache (scripts/cache_basemap.py); built into the offline image, not committed
+frontend/public/tiles/

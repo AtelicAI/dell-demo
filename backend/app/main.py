@@ -27,6 +27,8 @@ from app.evidence import Evidence
 DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
 STATE_FILE = Path(os.getenv("UI_STATE_FILE", DATA_DIR.parent / ".ui-state" / "state.json"))
 DEPLOYMENT = os.getenv("DEPLOYMENT_LABEL", "Local backend process")
+# Offline laptop build: agents replay recorded runs and the UI offers scripted questions instead of free text.
+OFFLINE = os.getenv("OFFLINE", "0") == "1"
 
 app = FastAPI(title="Atelic x Dell x NVIDIA — Methane Incident Intelligence (UI API)")
 # Same-origin behind the web proxy (/api); CORS stays open only for local development on :8000.
@@ -244,6 +246,7 @@ def status():
         "replay_time_utc": None,
         "replay_start_utc": at_seconds(mon["scenario_seconds_at_clip_start"]),
         "deployment": DEPLOYMENT,
+        "offline": OFFLINE,
         "services": {k: h.get(k) for k in ("graph", "historian", "historian_status", "documents", "workflow", "nvidia")},
     }
 
@@ -1451,7 +1454,7 @@ def work_order_view(s):
     base = {"generator": generator(rec), "can_draft": False, "missing": [] if s["engine_id"] else ["No alert raised yet (Detect screen)"],
             "inputs": draft_inputs(s, rec), "nvidia_inference": nvidia_status(), "agent": agent_status(s),
             "investigation": investigation_view(rec, s["names"]), "questions": questions_view(s, rec),
-            "can_ask": can_ask(rec),
+            "can_ask": can_ask(rec), "offline": OFFLINE,
             "field_notes": field_notes_view(s, rec), "research": research_view(s, rec),
             "engine_state": rec and rec["state"], "engine_incident_id": s["engine_id"], "agent_activity": agent_activity(rec)}
     if not s["versions"]:
@@ -1709,7 +1712,7 @@ def follow_up(s, rec):
             "closure": rec.get("closure") and {"decision": rec["closure"]["decision"], "rationale": rec["closure"]["rationale"],
                                                "at": utc(rec["closure"]["recorded_at"])},
             "agent": agent_status(s), "graph_memory": s.get("graph_memory"),
-            "questions": questions_view(s, rec), "can_ask": can_ask(rec)}
+            "questions": questions_view(s, rec), "can_ask": can_ask(rec), "offline": OFFLINE}
 
 
 def make_report(s):
