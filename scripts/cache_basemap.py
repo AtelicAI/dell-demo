@@ -9,6 +9,8 @@ import json
 import math
 import ssl
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -22,6 +24,18 @@ MIN_ZOOM = 11
 def tile(lat, lon, z):
     n = 2 ** z
     return int((lon + 180) / 360 * n), int((1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * n)
+
+
+def fetch(url, ctx, tries=5):
+    """The tile server returns the odd 502 under load: retry with a growing pause."""
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(url, timeout=30, context=ctx) as r:
+                return r.read()
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == tries - 1:
+                raise
+            time.sleep(2 ** attempt)
 
 
 def main(radius_km=4.0, max_zoom=17):
@@ -43,8 +57,7 @@ def main(radius_km=4.0, max_zoom=17):
                 path = OUT / str(z) / str(y) / f"{x}.jpg"
                 if not path.exists():
                     path.parent.mkdir(parents=True, exist_ok=True)
-                    with urllib.request.urlopen(URL.format(z=z, y=y, x=x), timeout=30, context=ctx) as r:
-                        path.write_bytes(r.read())
+                    path.write_bytes(fetch(URL.format(z=z, y=y, x=x), ctx))
                 count += 1
     (OUT / "basemap.json").write_text(json.dumps(dict(
         observation_id=rec["satellite_observation_id"], bounds=[[south, west], [north, east]],
