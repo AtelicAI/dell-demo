@@ -24,8 +24,9 @@
   function readName() { try { return localStorage.getItem('atelic.reviewer') || ''; } catch (e) { return ''; } }
 
   async function post(path, body) {
+    // Edits, flags and submits are recorded under the name this browser last typed (Approve / Report / close dialogs).
     const r = await fetch(`${API}/incidents/${INCIDENT_ID}/work-order${path}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ by: readName() || undefined, ...(body || {}) }),
     });
     const data = await r.json();
     if (!r.ok) {

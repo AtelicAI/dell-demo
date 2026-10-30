@@ -409,7 +409,7 @@
     msg.className = 'run-msg'; msg.textContent = `Running ${tool ? METHOD_LABEL[tool] || tool : "the agent's choice"} on the frozen window…`;
     try {
       const r = await fetch(`${API}/incidents/${INCIDENT_ID}/quantify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: tool || 'agent' }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: tool || 'agent', by: (() => { try { return localStorage.getItem('atelic.reviewer') || undefined; } catch (e) { return undefined; } })() }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error((body.detail && body.detail.failure) || body.detail || r.status);

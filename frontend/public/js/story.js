@@ -111,9 +111,10 @@
       ${(q.claims || []).length ? `<ul class="qa-cl">${q.claims.map((c) => `<li>${esc(c.statement)}${sup(c.evidence_ids)}</li>`).join('')}</ul>` : ''}
       ${n ? `<details class="qa-srcs"><summary>Sources <b>${n}</b></summary><ol class="qa-src">${Object.keys(no).map((id) => { const e = src[id] || {}, p = SHOWN_PROV[e.provenance];
         return `<li value="${no[id]}"><b>${esc(e.group || id)}</b> ${esc(e.label && e.label !== id ? e.label : '')}${p ? ` <span class="qa-prov">${p}</span>` : ''}</li>`; }).join('')}</ol></details>` : ''}
-      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span>${esc(t)}</span>${canAsk ? `<button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}${tray ? (picked.has(t)
-        ? '<span class="qa-added">✓ Added</span>'
-        : `<button type="button" class="btn sm ghost" data-tray-add="${esc(t)}" data-tray-from="${esc(q.asked_by)}">+ Add to plan</button>`) : ''}</li>`).join('')}</ul></div>` : ''}
+      ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span class="qa-fu-t">${esc(t)}</span>
+        <span class="qa-fu-acts">${canAsk ? `<button class="linkish" type="button" data-ask="${esc(t)}">Ask this</button>` : ''}${tray ? (picked.has(t)
+          ? `<button type="button" class="btn sm qa-added" data-tray-undo="${esc(t)}" title="Remove from the changes to ask for"><span class="on">✓ Added</span><span class="off">Undo</span></button>`
+          : `<button type="button" class="btn sm ghost" data-tray-add="${esc(t)}" data-tray-from="${esc(q.asked_by)}">+ Add to plan</button>`) : ''}</span></li>`).join('')}</ul></div>` : ''}
     </div>`;
   }
 
@@ -172,6 +173,12 @@
       if (k && !items.some((x) => x.text === add.dataset.trayAdd)) traySet(k, [...items, { text: add.dataset.trayAdd, from: `answer to ${add.dataset.trayFrom || 'Engineer'}` }]);
       return;
     }
+    const undo = e.target.closest('[data-tray-undo]');
+    if (undo) {
+      const k = undo.closest('[data-tray-key]') && undo.closest('[data-tray-key]').dataset.trayKey;
+      traySet(k, trayGet(k).filter((x) => x.text !== undo.dataset.trayUndo));
+      return;
+    }
     const rm = e.target.closest('[data-tray-remove]');
     if (rm) {
       const k = rm.closest('[data-tray-key]') && rm.closest('[data-tray-key]').dataset.trayKey;
@@ -208,6 +215,42 @@
     if (!r.ok) { if (msg) msg.textContent = typeof data.detail === 'string' ? data.detail : 'Could not send'; return null; }
     return data;
   }
+
+  // "Ask the agent ↓": floats while the question box is below the screen, scrolls to it on click, and hides as soon
+  // as the box is in view (also when the engineer scrolls there). Sits above Plan's sticky readiness bar.
+  (function jumpToAsk() {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'qa-jump'; btn.hidden = true;
+    btn.innerHTML = '<span>Ask the agent</span><span aria-hidden="true">↓</span>';
+    btn.addEventListener('click', () => {
+      const box = document.getElementById('qa');
+      if (!box) return;
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const t = document.getElementById('qa-text');
+      if (t) setTimeout(() => t.focus({ preventScroll: true }), 450);
+    });
+    let queued = false;
+    const update = () => {
+      queued = false;
+      const box = document.getElementById('qa');
+      const shown = box && box.offsetParent !== null && box.querySelector('.qa-box');
+      const below = shown && box.getBoundingClientRect().top > window.innerHeight - 80;
+      if (btn.hidden === !!below) btn.hidden = !below; // only on change: the observer below watches 'hidden'
+      if (below) {
+        const bar = document.querySelector('.ready');
+        btn.style.bottom = `${bar && bar.offsetParent !== null ? bar.offsetHeight + 26 : 22}px`;
+      }
+    };
+    const later = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(btn);
+      window.addEventListener('scroll', later, { passive: true });
+      window.addEventListener('resize', later);
+      // The box fills in and re-renders as answers arrive.
+      new MutationObserver(later).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+      later();
+    });
+  })();
 
   async function ask(incidentId, name) {
     const box = document.getElementById('qa-text'), msg = document.getElementById('qa-msg');

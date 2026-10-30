@@ -169,7 +169,7 @@
     msg.classList.remove('err'); msg.textContent = 'Preparing…';
     try {
       const r = await fetch(`${API}/incidents/${INCIDENT_ID}/report/export`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format: fmt }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format: fmt, by: readName() || undefined }),
       });
       if (!r.ok) throw new Error(`Export failed (${r.status})`);
       if (fmt === 'pdf') {
