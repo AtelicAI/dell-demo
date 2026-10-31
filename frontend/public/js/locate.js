@@ -254,9 +254,62 @@
     $('assess').innerHTML = likely ? `
       <div class="v-k">Likely source</div>
       <div class="v-row"><span class="v-id">${esc(likely)}</span>${conf(likely) != null ? `<span class="pill conf" title="Camera overlap, weighted by the methane sensor fit and the investigation's ranking"><i></i>Confidence ${pct(conf(likely))}</span>` : ''}</div>
-      <div class="by"><span class="v-nm">${esc(name(likely) || '')}</span>${C.status === 'sample' || !C.method ? '' : ` · ${esc(C.method)}`}</div>${bad}`
+      <div class="by"><span class="v-nm">${esc(name(likely) || '')}</span>${C.status === 'sample' || !C.method ? '' : ` · ${esc(C.method)}`}</div>${bad}${running()}`
       : `<div class="v-k">Source</div><div class="v-id">Unresolved</div>
       <div class="by">${C.status === 'sample' ? '' : esc(C.method || '')}</div>${bad}`;
+  }
+
+  // While the investigation agent is still working, say so in the assessment and refresh when it finishes.
+  const running = () => C && C.running
+    ? '<div class="ag-run"><span class="ag-spin"></span><span><b>Investigation agent working</b> · fitting the methane sensors and reading the maintenance history. Confidence updates when it finishes.</span></div>' : '';
+  function watchRun() {
+    if (!C || !C.running) return;
+    setTimeout(async () => {
+      try {
+        const v = await window.AtelicShell.get(`/incidents/${window.AtelicShell.INCIDENT_ID}/candidates`);
+        if (!v.running) {
+          C = v; rank.clear();
+          (C.candidates || []).forEach((x, i) => rank.set(x.asset_id, i + 1));
+          renderAssess(); renderCands(); renderDetail(); renderLayout();
+          return;
+        }
+      } catch (e) { /* keep waiting */ }
+      watchRun();
+    }, 2500);
+  }
+
+  // The investigation agent's run, from the Glass box spans: what it looked at, as one compact strip.
+  const TOOL_TXT = { get_camera_candidates: 'Camera candidates', query_asset_graph: 'Knowledge graph', get_sensor_history: 'Methane sensors',
+    search_maintenance: 'Maintenance records', estimate_emissions: 'Emission estimate', get_long_term_history: 'Long-term trend',
+    retrieve_procedure: 'Procedures' };
+  async function agentRun() {
+    const box = $('agrun');
+    if (!box) return;
+    const { get, INCIDENT_ID } = window.AtelicShell;
+    let st = null;
+    try { st = ((await get(`/incidents/${INCIDENT_ID}/agent-runs`)).steps || []).find((x) => x.id === 'investigation'); } catch (e) { /* hidden */ }
+    if (!st || st.status === 'not_run' || !(st.spans || []).length) {
+      if (C && C.status !== 'sample') setTimeout(agentRun, 3000);
+      return;
+    }
+    const tools = [], seen = new Set();
+    let thoughts = 0;
+    st.spans.forEach((sp) => {
+      const t = String(sp.tool || '').split(':')[0];
+      if (t === 'model_inference') thoughts += 1;
+      else if (TOOL_TXT[t] && !seen.has(t)) { seen.add(t); tools.push(TOOL_TXT[t]); }
+    });
+    const key = `atelic.agrun.${INCIDENT_ID}`;
+    let played = false;
+    try { played = sessionStorage.getItem(key) === '1'; sessionStorage.setItem(key, '1'); } catch (e) { /* ignore */ }
+    box.hidden = false;
+    box.innerHTML = `<div class="ar-h"><span class="ar-st"><span class="ag-spin"></span></span><b>Investigation agent</b><span class="ar-n">Nemotron · ${thoughts} reasoning steps · ${tools.length} tools</span></div>
+      <div class="ar-tools">${tools.map((t) => `<span class="ar-t${played ? ' on' : ''}">${esc(t)}</span>`).join('')}</div>`;
+    const done = () => { box.querySelector('.ar-st').innerHTML = '<span class="ar-ok">✓</span>'; };
+    if (played) return done();
+    const chips = [...box.querySelectorAll('.ar-t')];
+    chips.forEach((c, i) => setTimeout(() => c.classList.add('on'), 500 + i * 450));
+    setTimeout(done, 700 + chips.length * 450);
   }
 
   // Confidence per candidate (shares across the candidates, from the API).
@@ -429,6 +482,8 @@
       C = c.value;
       (C.candidates || []).forEach((x, i) => rank.set(x.asset_id, i + 1));
       renderAssess();
+      watchRun();
+      agentRun();
     } else {
       $('cand-badge').innerHTML = badge('pending');
       $('assess').className = 'assess unresolved';

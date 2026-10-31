@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="css/shell.css?v=101">
 <script src="js/shell.js?v=107" defer></script>
 <script src="js/plumeheat.js?v=101" defer></script>
-<script src="js/locate.js?v=123" defer></script>
+<script src="js/locate.js?v=125" defer></script>
 <style>
 
   /* PRD Screen 3: investigation (camera strip + plant view) | ranked candidates */
@@ -166,6 +166,23 @@
   .meter i.f{background:var(--ink-mute)}
   .meter i.a{background:none;box-shadow:inset 0 0 0 1px var(--ink-dim)}
   .cand .ct{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);white-space:nowrap}
+  .ag-run{display:flex;gap:8px;align-items:flex-start;margin-top:8px;padding:7px 10px;border:1px solid var(--line,#e3e7ee);border-left:3px solid var(--violet,#6d4bd8);border-radius:4px;font-size:11.5px;color:var(--ink-mute)}
+  .ag-run b{color:var(--ink);font-weight:600}
+  .ag-spin{width:11px;height:11px;margin-top:2px;border-radius:50%;border:2px solid var(--line-strong,#cfd5df);border-top-color:var(--violet,#6d4bd8);animation:agspin 1s linear infinite;flex:none;display:inline-block}
+  @keyframes agspin{to{transform:rotate(360deg)}}
+  .agrun{margin:8px 0 2px;padding:8px 10px;border:1px solid var(--line,#e3e7ee);border-left:3px solid var(--violet,#2E6399);border-radius:4px;font-size:11.5px}
+  .ar-h{display:flex;align-items:center;gap:7px;min-width:0}
+  .ar-h b{font-weight:600}
+  .ar-n{color:var(--ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .ar-gb{margin-left:auto;font-size:11px;white-space:nowrap}
+  .ar-st{display:inline-flex;width:12px;justify-content:center}
+  .ar-st .ag-spin{margin-top:0}
+  .ar-ok{color:var(--good);font-weight:700}
+  .ar-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .ar-t{padding:1px 7px;border-radius:10px;border:1px solid var(--line,#e3e7ee);color:var(--ink-dim);opacity:.35;transition:opacity .3s,color .3s,border-color .3s}
+  .ar-t.on{opacity:1;color:var(--ink);border-color:var(--line-strong,#cfd5df)}
+  .ar-t.on::before{content:"✓ ";color:var(--good)}
+  @media (prefers-reduced-motion:reduce){.ar-t{transition:none}}
   .cbar{display:block;width:64px;height:5px;border-radius:3px;background:var(--line,#e3e7ee);overflow:hidden}
   .cbar i{display:block;height:100%;background:var(--accent,#2f5b8f)}
   .cand.sel .ct,.cand .ct{font-size:11px;color:var(--ink-mute)}
@@ -274,6 +291,7 @@
         <span class="gb-slot" data-trace="equipment_mapping"></span>
       </div>
       <div id="assess" class="assess"><div class="note">Loading…</div></div>
+      <div id="agrun" class="agrun" hidden></div>
       <div class="cands" id="cands"></div>
       <div class="dtabs" role="tablist" aria-label="Asset detail">
         <button class="tab" role="tab" data-t="evidence" aria-selected="true">Evidence</button>

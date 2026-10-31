@@ -940,7 +940,12 @@ def confidences(overlap, fits=None, favoured=None):
             x *= 2.5
         w[aid] = x
     t = sum(w.values()) or 1.0
-    return {k: round(v / t, 3) for k, v in w.items()}
+    # Whole percentages that add up to exactly 100 (largest remainder), so 94.6 / 5.4 shows as 95 / 5, never 95 / 6.
+    raw = {k: v / t * 100 for k, v in w.items()}
+    pct = {k: math.floor(v) for k, v in raw.items()}
+    for k in sorted(raw, key=lambda k: raw[k] - pct[k], reverse=True)[:100 - sum(pct.values())]:
+        pct[k] += 1
+    return {k: pct[k] / 100 for k in w}
 
 
 @app.get("/incidents/{incident_id}/candidates")
@@ -957,7 +962,7 @@ def get_candidates(incident_id: str):
         cam = s.get("camera_id") or "CAM-01"
         cands = loc["detail"]["candidates"]
         conf = confidences({c["asset_id"]: c["overlap_fraction"] for c in cands})
-        return {"status": "verified", "provenance": "model_estimated", "method": "Camera plume-origin overlap",
+        return {"status": "verified", "running": True, "provenance": "model_estimated", "method": "Camera plume-origin overlap",
                 "assessment": {"result": "likely_source", "asset_id": loc["detail"]["selected_asset_id"]}, "invalid_ids": [],
                 "candidates": [{"asset_id": c["asset_id"], "status": "candidate", "confidence": conf[c["asset_id"]],
                                 "rationale": [f"The plume's origin on {cam} sits on {c['asset_id']} ({c['overlap_fraction']:.0%} of the origin region)."],
