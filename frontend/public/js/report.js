@@ -97,6 +97,8 @@
   }
 
   function renderAll() {
+    // Times are shown on the site clock: until the shell has the clock, draw again shortly.
+    if (!window.AtelicShell.replayNow() && (window.__clockTries = (window.__clockTries || 0) + 1) < 20) setTimeout(renderAll, 500);
     evNo = {};
     if (R) R.evidence.forEach((e, i) => (evNo[e.id] = i + 1));
     renderDoc(); renderSide(); renderEvidence(); renderStory();

@@ -761,7 +761,7 @@ def plant_graph():
         g = engine.get("/graph/plant")
         fac = cached(("facility",), lambda: engine.get("/facility"), ttl=3600)
         ver = fac.get("geometry_version")
-        src = "Neo4j (engine knowledge graph)"
+        src = "Neo4j (plant knowledge graph)"
         nodes, edges, areas = [], [], {}
         for n in g["nodes"]:
             p, label = n["props"], n["label"]
@@ -1496,7 +1496,7 @@ def draft_inputs(s, rec):
     rate = q and q.get("rate_kg_ch4_h")
     return [
         {"id": "source", "label": "Likely source", "value": sel, "provenance": "hypothesis", "screen": "locate.html",
-         "detail": f"Top of {len(snap.get('candidates', []))} camera candidates · sensors {att.get('status', 'pending').replace('_', ' ')}" if sel else "Locate agent running"},
+         "detail": f"Top of {len(snap.get('candidates', []))} camera candidates · {ATTRIBUTION_TEXT.get(att.get('status'), 'sensors ' + (att.get('status') or 'pending').replace('_', ' '))}" if sel else "Locate agent running"},
         {"id": "rate", "label": "Emission rate", "value": f"{rate:.2f} kg CH₄/h" if rate is not None else None, "screen": "quantify.html",
          "detail": (f"Sensitivity {q['interval']['low']}–{q['interval']['high']} kg/h" if rate is not None and q.get("interval")
                     else (q or {}).get("missing", ["Quantify agent running"])[0]),

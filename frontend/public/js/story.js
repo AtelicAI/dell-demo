@@ -35,6 +35,7 @@
   function cites(ids) {
     // Shown short: the ID without its kind prefix, section or raw timestamps (HIST-FAC-001 · 2026-09-06 to 2026-10-23).
     const show = (i) => {
+      if (/^detection\/runs\//.test(i)) return 'Camera detection run';
       const t = i.split(':').slice(1).join(':').split('#')[0] || i;
       const h = t.match(/^(HIST-[A-Z0-9-]+):(\d{4}-\d\d-\d\d):(\d{4}-\d\d-\d\d)/);
       return h ? `${h[1]} · ${h[2]} to ${h[3]}` : t.replace(/(\d{4}-\d\d-\d\d)T[\d:.]+(\+00:00|Z)?/g, '$1');
@@ -49,7 +50,7 @@
     const n = (k) => fs.filter((f) => f.kind === k).length;
     return `<div class="inv">
       <div class="inv-h"><span class="lbl">Investigation agent${inv.round > 1 ? ` · research round ${inv.round}` : ''}</span>
-        <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.replayed ? ' · recorded run' : ''}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
+        <span class="inv-by">${esc(inv.source_origin === 'llm' ? `${(inv.model || '').split('/').pop()} · ${inv.deployment === 'hosted_endpoint' ? 'NVIDIA hosted endpoint' : inv.deployment || ''}` : 'Deterministic template (model unavailable)')}${inv.recorded_at ? ` · ${hm(inv.recorded_at)}` : ''}</span>
         <span class="inv-n">${n('contradiction')} contradiction${n('contradiction') === 1 ? '' : 's'} · ${n('gap')} gap${n('gap') === 1 ? '' : 's'} · ${n('supporting')} supporting</span></div>
       ${inv.round > 1 ? `<div class="inv-ch"><span class="lbl">What changed since round ${inv.round - 1}</span>
         ${inv.focus ? `<p>Focus from ${esc(inv.requested_by || 'the engineer')}: “${esc(inv.focus)}”</p>` : ''}

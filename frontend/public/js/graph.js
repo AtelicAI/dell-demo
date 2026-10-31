@@ -311,6 +311,7 @@
 
   function wireCanvas() {
     cy = window.cytoscape({ container: $('cy'), style: styles(), minZoom: 0.2, maxZoom: 3, boxSelectionEnabled: false, autounselectify: false });
+    window.__atelicGraph = cy;  // read-only handle for walkthrough recordings
     // Sharp rendering: Cytoscape's layered cache redraws from lower-resolution snapshots after a change
     // (soft on high-DPI screens); draw each element from its own cache at the current zoom instead.
     const lyr = cy.renderer && cy.renderer().data && cy.renderer().data.lyrTxrCache;

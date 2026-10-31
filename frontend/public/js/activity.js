@@ -64,6 +64,8 @@
   function stepStatus(s) { return s.spans.some((x) => x.status === 'blocked') && !s.spans.some((x) => x.status === 'ok') ? 'blocked' : s.status; }
 
   function render() {
+    // Times are shown on the site clock: until the shell has the clock, draw again shortly.
+    if (!window.AtelicShell.replayNow() && (window.__clockTries = (window.__clockTries || 0) + 1) < 20) setTimeout(render, 500);
     if (!A) {
       $('trace').innerHTML = '<li class="why" style="padding:14px 0">Backend not reachable. No activity can be shown.</li>';
       $('hw').innerHTML = '';
