@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
 from app import engine
-from app.evidence import Evidence
+from app.evidence import Evidence, pretty_text
 
 DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
 STATE_FILE = Path(os.getenv("UI_STATE_FILE", DATA_DIR.parent / ".ui-state" / "state.json"))
@@ -234,6 +234,8 @@ def engine_health():
 
 
 def nvidia_status():
+    if OFFLINE:  # the agents' Nemotron runs ship with the build; no key or network on this machine
+        return "nemotron_runs"
     return "hosted_api" if engine_health().get("nvidia") in ("configured_not_verified", "verified") else "not_connected"
 
 
@@ -448,7 +450,7 @@ def sync(s):
                     "investigate": "Investigation agent reported findings",
                     "answer": "Agent answered an engineer question",
                     "reinvestigate": f"Investigation agent finished research round {d.get('round')}",
-                    "verify": f"Verifier recommends {d.get('recommendation')} ({d.get('recovery_check')})"}[e["step"]]
+                    "verify": f"Verifier recommends {(d.get('recommendation') or '').replace('_', ' ')} (sensors {(d.get('recovery_check') or '').replace('background_restored', 'back to baseline').replace('_', ' ')})"}[e["step"]]
             # Credit the model only when it produced the step; the engine's fallback is named as such.
             who = hit[1] if hit[1] != "Nemotron agent" or d.get("source_origin") == "llm" else "Deterministic template (model unavailable)"
             audit(s, hit[0], who, text, at=utc(e["recorded_at"]))
@@ -1525,7 +1527,8 @@ def work_order_view(s):
     approved = bool(rv and rv["decision"] == "approve")
     # The planner's previous draft, so the screens can show what a revision changed.
     prev = s["drafts"].get(str(latest["draft_version"] - 1)) if draft.get("revision_of") else None
-    return {**base, "draft": {**draft, "fields": latest["fields"], "version": latest["version"], "hash": latest["hash"],
+    shown_ev = [{**e, **{k: pretty_text(e[k]) for k in ("label", "excerpt") if isinstance(e.get(k), str)}} for e in draft.get("evidence", [])]
+    return {**base, "draft": {**draft, "evidence": shown_ev, "fields": latest["fields"], "version": latest["version"], "hash": latest["hash"],
                               "status": "Approved" if approved else "Draft"},
             "previous_draft": prev and {"engine_draft_version": prev["engine_draft_version"], "sections": prev["sections"]},
             "versions": [{k: v[k] for k in ("version", "hash", "created_at", "author", "changed", "draft_version")} for v in s["versions"]],
@@ -1964,6 +1967,21 @@ STEP_REASON = {"camera_event": "No alert yet. Trigger the event on the Detect sc
 HUMAN_EVENT = {"review": None, "question": "question_asked", "research": "research_requested", "report_issued": "report_issued", "repair_recorded": "repair_recorded", "closure": "incident_closed"}
 
 
+STATUS_TEXT = {"completed": "done", "repair_requested": "citation check sent the draft back for a fix", "failed": "failed"}
+WAIT_TEXT = {"waiting_for_camera_window": "Waiting for the camera plume to hold steady",
+             "missing_wind_or_methane": "Waiting for wind or a camera plume to measure",
+             "waiting_for_decisive_location": "Waiting for the sensors to separate the candidates"}
+STORE_NAME = {"neo4j": "Neo4j", "influxdb": "InfluxDB", "qdrant": "Qdrant", "postgresql": "PostgreSQL"}
+ATTRIBUTION_TEXT = {"agrees_single": "sensors agree with the camera", "agrees_ambiguous": "sensors agree, candidates not separable",
+                    "partly_agrees": "sensors partly agree", "disagrees": "sensors disagree with the camera",
+                    "no_consistent_location": "no location explains the readings", "not_assessed": "sensors not assessed"}
+
+
+def parse_ts(t):
+    from datetime import datetime
+    return datetime.fromisoformat(t.replace("Z", "+00:00")).timestamp()
+
+
 def agent_runs(s):
     orch = orchestration(s) or {"events": []}
     rec = record(s)
@@ -1981,20 +1999,32 @@ def agent_runs(s):
         d, st, kind = e["detail"], e["step"], e["kind"]
         if st == "detect" and kind == "completed":
             span("camera_event", e, "model_alert: Atelic detection model on the thermal camera",
-                 f"Alert at clip {d.get('clip_time_seconds') or 0:.1f} s", model="Atelic detection model",
+                 f"Plume confirmed on {s['camera_id']} (3 of 5 one-second checks)", model="Atelic detection model",
                  evidence=[{"label": "Executed detection run", "path": d.get("evidence_reference", ""), "screen": "detection.html"}])
         elif st == "locate" and kind == "tool_call":
-            span("graph", e, f"{d.get('tool')}: Neo4j", f"{d.get('asset_id')} context from {d.get('backend')}", ok=d.get("status") == "completed",
-                 evidence=[{"label": "Knowledge graph", "path": f"neo4j:Asset/{d.get('asset_id')}", "screen": "graph.html"}])
+            store = STORE_NAME.get(d.get("backend"), d.get("backend") or "engine")
+            what = (f"{d['asset_id']}: connections, sensors, cameras and maintenance" if d.get("asset_id")
+                    else "Methane, wind and pressure readings around the alarm")
+            span("graph" if d.get("asset_id") else "emission_estimate", e, f"{d.get('tool')}: {store}", what, ok=d.get("status") == "completed",
+                 evidence=[{"label": "Knowledge graph", "path": f"neo4j:Asset/{d['asset_id']}", "screen": "graph.html"}] if d.get("asset_id")
+                          else [{"label": "Telemetry", "path": "InfluxDB", "screen": "quantify.html"}])
         elif st == "locate" and kind == "completed":
             span("equipment_mapping", e, "camera_candidates: origin-region overlap",
-                 ", ".join(f"{c['asset_id']} {c['overlap_fraction']:.0%}" for c in d.get("candidates", [])) + f" · selected {d.get('selected_asset_id')} (unconfirmed)",
+                 ", ".join(f"{c['asset_id']} {c['overlap_fraction']:.0%}" for c in d.get("candidates", [])) + f" · likely source {d.get('selected_asset_id')}",
                  evidence=[{"label": "Camera regions", "path": "facility/cameras.json", "screen": "locate.html"}])
         elif st == "quantify" and kind == "attempt":
-            span("emission_estimate", e, "estimate_emissions: Gaussian candidate fit",
-                 (f"{d['rate_kg_h']:.3f} kg/h, sensors {(d.get('attribution') or '').replace('_', ' ')}" if d.get("rate_kg_h") is not None
-                                                        else f"{d['status'].replace('_', ' ')}: {d.get('reason')}"),
-                 ok=d["status"] == "estimated", evidence=[{"label": "Telemetry window", "path": "InfluxDB · last 300 s", "screen": "quantify.html"}])
+            # The agent re-checks every 10 s: consecutive checks with the same outcome are one line, timed first to last.
+            res = (f"{d['rate_kg_h']:.3f} kg/h · {ATTRIBUTION_TEXT.get(d.get('attribution'), (d.get('attribution') or '').replace('_', ' '))}"
+                   if d.get("rate_kg_h") is not None else WAIT_TEXT.get(d.get("reason"), (d.get("reason") or d["status"]).replace("_", " ")))
+            last = spans["emission_estimate"][-1] if spans["emission_estimate"] else None
+            if last and last.get("_res") == res and last["tool"].startswith("estimate_emissions"):
+                last["_n"] += 1
+                last["duration_ms"] = round((parse_ts(e["recorded_at"]) - parse_ts(last["started_at"])) * 1000, 1)
+                last["result"] = f"{res} · {last['_n']} checks"
+            else:
+                span("emission_estimate", e, "estimate_emissions: rate tools over the latest window", res,
+                     ok=d["status"] == "estimated", evidence=[{"label": "Telemetry window", "path": "InfluxDB · last 300 s", "screen": "quantify.html"}])
+                spans["emission_estimate"][-1].update(_res=res, _n=1)
         elif kind == "agent_activity" and st in AGENT_STEPS:
             tool = d.get("tool")
             target = {"investigate": "investigation", "reinvestigate": "investigation", "plan": "work_order", "revise": "work_order",
@@ -2003,7 +2033,8 @@ def agent_runs(s):
                 target = "procedure_passages"
             model = tool == "model_inference"
             span(target, e, f"{tool}: {'Nemotron on the NVIDIA hosted endpoint' if model else 'engine tool over the frozen snapshot'}",
-                 f"{st} · {d.get('status')}", model=d.get("model") if model else None, ok=d.get("status") == "completed",
+                 f"{st} · {STATUS_TEXT.get(d.get('status'), (d.get('status') or '').replace('_', ' '))}", model=d.get("model") if model else None,
+                 ok=d.get("status") in ("completed", "repair_requested"),
                  component="Nemotron agent" if model else "Agent tool", provider=d.get("endpoint") or "Atelic engine (local code)")
     human = []
     for e in orch["events"]:
@@ -2014,7 +2045,14 @@ def agent_runs(s):
                           "detail": d.get("rationale") or d.get("question") or d.get("work_performed") or d.get("decision")
                                     or (f"Research round {d['round']}" + (f": {d['focus']}" if d.get("focus") else "") if e["kind"] == "research" else "")})
     human += [{k: e[k] for k in ("event", "actor", "at", "version", "detail")} for e in s["audit"] if e["event"] == "submitted_for_review"]
-    human.sort(key=lambda x: x["at"] or "")
+    # A submission sorts before a review stamped the same second; each review is on the draft last submitted.
+    human.sort(key=lambda x: (x["at"] or "", 0 if x["event"] == "submitted_for_review" else 1))
+    shown = None
+    for h in human:
+        if h["event"] == "submitted_for_review":
+            shown = h["version"]
+        elif h["event"].startswith("review_") and shown is not None:
+            h["version"] = shown
     st = rec and rec["state"]
     approval = ("approved" if st in APPROVED_OR_LATER else "returned" if latest_review(s) else "waiting" if s["submitted"] else "not_reached")
     steps = []
@@ -2031,6 +2069,8 @@ def agent_runs(s):
                           "reason": None if closed else "Closure is a human decision after the verifier reports.",
                           "guardrail": "Engine rule: report, repair record and closure require the engineer credential."})
         else:
+            for sp in spans[key_]:
+                sp.pop("_res", None); sp.pop("_n", None)
             steps.append({"id": key_, "label": label, "status": "ran" if spans[key_] else "not_run", "spans": spans[key_],
                           "reason": None if spans[key_] else STEP_REASON.get(key_)})
     h = engine_health()

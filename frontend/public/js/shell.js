@@ -42,7 +42,7 @@
   // Stage → rail page, so stepper boxes can link to their screen.
   const STAGE_PAGE = { detect: 'detection', locate: 'locate', quantify: 'quantify', plan: 'plan', approve: 'review', report: 'report', close: 'report' };
   const DELL_LABELS = { running: 'Running', target_deployment: 'Target deployment' };
-  const NVIDIA_LABELS = { local_nim: 'Local NIM', hosted_api: 'Hosted API', not_connected: 'Not connected' };
+  const NVIDIA_LABELS = { local_nim: 'Local NIM', hosted_api: 'Hosted API', nemotron_runs: 'Nemotron', not_connected: 'Not connected' };
   // Partner roles for the Dell / NVIDIA pills. Status lines come from /status; nothing here claims a live connection.
   const PARTNERS = {
     dell: {
@@ -64,6 +64,7 @@
       ],
       status: (s) => s.nvidia_inference === 'local_nim' ? ['ok', 'Local NIM: inference runs on the edge server.']
         : s.nvidia_inference === 'hosted_api' ? ['ok', 'Hosted API: inference runs on NVIDIA-hosted endpoints.']
+        : s.nvidia_inference === 'nemotron_runs' ? ['ok', 'NVIDIA Nemotron agents investigate, draft, answer and verify.']
         : ['off', 'Not connected. No NVIDIA model is in use; the engine falls back to a labelled template.'],
     },
   };

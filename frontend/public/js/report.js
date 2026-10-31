@@ -21,7 +21,10 @@
     question_asked: 'Question asked', report_issued: 'Report issued', repair_recorded: 'Repair recorded',
     agent_verification: 'Verifier result', incident_closed: 'Incident closed', incident_kept_open: 'Kept open', agents_restarted: 'Agents restarted',
   };
-  const when = (t) => (t ? `${t.slice(0, 10)} ${t.slice(11, 19)}` : '—');
+  // Times on the site clock like every other screen (a real time maps to the same distance back from site time).
+  const site = (t) => { const d = t && window.AtelicShell.toReplay(t); return d && !Number.isNaN(d.getTime()) ? d.toISOString() : t; };
+  const when = (t) => (t ? `${site(t).slice(0, 10)} ${site(t).slice(11, 19)}` : '—');
+  const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|\+00:00)$/;
   const MONO = /^(v\d|INC-|MOV_|[A-Z]{2,4}-\d|\d)/;
 
   // Report section -> the Glass box step that produced it.
@@ -31,7 +34,7 @@
   function rows(s) {
     return `<table class="rows">${s.rows.map((r) => {
       const fns = r.cites.filter((c) => evNo[c]).map((c) => `<button class="fn" data-ev="${esc(c)}" aria-label="Source ${evNo[c]}">${evNo[c]}</button>`).join('');
-      const val = r.value === null ? 'Not available' : r.value;
+      const val = r.value === null ? (r.label === 'Reason' ? '—' : 'Not available') : ISO.test(r.value) ? `${when(r.value)} UTC` : r.value;
       return `<tr class="${r.value === null ? 'gap' : ''}">
         <td class="k">${esc(r.label)}</td>
         <td class="v"><span class="val${r.value !== null && MONO.test(r.value) && r.value.length < 40 ? ' mono' : ''}">${esc(val)}</span>${fns}

@@ -56,7 +56,7 @@
       ${closed.map((h) => `<tr ${rowAttrs(h.incident_id)}>
           <td class="id">${esc(h.incident_id)}${activeTag(h.incident_id)}</td>
           <td class="mono">${esc(h.camera_id)}</td>
-          <td>${h.asset_id ? `<span class="mono">${esc(h.asset_id)}</span>` : '<span class="dim">None</span>'}</td>
+          <td>${h.asset_id ? `<span class="mono">${esc(h.asset_id)}</span>` : '<span class="dim">—</span>'}</td>
           <td>${chip(h.outcome_label, OUTCOME_KIND[h.outcome])}</td>
           <td class="mute">${esc(h.decision.reviewer)}</td>
           <td class="mono mute">${esc((h.closed_utc || '').slice(0, 10))}</td>
@@ -74,7 +74,7 @@
           <td class="mono mute">${esc(w.date)}</td>
           <td>${w.asset_id ? `<span class="mono">${esc(w.asset_id)}</span>` : '<span class="dim">Site</span>'}</td>
           <td class="wrap">${esc(w.issue)}<small class="wt">${esc(w.work_type)}</small></td>
-          <td>${w.commitments.length ? chip(waiting ? `${waiting} due` : 'All done', waiting ? 'warn' : 'good') : '<span class="dim">None</span>'}</td>
+          <td>${w.commitments.length ? chip(waiting ? `${waiting} due` : 'All done', waiting ? 'warn' : 'good') : '<span class="dim">—</span>'}</td>
         </tr>`;
       }).join('')}</tbody></table>`
       : '<div class="empty-row">No station history in the knowledge graph.</div>';
@@ -143,7 +143,7 @@
             ...(d.reason ? [['Reason', esc(d.reason)]] : []),
             ...(h.closure ? [['Closed by', esc(h.closure.by)], ...(h.closure.rationale ? [['Closure reason', esc(h.closure.rationale)]] : [])] : []),
             ...(h.comment ? [['What was seen', esc(h.comment)]] : []),
-            ['Work order', h.work_order ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : 'None'],
+            ['Work order', h.work_order ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : '—'],
             ['Emission rate', h.rate != null ? esc(h.rate) : 'Not recorded'], // the API already gives unit and "(model estimate)"
           ])}
           <h4>Timeline</h4>

@@ -3,11 +3,27 @@
 Every entry is looked up in the frozen snapshot the agents read; an ID that cannot be resolved is still listed,
 labelled as unresolved, never dropped or invented.
 """
+import re
 
 
 def provenance_of(kind):
     return {"quantification": "model_estimated", "detection": "model_estimated", "history": "simulated",
             "field_note": "field_note"}.get(kind, "simulated")
+
+
+def pretty_id(eid):
+    """Evidence ID as shown to people: dates instead of raw timestamps, no file-style section names."""
+    eid = re.sub(r"(\d{4}-\d\d-\d\d)T\d\d:\d\d:\d\d(\.\d+)?(\+00:00|Z)?", r"\1", eid)
+    eid = eid.replace("#complete_example", "")
+    m = re.match(r"history:(HIST-[A-Z0-9-]+):(\d{4}-\d\d-\d\d):(\d{4}-\d\d-\d\d)$", eid)
+    return f"{m.group(1)} · {m.group(2)} to {m.group(3)}" if m else eid
+
+
+def pretty_text(t):
+    """Raw IDs and codes inside a sentence, as people read them."""
+    t = re.sub(r"HIST-([A-Z0-9-]+):(\d{4}-\d\d-\d\d):(\d{4}-\d\d-\d\d)T[\d:.]+(\+00:00|Z)?", r"HIST-\1 (\2 to \3)", t)
+    t = re.sub(r"(\d{4}-\d\d-\d\d)T(\d\d:\d\d):\d\d(\.\d+)?(\+00:00|Z)", r"\1 \2 UTC", t)
+    return re.sub(r"\b(not_done|best_fit|poor_fit|comparable_fit|background_restored|closed_with_exception)\b", lambda m: m.group(1).replace("_", " "), t)
 
 
 class Evidence:
@@ -70,7 +86,8 @@ class Evidence:
         if kind == "document":
             d = self.docs.get(eid) or self.docs.get(eid.split("#")[0]) or {}
             doc = rest.split("#")[0]
-            return dict(kind="procedure", group=f"Doc · {doc}", label=f"{d.get('title') or doc} · {rest.split('#')[1] if '#' in rest else 'document'}",
+            sec = rest.split('#')[1] if '#' in rest else 'document'
+            return dict(kind="procedure", group=f"Doc · {doc}", label=f"{d.get('title') or doc} · {'full document' if sec == 'complete_example' else sec.replace('_', ' ')}",
                         excerpt=(d.get("text") or "")[:360] or None)
         if kind in ("history", "history-episode"):
             h = self.snap.get("long_term_history") or {}
@@ -95,7 +112,10 @@ class Evidence:
     def add(self, eid):
         if eid not in self.entries:
             e = self.resolve(eid)
-            self.entries[eid] = {"id": eid, "uri": eid, "source": eid, "provenance": provenance_of(e["kind"]), "excerpt": None, **e}
+            self.entries[eid] = {"id": eid, "uri": eid, "source": pretty_id(eid), "provenance": provenance_of(e["kind"]), "excerpt": None, **e}
+            for k in ("label", "excerpt"):
+                if isinstance(self.entries[eid].get(k), str):
+                    self.entries[eid][k] = pretty_text(self.entries[eid][k])
         return eid
 
     def items(self):

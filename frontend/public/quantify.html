@@ -71,6 +71,9 @@
   .cmore .chips{display:flex;flex-wrap:wrap;gap:6px}
   .crun{display:inline-flex;align-items:center;gap:8px;padding:4px 6px 4px 10px;border:1px solid var(--line-strong);border-radius:4px;background:var(--panel);font:inherit;font-size:11.5px;color:var(--ink);cursor:pointer}
   .crun b{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;background:var(--panel-2);color:var(--accent);display:inline-flex;align-items:center;gap:5px}
+  [data-rd] .off{color:var(--bad);font-size:.8em}
+  .crun.off{opacity:.6;cursor:default}
+  .crun.off b{color:var(--ink-dim);background:none}
   .crun:hover{border-color:var(--accent)}
   .crun:hover b{background:var(--accent);color:#fff}
   .crun.failed b{color:var(--warn)}

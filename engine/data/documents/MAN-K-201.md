@@ -1,6 +1,6 @@
 # MAN-K-201: Compressor rod packing and vent excerpt
 
-Status: draft; operational_approval: false; version: 1.
+Status: draft, not yet approved for operations (version 1).
 
 Tag K-201, single-stage gas compressor between P-102 (suction, about 7 bar(a)) and P-201 (discharge, about 12.6 bar(a)), nominal throughput 1800 kg/h. Rod packing leakage is routed to a packing vent; a rising vent flow is an expected wear indicator and should be trended against the OEM allowable range.
 

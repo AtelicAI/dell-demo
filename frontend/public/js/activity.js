@@ -14,8 +14,10 @@
   const EVENT = { submitted_for_review: 'Submitted for review', review_approve: 'Approved', review_request_changes: 'Changes requested', review_reject: 'Rejected',
     question_asked: 'Question asked', report_issued: 'Report issued', repair_recorded: 'Repair recorded', incident_closed: 'Closure decision' };
   const DELL = { running: 'Running', target_deployment: 'Target deployment' };
-  const NVIDIA = { local_nim: 'Local NIM', hosted_api: 'Hosted API', not_connected: 'Not connected' };
-  const hms = (t) => (t ? t.slice(11, 19) : '—');
+  const NVIDIA = { local_nim: 'Local NIM', hosted_api: 'Hosted API', nemotron_runs: 'Nemotron', not_connected: 'Not connected' };
+  // Times on the site clock, like every other screen (the shell maps a real time to the same distance back from site time).
+  const onSite = (t) => { const d = t && window.AtelicShell.toReplay(t); return d && !Number.isNaN(d.getTime()) ? d.toISOString() : t; };
+  const hms = (t) => (t ? onSite(t).slice(11, 19) : '—');
   const human = (s) => s.id === 'approval' || s.id === 'closure';
 
   // Where each step's result is shown in the app (for "Shown on …" links and the back link).
@@ -31,7 +33,7 @@
 
   let A = null, filter = 'all', open = new Set(), timer = null, active = null;
 
-  function fmtMs(ms) { return ms === null || ms === undefined ? 'not timed' : ms < 1 ? `${ms} ms` : `${Math.round(ms * 10) / 10} ms`; }
+  function fmtMs(ms) { return ms === null || ms === undefined ? '' : ms < 1 ? `${ms} ms` : `${Math.round(ms * 10) / 10} ms`; }
 
   function spanCard(sp, maxMs) {
     const w = sp.duration_ms ? Math.max(2, Math.round((sp.duration_ms / maxMs) * 70)) : 0;
@@ -50,11 +52,11 @@
         <tr><td>Provider</td><td>${esc(sp.provider)}</td></tr>
         <tr><td>Execution location</td><td>${esc(sp.location)}</td></tr>
         <tr><td>Tool</td><td class="m">${esc(sp.tool)}</td></tr>
-        <tr><td>Duration</td><td class="m">${fmtMs(sp.duration_ms)}${sp.note ? ` · ${esc(sp.note)}` : ''}</td></tr>
+        ${sp.duration_ms != null ? `<tr><td>Duration</td><td class="m">${fmtMs(sp.duration_ms)}${sp.note ? ` · ${esc(sp.note)}` : ''}</td></tr>` : ''}
         <tr><td>Evidence</td><td>${ev}</td></tr>
         <tr><td>Result</td><td>${esc(sp.result)}</td></tr>
         <tr><td>Guardrail decision</td><td>${esc(sp.guardrail)}</td></tr>
-        <tr><td>Started</td><td class="m">${esc(sp.started_at)}</td></tr>
+        <tr><td>Started</td><td class="m">${sp.started_at ? `${esc(onSite(sp.started_at).slice(0, 10))} ${hms(sp.started_at)} UTC` : '—'}</td></tr>
       </table></div>
     </div>`;
   }

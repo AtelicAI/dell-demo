@@ -127,7 +127,7 @@
       f('Tool chosen by the agent', esc(lbl(METHOD_LABEL[r.primary_tool] || r.primary_tool)), `Source: ${esc(r.source_asset_id)} (hypothesis)`) +
       f('Data window', cam ? '90 s of camera frames' : '60 s of sensor readings', w.end_utc ? `ending ${hhmmss(w.end_utc)} UTC` : '') +
       f('Model version', esc(mver(r)), esc(r.model_note || '')) +
-      f('Case read by the agent', case_.wind !== 'available' ? 'Weather mast down' : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} sensors`,
+      f('Case read by the agent', case_.wind !== 'available' ? `Weather mast offline${mastOff() ? ` since ${mastOff()} UTC` : ''}; no wind in the estimate window` : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} sensors`,
         case_.wind !== 'available' ? 'Camera sees the plume' : `${case_.camera_candidates} camera candidates · wind ${case_.wind_speed_m_s} m/s${cam ? ' · camera sees the plume' : ''}`) +
       f('Assumptions', `<a href="#assumptions-panel">${(r.assumptions || []).length} listed</a>`, 'Geometry is draft');
     fields.hidden = false;
@@ -152,14 +152,17 @@
     const done = new Set(runs.map((x) => x.m.id));
     const rest = ((Q.methods) || []).filter((m) => m.connected && !done.has(m.id));
     const chip = (m) => {
+      // A method whose inputs are missing (e.g. no wind while the weather mast is down) cannot run: say so, no button.
+      if (m.role === 'blocked') return `<span class="crun off" title="${esc(m.reason || '')}"><span>${esc(lbl(m.label))}</span><b>Needs wind</b></span>`;
       const e = m.engineer_run, failed = e && e.rate_kg_h == null;
       return `<button class="crun${failed ? ' failed' : ''}" type="button" data-tool="${esc(m.id)}" title="${esc(failed ? `No rate: ${why(e.reason || e.status)}` : m.reason || '')}">
         <span>${esc(lbl(m.label))}</span><b>${failed ? 'No rate · retry' : 'Run'}</b></button>`;
     };
+    const runnable = rest.filter((m) => m.role !== 'blocked');
     return `<div class="cmp" aria-label="Rate from each method run, kg/h">
       <div class="crows">${rows}${axis}</div>
       <div class="c-legend"><span><i class="ld"></i>Method estimate</span><span><i class="lb"></i>Uncertainty</span>${avg != null ? '<span><i class="la"></i>Average</span>' : ''}</div>
-      ${rest.length ? `<div class="cmore"><span class="lbl">${runs.length > 1 ? 'Add another method to the average' : 'Run another method to compare and average'}</span><div class="chips">${rest.map(chip).join('')}</div></div>` : ''}
+      ${rest.length ? `<div class="cmore"><span class="lbl">${!runnable.length ? 'Other methods need the weather mast, which is offline' : runs.length > 1 ? 'Add another method to the average' : 'Run another method to compare and average'}</span><div class="chips">${rest.map(chip).join('')}</div></div>` : ''}
     </div>`;
   }
 
@@ -168,6 +171,9 @@
     return pts.filter((p) => n == null || Date.parse(p[0]) <= n).map((p) => [Date.parse(p[0]), p[1]]);
   }
 
+  // When the wind channel last reported (S = sensor series), for the "mast offline" wording.
+  const mastOff = () => { const w = S && S.series && S.series.wind_speed_m_s; return w && w.length ? w[w.length - 1][0].slice(11, 19) : null; };
+  const OUTAGE = { wind_speed_m_s: 'Weather mast offline', wind_dir_deg_from_north: 'Weather mast offline', obukhov_m: 'Sonic offline' };
   function traceOption(have) {
     const n = nowMs(), r = Q && Q.result, w = r && r.data_window;
     const t0 = Date.parse(S.site.replay_start_utc), t1 = Date.parse(S.site.replay_end_utc);
@@ -195,11 +201,16 @@
         axisLabel: { color: css('--ink-dim'), fontFamily: MONO, fontSize: 9.5 },
       });
       const pts = seriesUpTo(S.series[s.q], n);
+      // A channel that stops reporting (CAM-02's weather mast goes down just before the alarm): shade the gap up to now.
+      const all = S.series[s.q] || [], lastT = all.length ? Date.parse(all[all.length - 1][0]) : null;
+      const gapEnd = n == null ? t1 : Math.min(n, t1);
+      const outage = lastT && t1 - lastT > 30e3 && gapEnd - lastT > 10e3
+        ? [[{ xAxis: lastT + 10e3, itemStyle: { color: 'rgba(180,35,24,.07)' }, label: { show: true, position: 'insideTop', formatter: `${OUTAGE[s.q] || 'No readings'} from ${iso(lastT).slice(11, 16)}`, color: css('--bad') || '#B42318', fontFamily: MONO, fontSize: 9.5 } }, { xAxis: gapEnd }]] : [];
       series.push({
         type: 'line', xAxisIndex: i, yAxisIndex: i, data: pts, showSymbol: false,
         lineStyle: { width: 1.6, color: col }, itemStyle: { color: col },
         areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: col + '22' }, { offset: 1, color: col + '00' }]) },
-        markArea: { silent: true, itemStyle: { color: css('--accent-glow'), opacity: .5 }, data: area },
+        markArea: { silent: true, itemStyle: { color: css('--accent-glow'), opacity: .5 }, data: [...area, ...outage] },
         markLine: { silent: true, symbol: 'none', data: marks.map((m) => ({ ...m, label: { show: first, position: 'insideEndTop', fontFamily: MONO, fontSize: 9.5, color: m.lineStyle.color, ...m.label } })) },
       });
       if (s.q === 'methane_ppm') {
@@ -234,7 +245,10 @@
       if (ms != null) best = pts.reduce((b, p) => (Math.abs(p[0] - ms) < Math.abs(b[0] - ms) ? p : b), best);
       at = best[0];
       const node = $('labels').querySelector(`[data-rd="${s.q}"]`);
-      if (node) node.innerHTML = `${best[1].toFixed(s.digits)}<small>${s.unit}</small>`;
+      // A channel that stopped reporting reads "Offline" once the clock is past its last reading (not its stale value).
+      const all = S.series[s.q], lastT = Date.parse(all[all.length - 1][0]), n = nowMs();
+      const off = ms == null && OUTAGE[s.q] && n != null && n - lastT > 20e3 && Date.parse(S.site.replay_end_utc) - lastT > 30e3;
+      if (node) node.innerHTML = off ? `<span class="off">Offline</span><small>since ${iso(lastT).slice(11, 16)}</small>` : `${best[1].toFixed(s.digits)}<small>${s.unit}</small>`;
     });
     const used = new Map((((Q && Q.result) || {}).samples || []).map((x) => [Date.parse(x.t), x.used]));
     const u = at != null ? used.get(at) : undefined;
@@ -340,7 +354,7 @@
     $('methods').innerHTML = shown.map((m) => `<div class="tool r-${esc(m.role)}">
         <div class="t-head"><b>${esc(lbl(m.label))}</b><span class="t-role">${esc(ROLE[m.role] || m.role)}</span></div>
         <span class="t-why">${esc(m.reason)}</span>${ready ? out(m) : ''}
-        ${m.connected ? (ready && !ran.has(m.id) ? `<button class="t-run" data-tool="${esc(m.id)}">Run ${esc(lbl(m.label))}</button>` : '')
+        ${m.connected ? (ready && !ran.has(m.id) && m.role !== 'blocked' ? `<button class="t-run" data-tool="${esc(m.id)}">Run ${esc(lbl(m.label))}</button>` : '')
           : '<span class="t-na">Not deployed</span>'}
       </div>`).join('') || '<div class="note">No tools reported by the backend.</div>';
     $('btn-run').disabled = !ready;
@@ -367,8 +381,9 @@
     const li = (id, t, b) => `<li><span class="id">${esc(id)}</span><span class="t" title="${esc(t)}">${esc(t)}</span>${b}</li>`;
     const items = [];
     if (so.methane_ppm) items.push(li(so.methane_ppm, 'Methane concentration', badge(prov)));
-    if (so.wind_speed_m_s) items.push(li(so.wind_speed_m_s, 'Wind speed + direction', badge(prov)));
-    if (so.obukhov_m) items.push(li('MET-01 sonic', 'Turbulence u* + stability L', badge(prov)));
+    const mast = mastOff() && r && r.case && r.case.wind !== 'available' ? ` · offline since ${mastOff().slice(0, 5)}` : '';
+    if (so.wind_speed_m_s) items.push(li(so.wind_speed_m_s, `Wind speed + direction${mast}`, badge(prov)));
+    if (so.obukhov_m) items.push(li('MET-01 sonic', `Turbulence u* + stability L${mast}`, badge(prov)));
     if (r && r.primary_tool === 'qogi') items.push(li(r.camera ? r.camera.camera_id : 'Camera', 'Radiometric frames + plume mask', badge(prov)));
     if (so.pressure_bara) items.push(li(so.pressure_bara, 'Pressure (context only)', badge(prov)));
     items.push(li('Geometry', 'Facility positions + heights', badge('synthetic', 'plant knowledge graph')));
