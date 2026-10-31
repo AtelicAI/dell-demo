@@ -1,0 +1,32 @@
+{
+ "_comment": "Closed incidents from before the current events, seeded into the graph as IncidentRecord nodes with historical=true (Reset keeps them). Consistent with maintenance.json: none concerns XV-2104 or F-205.",
+ "incidents": [
+  {
+   "id": "INC-2026-031", "camera_id": "CAM-03", "outcome": "repaired", "work_order_id": "WO-003",
+   "occurred_at_utc": "2026-07-14T05:42:00Z", "closed_at_utc": "2026-07-16T09:10:00Z",
+   "selected_asset_id": "V-101", "candidate_asset_ids": ["V-101", "XV-105"],
+   "rate_status": "estimated", "rate_kg_h": 0.09,
+   "approved_plan_title": "Replace V-101 level gauge glass and gaskets",
+   "work_performed": "Gauge glass and gaskets replaced under WO-003; soap test showed no bubbles.",
+   "verification_recommendation": "close", "recovery_check": "background_restored",
+   "closure_rationale": "Shift supervisor: Gauge glass gasket was the source. Replaced under WO-003; sensors back to background for 24 h.",
+   "closed_by": "Shift supervisor"
+  },
+  {
+   "id": "INC-2026-044", "camera_id": "CAM-04", "outcome": "false_alarm",
+   "occurred_at_utc": "2026-09-11T13:25:00Z", "closed_at_utc": "2026-09-11T13:41:00Z",
+   "selected_asset_id": "XV-2111", "candidate_asset_ids": ["XV-2111"],
+   "rate_status": "not_estimated",
+   "closure_rationale": "Control-room engineer: Hot exhaust from a service truck parked by the perimeter; methane sensors stayed at background.",
+   "closed_by": "Control-room engineer"
+  },
+  {
+   "id": "INC-2026-047", "camera_id": "CAM-02", "outcome": "false_alarm", "work_order_id": "WO-010",
+   "occurred_at_utc": "2026-10-02T10:05:00Z", "closed_at_utc": "2026-10-02T10:30:00Z",
+   "selected_asset_id": "P-201", "candidate_asset_ids": ["P-201"],
+   "rate_status": "not_estimated",
+   "closure_rationale": "Control-room engineer: Generator exhaust from the WO-010 ultrasonic survey crew; no methane on CH4-01 to CH4-05.",
+   "closed_by": "Control-room engineer"
+  }
+ ]
+}

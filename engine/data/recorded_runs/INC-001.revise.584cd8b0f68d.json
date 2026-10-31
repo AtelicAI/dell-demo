@@ -52,7 +52,7 @@
      }
     ],
     "role": "assistant",
-    "reasoning_content": "The user wants me to conduct an engineering investigation for a synthetic demonstration. I need to use the read-only tools to gather evidence and then produce a JSON report with specific structure. Let me start by calling all the available tools to gather evidence."
+    "reasoning_content": "The user wants me to conduct an engineering investigation for this incident. I need to use the read-only tools to gather evidence and then produce a JSON report with specific structure. Let me start by calling all the available tools to gather evidence."
    },
    "elapsed_ms": 3180
   },

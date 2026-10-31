@@ -56,7 +56,7 @@
       title: 'NVIDIA AI stack',
       role: 'Components:',
       parts: [
-        ['Nemotron 3 Ultra', 'investigates, drafts and revises work orders, answers questions, verifies repairs (NVIDIA hosted endpoint in this demo)'],
+        ['Nemotron 3 Ultra', 'investigates, drafts and revises work orders, answers questions, verifies repairs (NVIDIA hosted endpoint)'],
         ['Speech NIM', 'Arabic and English voice'],
         ['NeMo Retriever', 'finds the right plant documents'],
         ['NeMo Guardrails', 'blocks unsafe or out-of-scope actions'],
@@ -144,7 +144,7 @@
       <button type="button" class="rail-tg" id="rail-tg" aria-label="Collapse menu" title="Collapse menu"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
       <div class="brand"><img class="mk" src="img/atelic-logo.png" alt="Atelic"><span class="tg">edge</span></div>
       <nav class="nv">${links}</nav>
-      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator · <button type="button" class="linkish" id="sign-out">Sign out</button> · <button type="button" class="linkish" id="demo-reset" title="Start a fresh demo">Reset demo</button></span></div></div>`;
+      <div class="ft" data-label="Control-room engineer"><div class="av">CR</div><div class="who"><b>Control-room engineer</b><span>Operator · <button type="button" class="linkish" id="sign-out">Sign out</button> · <button type="button" class="linkish" id="demo-reset" title="Clear every incident and start fresh">Reset</button></span></div></div>`;
     $('rail-tg').addEventListener('click', () => setRailMin(!document.documentElement.classList.contains('rail-min')));
     setRailMin(readRailMin(), true);
   }
@@ -174,7 +174,7 @@
     el.innerHTML = `
       <div class="crumb"><span>ATELIC</span><span class="sep">|</span><span class="cur">Methane incident intelligence</span></div>
       <div class="right-controls">
-        <button type="button" id="pill-sys" class="status-pill" data-partner="system" title="Dell edge server, NVIDIA inference and replay clock" aria-expanded="false"><span class="dot"></span>System · …</button>
+        <button type="button" id="pill-sys" class="status-pill" data-partner="system" title="Dell server, NVIDIA inference and site clock" aria-expanded="false"><span class="dot"></span>System · …</button>
         <button type="button" id="nt-btn" class="nt-btn" aria-label="Notifications" title="Notifications" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg><span class="nt-n" hidden></span></button>
       </div>
       <div class="hw-pop" id="hw-pop" role="dialog" hidden></div>
@@ -331,8 +331,8 @@
     };
     const now = replayNow();
     pop.innerHTML = `${sec(PARTNERS.dell)}${sec(PARTNERS.nvidia)}
-      <div class="hw-sec"><b class="t">Replay clock</b><div class="hw-st ${now ? 'ok' : 'off'}"><span class="dot"></span>${now
-        ? `Recorded data is replayed from ${fmtUtc(now, true)}.` : 'No replay running.'}</div></div>`;
+      <div class="hw-sec"><b class="t">Site clock</b><div class="hw-st ${now ? 'ok' : 'off'}"><span class="dot"></span>${now
+        ? `Site time ${fmtUtc(now, true)}.` : 'Clock not running.'}</div></div>`;
     pop.dataset.for = key;
     pop.hidden = false;
     document.querySelectorAll('[data-partner]').forEach((b) => b.setAttribute('aria-expanded', String(b === btn)));
@@ -353,7 +353,7 @@
     if (!el) return;
     const live = s && s.dell_edge === 'running' && s.nvidia_inference !== 'not_connected';
     pill(el, `System${now ? ` · <span class="mono">${fmtUtc(now)}</span>` : ''}`, live ? 'ok' : 'off');
-    if (s) el.title = `Dell Edge: ${DELL_LABELS[s.dell_edge] || 'Unknown'} · NVIDIA inference: ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}${now ? ` · Replay ${fmtUtc(now, true)}` : ''}`;
+    if (s) el.title = `Dell Edge: ${DELL_LABELS[s.dell_edge] || 'Unknown'} · NVIDIA inference: ${NVIDIA_LABELS[s.nvidia_inference] || 'Unknown'}${now ? ` · Site time ${fmtUtc(now, true)}` : ''}`;
   }
 
   function renderStatus(s) {
@@ -542,11 +542,11 @@
   document.addEventListener('click', (e) => {
     if (e.target.id !== 'demo-reset') return;
     modal({
-      title: 'Reset the demo?',
+      title: 'Reset everything?',
       html: '<p class="dm-lead">Every camera goes back to normal operations, every incident is cleared and the closed incidents are removed from the incident list and the knowledge graph. Plant records and maintenance history stay. This cannot be undone.</p>',
-      okLabel: 'Reset demo', okClass: 'go',
+      okLabel: 'Reset', okClass: 'go',
       onOk: async () => {
-        try { await postJson('/demo/reset', {}); } catch (err) { failed('Could not reset the demo', err); return; }
+        try { await postJson('/demo/reset', {}); } catch (err) { failed('Could not reset', err); return; }
         try {
           ['atelic.reviewer', 'atelic.notesSeen'].forEach((k) => localStorage.removeItem(k));
           ['atelic.incident', 'atelic.replayT0'].forEach((k) => sessionStorage.removeItem(k));

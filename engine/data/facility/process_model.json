@@ -1,6 +1,6 @@
 {
   "version": "assumed-skid-1",
-  "provenance": "Assumed synthetic skid inputs; not calibrated GasLib data",
+  "provenance": "Assumed skid inputs; not calibrated",
   "inlet_asset_id": "V-101",
   "compressor_asset_id": "K-201",
   "outlet_asset_id": "P-203",

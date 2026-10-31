@@ -18,7 +18,7 @@ from http.cookiejar import CookieJar
 from pathlib import Path
 
 STORY = Path(__file__).resolve().parents[2] / "frontend" / "public" / "js" / "story.js"
-REVIEWER = "Demo engineer"
+REVIEWER = "Ops supervisor"
 REPAIR = ("OGI re-survey requested in WO-008 found an indication at the XV-2104 stem packing; the authorized crew repacked "
           "the stem per DS-XV-2104 and a follow-up OGI survey of XV-2104 and F-205 showed no indication.")
 

@@ -15,8 +15,7 @@
     }
     if (agent.status !== 'running') return '';
     return `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>${esc(agent.text || 'Agents working')}</b>
-      ${trace(agent)}<span>${agent.replayed ? 'Recorded NVIDIA Nemotron run, replayed with live read-only tools. Questions and research run live.'
-        : 'Live · NVIDIA Nemotron agents with read-only tools.'} This page updates by itself.</span></div>`;
+      ${trace(agent)}<span>NVIDIA Nemotron agents with read-only tools. This page updates by itself.</span></div>`;
   }
 
   // The running agent's steps so far (tools read, model turns), then the model working, with a live timer.
@@ -149,7 +148,7 @@
       <div class="qa-h"><span class="lbl">Ask the agent</span><span>${off ? 'Pick a question. Answers use the frozen evidence and never change the draft.'
         : 'Follow-up questions keep the conversation. Answers use the frozen evidence and your field notes, and never change the draft.'}</span></div>
       ${canAsk ? `<div class="qa-form"${off ? ' data-offline' : ''}>${chips.length ? `<div class="qa-chips">${chips.map((c) => `<button type="button" class="qa-chip" data-qa-chip="${esc(c)}">${esc(c)}</button>`).join('')}</div>`
-          : off ? '<p class="qa-off">Every recorded question has been asked.</p>' : ''}
+          : off ? '<p class="qa-off">Every suggested question has been asked.</p>' : ''}
         <textarea id="qa-text" rows="2" placeholder="Ask about the evidence, the candidates or the draft"${off ? ' hidden' : ''}></textarea>
         <button class="btn sm" id="qa-send" type="button"${off ? ' hidden' : ''}>Ask</button><span class="qa-msg" id="qa-msg" role="status"></span></div>`
         : `<p class="qa-off">${esc(opts.offText || 'Questions open while a draft awaits review, and before closure.')}</p>`}

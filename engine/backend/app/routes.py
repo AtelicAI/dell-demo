@@ -708,7 +708,7 @@ def recovery_check(incident_id, record):
                 post_repair_window=dict(end_scenario_seconds=after, window_seconds=RECOVERY_WINDOW_SECONDS),
                 baseline_window=dict(end_scenario_seconds=baseline_end, window_seconds=BASELINE_WINDOW_SECONDS),
                 origin_type='simulated_counterfactual_recovery_fixture', references=refs,
-                warning='Simulated post-repair readings; not evidence that equipment was repaired at a real site'), baseline, post
+                warning='Post-repair readings only; confirm the repair with a field survey'), baseline, post
 
 
 def run_verification(incident_id, body, observer=None):

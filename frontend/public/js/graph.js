@@ -69,6 +69,30 @@
   const extra = new Set(), hidden = new Set();
   const params = new URLSearchParams(location.search);
 
+  // Same view on return: the view (mode, selection, filters, hidden and expanded nodes, node positions, zoom and pan)
+  // is kept for this tab, so leaving the graph and coming back (rail, back button, a link to the same asset) shows it
+  // as it was. A link that asks for another asset or view starts that view fresh.
+  const STORE = 'atelic.graphView';
+  let restoring = null, saveTimer = null, alarmSig = '';
+  const readView = () => { try { return JSON.parse(sessionStorage.getItem(STORE) || 'null'); } catch (e) { return null; } };
+  function saveView() {
+    if (!cy || !G) return;
+    const pos = {};
+    cy.nodes().not('.leaving').forEach((n) => { const p = n.position(); pos[n.id()] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; });
+    try {
+      sessionStorage.setItem(STORE, JSON.stringify({ inc: window.AtelicShell.INCIDENT_ID, alarms: alarmSig, mode, selected, showInc, depth, lane,
+        groups: [...shownGroups], hidden: [...hidden], extra: [...extra], pos, zoom: cy.zoom(), pan: cy.pan() }));
+    } catch (e) { /* storage blocked: the view is not kept */ }
+  }
+  const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveView, 150); };
+  // Deterministic layout: the same view settles the same way every time (seeded in place of Math.random).
+  function seeded(fn) {
+    let a = 0x9E3779B9;
+    const rnd = Math.random;
+    Math.random = () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    try { return fn(); } finally { Math.random = rnd; }
+  }
+
   const typeOf = (id) => (byId.get(id) || {}).asset_type;
   const nameOf = (id) => { const n = byId.get(id); return n && n.display_name !== id ? n.display_name : ''; };
   const outs = (id, t) => G.edges.filter((e) => e.from === id && (!t || e.type === t)).map((e) => e.to);
@@ -203,8 +227,11 @@
           return;
         }
         const near = nbrs(id).map((x) => cy.getElementById(x)).find((x) => x.nonempty() && !x.hasClass('leaving'));
-        const p = near ? near.position() : around;
-        fadeTo1(cy.add({ ...d, position: { x: p.x + (Math.random() - 0.5) * 60, y: p.y + (Math.random() - 0.5) * 60 } }), 80);
+        const p = near ? near.position() : around, h = [...id].reduce((k, c) => (k * 31 + c.charCodeAt(0)) | 0, 7);
+        const kept = restoring && restoring.pos[id];
+        const node = cy.add({ ...d, position: kept ? { x: kept[0], y: kept[1] } : { x: p.x + ((h & 255) / 255 - 0.5) * 60, y: p.y + (((h >> 8) & 255) / 255 - 0.5) * 60 } });
+        if (kept) node.scratch('placed', true);
+        fadeTo1(node, 80);
       });
       edges.forEach(({ e, i }) => {
         const id = `e${i}`, cur = cy.getElementById(id);
@@ -222,20 +249,30 @@
   }
 
   function layout(how) {
-    if (how === 'none') return;
+    if (how === 'none') { saveSoon(); return; }
+    if (restoring) {
+      // Back on a kept view: every node is where it was, so no layout; the same zoom and pan.
+      const r = restoring;
+      restoring = null;
+      if (cy.nodes().not('.leaving').every((n) => r.pos[n.id()])) {
+        cy.zoom(r.zoom); cy.pan(r.pan);
+        saveSoon();
+        return;
+      }
+    }
     const els = cy.elements().not('.leaving');
     const fresh = !cy.nodes().some((n) => n.scratch('placed'));
     if (how === 'grow') {
       // keep what was there; only the new nodes settle in
       const old = cy.nodes().filter((n) => n.scratch('placed'));
       old.lock();
-      els.layout({ name: 'cose', animate: 'end', animationDuration: MOVE, animationEasing: EASE, randomize: false, fit: false, nodeRepulsion: () => 9000, idealEdgeLength: () => 85, gravity: 0.2, numIter: 800, padding: 40 })
+      seeded(() => els.layout({ name: 'cose', animate: 'end', animationDuration: MOVE, animationEasing: EASE, randomize: false, fit: false, nodeRepulsion: () => 9000, idealEdgeLength: () => 85, gravity: 0.2, numIter: 800, padding: 40 })
         .one('layoutstop', () => {
-          old.unlock(); cy.nodes().scratch('placed', true);
+          old.unlock(); cy.nodes().scratch('placed', true); saveSoon();
           // bring new nodes into view if they settled outside it
           const bb = els.boundingBox(), ext = cy.extent();
           if (bb.x1 < ext.x1 || bb.y1 < ext.y1 || bb.x2 > ext.x2 || bb.y2 > ext.y2) cy.animate({ fit: { eles: els, padding: 36 } }, { duration: 400, easing: EASE });
-        }).run();
+        }).run());
       return;
     }
     let opts;
@@ -257,7 +294,7 @@
       opts = { name: 'cose', animate: 'end', animationDuration: MOVE, animationEasing: EASE, randomize: fresh, nodeRepulsion: () => (site ? 60000 : 90000),
         idealEdgeLength: () => (site ? 50 : 60), edgeElasticity: () => 120, gravity: site ? 6 : 0.15, numIter: 2500, nodeOverlap: 24, componentSpacing: 50, padding: 30 };
     }
-    els.layout(opts).one('layoutstop', () => cy.nodes().scratch('placed', true)).run();
+    seeded(() => els.layout(opts).one('layoutstop', () => { cy.nodes().scratch('placed', true); saveSoon(); }).run());
   }
 
   // Hover: the node, its relationships and its neighbours stay; the rest fades.
@@ -289,6 +326,7 @@
         this.drawElement(ctx, ele);
       };
     }
+    cy.on('viewport dragfree', saveSoon);
     cy.on('mouseover', 'node', (e) => { hover(e.target); $('cy').style.cursor = 'pointer'; });
     cy.on('mouseout', 'node', () => { hover(null); $('cy').style.cursor = ''; });
     cy.on('mouseover', 'edge', (e) => { e.target.addClass('hot'); $('cy').style.cursor = 'pointer'; });
@@ -316,7 +354,7 @@
   function renderBar() {
     const I = incList.length;
     $('modes').innerHTML = `<button data-mode="focus" aria-pressed="${mode === 'focus'}"${selected ? '' : ' disabled'}>Focus<span class="k">${esc(selected || '')}</span></button>
-      <button data-mode="incident" aria-pressed="${mode === 'incident'}"${I ? '' : ' disabled title="No alert raised yet"'}>Incident<span class="k">${esc(incList.length > 1 ? '' : showInc || (I ? incList[0].incident_id : 'none'))}</span></button>
+      <button data-mode="incident" aria-pressed="${mode === 'incident'}"${I ? '' : ' disabled title="No alert raised yet"'}>Incident<span class="k">${esc(incList.length > 1 ? '' : showInc || (I ? incList[0].incident_id : ''))}</span></button>
       <button data-mode="site" aria-pressed="${mode === 'site'}">Whole graph</button>`;
     $('depth').hidden = mode !== 'focus';
     $('depth').innerHTML = [1, 2].map((d) => `<button data-depth="${d}" aria-pressed="${depth === d}">${d} hop${d === 1 ? '' : 's'}</button>`).join('');
@@ -573,10 +611,12 @@
     if (selected) params.set('asset', selected); else params.delete('asset');
     if (mode === 'incident' && showInc) params.set('show', showInc); else params.delete('show');
     try { history.replaceState(null, '', `?${params}`); } catch (e) { /* ignore */ }
+    saveSoon();
   }
   function renderAll(how) {
     renderBar(); draw(how); renderCtx(); renderLane(); renderSide();
     if (picker) picker.set(selected || 'none');
+    saveSoon();
   }
   // A record picked from the lists opens on its asset with the card highlighted below.
   const recordOf = (id) => { const t = typeOf(id); return t === 'WorkOrder' ? id : t === 'Commitment' ? ins(id, 'COMMITTED_TO')[0] : t === 'FieldReport' ? outs(id, 'DOCUMENTS')[0] : null; };
@@ -695,25 +735,37 @@
       incSets[l.incident_id] = { l, c, camera: l.camera_id, nodes: new Set([...rel].filter((id) => byId.has(id))),
         cands: new Set(c.candidates.map((x) => x.asset_id)), source: c.assessment && c.assessment.result === 'likely_source' ? c.assessment.asset_id : null };
     });
-    const store = G.store === 'neo4j' ? 'Neo4j' : G.store;
     $('stats').textContent = `${G.nodes.length} nodes · ${G.edges.length} relationships`;
-    $('src').textContent = `Source: engine knowledge graph (${store})${(G.nodes[0] || {}).mapping_version ? ` · mapping v${G.nodes[0].mapping_version}` : ''}`;
-    $('store').innerHTML = `Read from the engine's knowledge graph (${esc(store)}). ${badge(G.nodes.some((n) => n.provenance !== 'synthetic') ? 'pending' : 'synthetic')}`;
+    $('src').textContent = `Source: plant knowledge graph${(G.nodes[0] || {}).mapping_version ? ` · mapping v${G.nodes[0].mapping_version}` : ''}`;
+    $('store').innerHTML = `Read from the plant knowledge graph. ${badge(G.nodes.some((n) => n.provenance !== 'synthetic') ? 'pending' : 'synthetic')}`;
 
     // Where to start: ?show / ?view=incident → incident; ?view=site → whole graph; ?asset → focus;
-    // nothing asked and this tab's incident is open → incident; otherwise focus on the likely source (or the first equipment).
+    // nothing asked → the whole graph (the likely source, or the first equipment, is selected in the side panel).
     const v = params.get('view'), want = params.get('show') || (v === 'incident' ? INCIDENT_ID : null);
-    const open = incList.find((l) => l.incident_id === INCIDENT_ID && !l.dismissal && !closedByEngine(l));
     const a = params.get('asset');
-    if (a && byId.has(a)) { const wo = recordOf(a); selected = wo ? ins(wo, 'HAS_WORK_ORDER')[0] || a : a; hlRecord = wo; }
-    if (want && incSets[want]) { showInc = want; mode = 'incident'; }
-    else if (v === 'site') mode = 'site';
-    else if (a && byId.has(a)) mode = 'focus';
-    else if (open && v !== 'focus') { showInc = open.incident_id; mode = 'incident'; }
-    else mode = 'focus';
-    if (mode === 'incident' && incSets[showInc].source) selected = selected || incSets[showInc].source;
-    if (!selected) selected = (incList[0] && incSets[incList[0].incident_id].source) || [...flowCol.keys()].sort((x, y) => flowCol.get(x) - flowCol.get(y))[0] || G.nodes[0].asset_id;
-    lane = hlRecord ? 'story' : LANE_OF[mode];
+    // The kept view for this tab, if nothing has changed since (same incident, same raised alarms) and the link asks
+    // for nothing else: a bare link (rail) or the same view and asset (back button, same "Open in knowledge graph").
+    const kept = readView(), alarms = incList.map((l) => `${l.incident_id}:${l.dismissal || closedByEngine(l) ? 'c' : 'o'}`).join();
+    const sameAsk = kept && (!v || v === kept.mode) && (!a || a === kept.selected) && (!params.get('show') || params.get('show') === kept.showInc);
+    if (kept && kept.inc === INCIDENT_ID && kept.alarms === alarms && sameAsk && byId.has(kept.selected)
+      && (kept.mode !== 'incident' || incSets[kept.showInc])) {
+      mode = kept.mode; selected = kept.selected; showInc = kept.showInc; depth = kept.depth || 1; lane = kept.lane || LANE_OF[mode];
+      shownGroups.clear(); kept.groups.forEach((g) => shownGroups.add(g));
+      kept.hidden.filter((id) => byId.has(id)).forEach((id) => hidden.add(id));
+      kept.extra.filter((id) => byId.has(id)).forEach((id) => extra.add(id));
+      restoring = kept;
+    } else {
+      if (a && byId.has(a)) { const wo = recordOf(a); selected = wo ? ins(wo, 'HAS_WORK_ORDER')[0] || a : a; hlRecord = wo; }
+      if (want && incSets[want]) { showInc = want; mode = 'incident'; }
+      else if (v === 'site') mode = 'site';
+      else if (a && byId.has(a)) mode = 'focus';
+      else if (v === 'focus') mode = 'focus';
+      else mode = 'site';  // nothing asked: the whole graph
+      if (mode === 'incident' && incSets[showInc].source) selected = selected || incSets[showInc].source;
+      if (!selected) selected = (incList[0] && incSets[incList[0].incident_id].source) || [...flowCol.keys()].sort((x, y) => flowCol.get(x) - flowCol.get(y))[0] || G.nodes[0].asset_id;
+      lane = hlRecord ? 'story' : LANE_OF[mode];
+    }
+    alarmSig = alarms;
     $('canvas').style.height = `${Math.max(440, Math.min(640, window.innerHeight - 330))}px`;
     wireCanvas();
     renderPickers();
@@ -727,5 +779,6 @@
     }).observe(document.querySelector('.ws-main'));
   }
 
+  window.addEventListener('pagehide', saveView);
   document.addEventListener('DOMContentLoaded', init);
 })();

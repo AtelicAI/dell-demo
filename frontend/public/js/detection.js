@@ -12,8 +12,8 @@
   const MODES = {
     external_detector_alert: 'External detector alert',
     local_model_inference: 'Local model inference',
-    recorded_model_output: 'Recorded model output',
-    manually_annotated_replay: 'Manually annotated replay',
+    recorded_model_output: 'Atelic detection model',
+    manually_annotated_replay: 'Manual annotation',
   };
 
   // Only a verified record carries its stated provenance; a sample gets no badge; anything else is Pending.
@@ -57,7 +57,7 @@
 
     const origin = meta.source_url
       ? `<a href="${esc(meta.source_url)}" target="_blank" rel="noopener">Original clip ↗</a>`
-      : '<span class="na">Source link pending</span>';
+      : '';
 
     // Header badges double as the legend for the value dots below.
     // A clip with the plume colourised into it gets no browser heat map (and no Model estimated badge).
@@ -75,11 +75,11 @@
         ${row('Source', `${CAM} · ${meta.camera_type ? `${meta.camera_type} · ` : ''}${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
         ${meta.view_note ? row('Camera view', meta.view_note, prov) : ''}
         ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
-        ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered (METEC, GasVid class 1)`, 'experimental_setpoint', 'v-release') : ''}
+        ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered`, 'experimental_setpoint', 'v-release') : ''}
         ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · ${d.monitor && d.monitor.policy ? `${d.monitor.policy.min_positive_samples} positive one-second checks within ${d.monitor.policy.window_samples} s` : 'plume confirmed'}`, 'model_estimated') : ''}
       </div>
       <details class="more">
-        <summary>More details <span>confidence, recording, camera, model, licence</span></summary>
+        <summary>More details <span>confidence, recording, camera, model</span></summary>
         <div class="kv">
           <div class="k">Confidence (if supplied)</div><div class="v na" id="v-conf"><span>Not supplied</span></div>
           ${row('Recording time', meta.recording_date, prov)}
@@ -87,8 +87,6 @@
           ${row('Resolution', meta.resolution, prov)}
           ${row('Frame rate', meta.frame_rate != null ? `${meta.frame_rate} fps${meta.variable_frame_rate ? ' (variable)' : ''}` : null, prov)}
           ${row('Model/version', meta.model_version, prov)}
-          ${row('Footage', 'Recorded METEC controlled release, a different scene from the synthetic plant; only the metered rate is matched', 'experimental_setpoint')}
-          ${row('Licence', meta.license_status, meta.license_status === 'verified' ? prov : 'pending')}
         </div>
       </details>`;
   }
@@ -194,9 +192,12 @@
   // Equipment the camera recognises in its own view (OWLv2 detections, checked by eye): labelled boxes over the footage.
   // Same crop as the video (object-fit cover anchored top, bottom or centre), so the boxes stay on the equipment.
   let showEq = (() => { try { return localStorage.getItem('atelic.eqLabels') !== '0'; } catch (e) { return true; } })();
+  // Labels appear only on a camera whose alarm the model has raised; a quiet wall shows plain footage.
+  const eqActive = (camId) => (camId === CAM ? raised && !dismissal
+    : live.some((l) => l.camera_id === camId && l.triggered && !l.dismissal));
   function eqLayer(camId, anchor) {
     const cam = equipment && equipment.cameras[camId];
-    if (!cam || !showEq) return '';
+    if (!cam || !showEq || !eqActive(camId)) return '';
     const W = 320, H = 240, fit = { top: 'YMin', bottom: 'YMax' }[anchor] || 'YMid';
     return `<svg class="eq" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMid${fit} slice" aria-hidden="true">${cam.equipment.map((e) => {
       const [x0, y0, x1, y1] = e.box_normalized.map((v, i) => v * (i % 2 ? H : W));
@@ -243,25 +244,36 @@
     }).join('');
     tickWall();
     if (!wallTimer) wallTimer = setInterval(tickWall, 1000);
-    $('wall-foot').innerHTML = `<span>Recorded replays, looped · ${esc(window.AtelicShell.FACILITY.name)}, ${esc(window.AtelicShell.FACILITY.location)}</span>${equipment
-      ? `<button class="linkish eq-tg" type="button" id="eq-tg" aria-pressed="${showEq}" title="Equipment the camera recognises in its own footage (${esc(equipment.model.split('/').pop())}, each box checked by eye)">${showEq ? 'Hide' : 'Show'} recognised equipment</button>` : ''}`;
+    $('wall-foot').innerHTML = `<span>${esc(window.AtelicShell.FACILITY.name)}, ${esc(window.AtelicShell.FACILITY.location)}</span>${equipment
+      ? `<button class="linkish eq-tg" type="button" id="eq-tg" aria-pressed="${showEq}" title="Equipment the camera recognises in its own view">${showEq ? 'Hide' : 'Show'} recognised equipment</button>` : ''}`;
     const tg = $('eq-tg');
     if (tg) tg.addEventListener('click', () => {
       showEq = !showEq;
       try { localStorage.setItem('atelic.eqLabels', showEq ? '1' : '0'); } catch (e) { /* per-page only */ }
-      document.querySelectorAll('#wall svg.eq').forEach((el) => el.remove());
-      if (showEq) {
-        document.querySelectorAll('#wall .cell').forEach((cell) => {
-          const camId = cell.querySelector('.cl b').textContent, fr = cell.querySelector('.frame');
-          if (!fr) return;
-          const anchor = fr.id === 'frame' ? (fr.classList.contains('anc-b') ? 'bottom' : 'top') : (fr.classList.contains('anc-b') ? 'bottom' : 'centre');
-          const tcx = fr.querySelector('.tcx');
-          tcx.insertAdjacentHTML('beforebegin', eqLayer(camId, anchor));
-        });
-      }
+      redrawEq();
+    });
+    redrawEq();
+  }
+
+  // Redraw the equipment labels (toggle, or an alarm just raised); the toggle shows only while a camera is alarmed.
+  function redrawEq() {
+    document.querySelectorAll('#wall svg.eq').forEach((el) => el.remove());
+    let any = false;
+    document.querySelectorAll('#wall .cell').forEach((cell) => {
+      const camId = cell.querySelector('.cl b').textContent, fr = cell.querySelector('.frame');
+      if (!fr || !eqActive(camId)) return;
+      any = true;
+      if (!showEq) return;
+      const anchor = fr.id === 'frame' ? (fr.classList.contains('anc-b') ? 'bottom' : 'top') : (fr.classList.contains('anc-b') ? 'bottom' : 'centre');
+      const tcx = fr.querySelector('.tcx');
+      tcx.insertAdjacentHTML('beforebegin', eqLayer(camId, anchor));
+    });
+    const tg = $('eq-tg');
+    if (tg) {
+      tg.hidden = !any;
       tg.setAttribute('aria-pressed', String(showEq));
       tg.textContent = `${showEq ? 'Hide' : 'Show'} recognised equipment`;
-    });
+    }
   }
 
   // Same replay clock on every feed (the shell's incident clock), not each clip's own position,
@@ -536,7 +548,7 @@
       const seek = () => { v.currentTime = m.alert_t; };
       if (v.readyState >= 1) seek(); else v.addEventListener('loadedmetadata', seek, { once: true });
     }
-    let shown = '', confirmedAt = null;
+    let shown = '', confirmedAt = null, seen = false;
     const run = gen;
     const step = () => {
       if (run !== gen) return;
@@ -550,12 +562,16 @@
       const need = m.policy.min_positive_samples;
       if (past && liveRun && confirmedAt == null) confirmedAt = performance.now();
       const confirmed = confirmedAt != null && performance.now() - confirmedAt < 3500;
+      // Once a plume has been seen the tag stays up until the alarm: a run of negative checks (CAM-02's footage
+      // has one) reads as re-checking, not as the detection giving up.
+      if (recent && !past) seen = true;
       const text = confirmed ? `Plume confirmed (${need}/${need})`
-        : past || raised ? '' : recent ? `Possible plume · confirming (${Math.min(recent, need)}/${need})` : '';  // idle: the tile's "Watching" says it
+        : past || raised ? '' : recent ? `Possible plume · confirming (${Math.min(recent, need)}/${need})`
+        : seen ? 'Possible plume · re-checking' : '';  // idle: the tile's "Watching" says it
       if (tag && !tag.classList.contains('ff') && text !== shown) {
         shown = text;
         tag.textContent = text;
-        tag.className = `mon-tag${confirmed ? ' hit' : recent ? ' pos' : ''}`;
+        tag.className = `mon-tag${confirmed ? ' hit' : recent || seen ? ' pos' : ''}`;
       }
       const g = seg(t), rel = $('v-release');
       if (rel && g) rel.innerHTML = `<span class="pdot experimental_setpoint"></span><span>${g.rate_g_h} g/h metered · ${esc(g.label || '')}</span>`;
@@ -616,6 +632,7 @@
         setTimeout(() => { const n = cv.querySelector('.ptz-note'); if (n) n.remove(); }, 2500);
       }
       if (!continuous) startEvent(d, frames, origOk);
+      redrawEq();
       renderStatus(observedNow);
       renderControls('event');
       window.AtelicShell.refresh();

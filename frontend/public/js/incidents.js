@@ -74,7 +74,7 @@
           <td class="mono mute">${esc(w.date)}</td>
           <td>${w.asset_id ? `<span class="mono">${esc(w.asset_id)}</span>` : '<span class="dim">Site</span>'}</td>
           <td class="wrap">${esc(w.issue)}<small class="wt">${esc(w.work_type)}</small></td>
-          <td>${w.commitments.length ? chip(waiting ? `${waiting} open` : 'All done', waiting ? 'warn' : 'good') : '<span class="dim">None</span>'}</td>
+          <td>${w.commitments.length ? chip(waiting ? `${waiting} due` : 'All done', waiting ? 'warn' : 'good') : '<span class="dim">None</span>'}</td>
         </tr>`;
       }).join('')}</tbody></table>`
       : '<div class="empty-row">No station history in the knowledge graph.</div>';

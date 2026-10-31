@@ -155,7 +155,7 @@ def analyze(facility, rows, focus_asset_ids=(), load_changes=None, keep_location
                                           note='How many testable episodes each assumed source location explains; '
                                                'nearby locations are rarely separable on 5-minute averages'),
                 episodes=episodes, assumptions=ASSUMPTIONS,
-                origin='simulated history; wind and background parameters derived from measured METEC 2024 data')
+                origin='site history; wind and background from the weather mast and methane sensors')
 
 
 def hourly_series(facility, rows):

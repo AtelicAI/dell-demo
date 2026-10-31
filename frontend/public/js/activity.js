@@ -8,7 +8,7 @@
 
   const STATUS = {
     ran: 'Ran', not_run: 'Not run', approved: 'Approved', waiting: 'Waiting for engineer',
-    returned: 'Returned', not_reached: 'Not reached', blocked: 'Blocked', manual: 'Demo trigger',
+    returned: 'Returned', not_reached: 'Not reached', blocked: 'Blocked', manual: 'Manual trigger',
   };
   const FILTERS = [['all', 'All'], ['ran', 'Ran'], ['not_run', 'Not run'], ['human', 'Human']];
   const EVENT = { submitted_for_review: 'Submitted for review', review_approve: 'Approved', review_request_changes: 'Changes requested', review_reject: 'Rejected',
@@ -70,7 +70,7 @@
     const counts = { all: A.steps.length, ran: A.steps.filter((s) => s.status === 'ran').length,
       not_run: A.steps.filter((s) => s.status === 'not_run').length, human: A.steps.filter(human).length };
     $('chips').innerHTML = FILTERS.map(([k, l]) => `<button data-filter="${k}" aria-pressed="${k === filter}">${l}<span class="n">${counts[k]}</span></button>`).join('');
-    $('sum').textContent = `${A.span_count} recorded span${A.span_count === 1 ? '' : 's'}`;
+    $('sum').textContent = `${A.span_count} span${A.span_count === 1 ? '' : 's'}`;
     $('btn-replay').disabled = !A.span_count;
     $('nvidia-line').hidden = A.hardware.nvidia_inference !== 'not_connected';
     const maxMs = Math.max(1, ...A.steps.flatMap((s) => s.spans.map((x) => x.duration_ms || 0)));
@@ -136,7 +136,7 @@
   }
   function stop() {
     clearTimeout(timer); timer = null;
-    $('btn-replay').textContent = 'Replay';
+    $('btn-replay').textContent = 'Play';
     document.querySelectorAll('.sp.on').forEach((e) => e.classList.remove('on'));
   }
 

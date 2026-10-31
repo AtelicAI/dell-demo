@@ -5,7 +5,7 @@
   "cameras": [
     {
       "camera_id": "CAM-01",
-      "area": "Compressor discharge",
+      "area": "Discharge valves · close-up",
       "watches": [
         "XV-2104",
         "F-205"
@@ -14,7 +14,7 @@
     },
     {
       "camera_id": "CAM-02",
-      "area": "Compressor discharge (wide view)",
+      "area": "Compressor skid · overview",
       "watches": [
         "XV-2104",
         "F-205"

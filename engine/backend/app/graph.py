@@ -71,6 +71,13 @@ class Graph:
                    "WITH e, r UNWIND (CASE WHEN r.consistent_locations = [] THEN [null] ELSE r.consistent_locations END) AS aid OPTIONAL MATCH (a:Asset {id:aid}) FOREACH (_ IN CASE WHEN a IS NULL THEN [] ELSE [1] END | CREATE (e)-[:CONSISTENT_WITH {provenance:'history_analysis_5min_indicative'}]->(a)) "
                    "WITH DISTINCT e, r WHERE r.load_change_id IS NOT NULL MATCH (l:LoadChange {id:r.load_change_id}) CREATE (e)-[:AFTER_LOAD_CHANGE {minutes:r.minutes_after_load_change, provenance:'history_analysis'}]->(l)",
                    rows=[{**e,'consistent_locations':e.get('consistent_locations',[]),'load_change_id':preceding(e)} for e in episodes],facility=facility.id).consume()
+            # Site history: incidents closed before the current events (historical=true, kept by Reset).
+            try:
+                past=load_json('incident_history.json')['incidents']
+            except FileNotFoundError:
+                past=[]
+            tx.run("UNWIND $rows AS r MERGE (i:IncidentRecord {id:r.id, workflow_schema:'site_history'}) SET i += r, i.historical=true, i.facility_id=$facility, i.origin_type='site_history'",
+                   rows=past,facility=facility.id).consume()
             # Incident memory survives reseeding: re-link it to the recreated assets.
             tx.run("MATCH (r:IncidentRecord {facility_id:$facility}) UNWIND r.candidate_asset_ids AS aid MATCH (a:Asset {id:aid}) "
                    "MERGE (r)-[:CONSIDERED]->(a) WITH r MATCH (a:Asset {id:r.selected_asset_id}) MERGE (r)-[:CONCERNS]->(a)",facility=facility.id).consume()
@@ -121,7 +128,7 @@ class Graph:
         self.query("MATCH (r:IncidentRecord {workflow_schema:$schema}) DETACH DELETE r", schema=schema)
     def forget_incidents(self, facility_id):
         """Remove every closed incident remembered for this facility (presenter's demo reset)."""
-        rows=self.query("MATCH (r:IncidentRecord {facility_id:$f}) WITH collect(r) AS rs "
+        rows=self.query("MATCH (r:IncidentRecord {facility_id:$f}) WHERE coalesce(r.historical,false)=false WITH collect(r) AS rs "
                         "FOREACH (r IN rs | DETACH DELETE r) RETURN size(rs) AS removed", f=facility_id)
         return rows[0]['removed'] if rows else 0
     PLANT_LABELS=('Asset','Sensor','Camera','WeatherStation','WorkOrder','Document','FieldReport','Commitment','IncidentRecord')

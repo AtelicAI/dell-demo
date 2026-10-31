@@ -112,7 +112,7 @@
     if (fu && fu.repair && !(document.activeElement && document.activeElement.id === 'qa-text')) {
       $('qa').innerHTML = S.questions(fu.questions, fu.can_ask, { chips: S.VERIFY_CHIPS, offline: fu.offline, offText: fu.closure ? 'The incident is closed; questions are closed.' : 'Questions open once the verifier has finished.' });
     }
-    $('ak-panel').hidden = !R || R.status !== 'final';
+    $('ak-panel').hidden = true;  // ground-truth panel: not shown
     if (R && R.status === 'final') {
       const em = R.sections.find((x) => x.id === 'emissions');
       const rate = em && em.rows[0].value ? parseFloat(em.rows[0].value) : null;

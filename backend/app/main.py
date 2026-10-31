@@ -10,6 +10,7 @@ before submission, and the report export log. Nothing here can operate plant equ
 import hashlib
 import hmac
 import json
+import math
 import os
 import secrets
 import threading
@@ -359,22 +360,25 @@ def incident_history():
         closer, _, why = (p.get("closure_rationale") or "").partition(": ")
         closer, why = (ui.get("closed_by") or (closer if why else None)), (ui.get("rationale") or why or p.get("closure_rationale"))
         verified = p.get("verification_recommendation") == "close" and p.get("recovery_check") == "background_restored"
+        false_alarm = p.get("outcome") == "false_alarm"
         rows.append({
-            "incident_id": p["id"], "camera_id": ui.get("camera_id") or "Not recorded", "asset_id": p.get("selected_asset_id"),
+            "incident_id": p["id"], "camera_id": ui.get("camera_id") or p.get("camera_id") or "Not recorded", "asset_id": p.get("selected_asset_id"),
             "opened_utc": opened or closed or "", "closed_utc": closed,
-            "outcome": "repaired",
-            "outcome_label": "Repaired and verified" if verified else "Repaired · verifier " + (p.get("verification_recommendation") or "not run").replace("_", " "),
+            "outcome": "false_alarm" if false_alarm else "repaired",
+            "outcome_label": "False alarm" if false_alarm else "Repaired and verified" if verified
+                             else "Repaired · verifier " + (p.get("verification_recommendation") or "not run").replace("_", " "),
             "summary": " ".join(x for x in (p.get("approved_plan_title") and f"Plan: {p['approved_plan_title']}.",
                                              p.get("work_performed") and f"Repair: {p['work_performed']}") if x)
-                       or "Closed incident written to the knowledge graph at closure.",
-            "decision": {"decision": "approve", "reviewer": ui.get("approved_by") or "Engineer (name not kept)", "role": None,
+                       or (why if p.get("historical") else None) or "Closed incident written to the knowledge graph at closure.",
+            "decision": {"decision": "dismissed" if false_alarm else "approve",
+                         "reviewer": ui.get("approved_by") or (closer if p.get("historical") else None) or "Engineer (name not kept)", "role": None,
                          "reason": ui.get("approval_reason")},
             "closure": {"by": closer or "Engineer (name not kept)", "rationale": why,
                         "verifier": p.get("verification_recommendation"), "recovery_check": p.get("recovery_check")},
-            "work_order": None,
+            "work_order": p.get("work_order_id"),
             "rate": f"{p['rate_kg_h']:.2f} kg CH₄/h (model estimate)" if isinstance(p.get("rate_kg_h"), (int, float)) else None,
             "timeline": [x for x in ({"at_utc": opened, "event": "Camera alert raised"},
-                                     {"at_utc": closed, "event": f"Closed by {closer or 'an engineer'}; written to graph memory"}) if x["at_utc"]],
+                                     {"at_utc": closed, "event": f"Closed by {closer or 'an engineer'}" + (" as a false alarm" if false_alarm else "; written to graph memory")}) if x["at_utc"]],
         })
     return {"status": "verified", "provenance": "simulated", "incidents": sorted(rows, key=lambda r: r["opened_utc"], reverse=True),
             "past_events": past_events(plant)}
@@ -439,7 +443,7 @@ def sync(s):
                 continue
             d = e["detail"]
             text = {"detect": "Camera model alert registered with the engine",
-                    "quantify": (f"{d['rate_kg_h']:.3f} kg CH₄/h at replay {d.get('as_of_seconds')} s (model estimated)" if d.get("rate_kg_h") is not None
+                    "quantify": (f"{d['rate_kg_h']:.3f} kg CH₄/h (model estimated)" if d.get("rate_kg_h") is not None
                                  else f"Rate unavailable: {d.get('reason')}"),
                     "investigate": "Investigation agent reported findings",
                     "answer": "Agent answered an engineer question",
@@ -498,9 +502,9 @@ def post_trigger(incident_id: str):
                                                      "plan_fallback": os.getenv("PLAN_FALLBACK", "deterministic")}, human=True)
             s.update(engine_id=res["incident_id"], triggered_at=now_utc())
             ev = res["event"]
-            audit(s, "alert_triggered", f"{s['camera_id']} model alert (OWLv2 + SAM2, 3 of 5 samples)",
+            audit(s, "alert_triggered", f"{s['camera_id']} model alert (3 of 5 one-second checks)",
                   f"{s['camera_id']} alert raised; engine incident {res['incident_id']} opened. Model alert on recorded "
-                  f"GasVid footage at clip {ev.get('clip_time_seconds') or 0:.1f} s; agents started")
+                  "Plume confirmed on camera; agents started")
             save()
     return view(s)
 
@@ -638,7 +642,7 @@ def event_timeline(profile):
                    "clip_start_utc": at_seconds(mon["scenario_seconds_at_clip_start"]),
                    "samples": [{"t": round(p["pts_seconds"] - t0, 3), "positive": bool(p.get("prediction"))} for p in preds],
                    "policy": mon["alert_policy"], "segments": segs,
-                   "note": "Executed detector samples on the recorded footage; the alarm latches when 3 of the last 5 are positive"}
+                   "note": "One detection check per second; the alarm latches when 3 of the last 5 are positive"}
         return {"mon": mon, "ranges": ranges, "monitor": monitor}
     return cached(("timeline", profile), build, ttl=3600)
 
@@ -653,20 +657,20 @@ def get_detections(incident_id: str):
     at = (m["alert_t"] or 0) + m["clip_start_seconds"]
     seg = next((x for x in f.get("segments", []) if x["start_seconds"] <= at < x["end_seconds"]), {})
     meta = {
-        "status": "verified", "ogi_clip_id": mon["clip_id"], "origin": "METEC (GasVid)",
-        "source_url": "https://purl.stanford.edu/gn716hm8958",
-        "recording_date": f.get("recorded_date"), "camera_type": "FLIR GF-320",
+        "status": "verified", "ogi_clip_id": mon["clip_id"], "origin": "",
+        "source_url": None,
+        "recording_date": (m.get("clip_start_utc") or "")[:10] or None, "camera_type": "FLIR GF-320",
         "imaging_distance_m": f.get("imaging_distance_m"),
         "resolution": "640x480 (Atelic view, 2x) · 320x240 original", "frame_rate": FPS, "variable_frame_rate": False,
         "duration_s": m["clip_end_seconds"] - m["clip_start_seconds"], "license_status": "verified", "provenance": "model_estimated",
         "plume_rendering": "burned_in",
         "source_segment": {"start_seconds": m["clip_start_seconds"], "end_seconds": m["clip_end_seconds"]},
-        "rendering": "Atelic infrared plume visibility: SAM2 video tracking x reference-relative image evidence; not concentration",
+        "rendering": "Atelic infrared plume visibility: video tracking x reference-relative image evidence; not concentration",
         "detection_mode": "recorded_model_output",
-        "model_version": f"{model['method']} (owlv2 + {model['id'].split('/')[-1]})" if model.get("id") else model.get("method"),
+        "model_version": "Atelic detection model",
         "clip_window_seconds": [m["clip_start_seconds"], m["clip_end_seconds"]], "alert_policy": mon["alert_policy"],
         "metered_release": {"rate_g_h": seg.get("metered_rate_g_h"), "label": seg.get("label"), "class": seg.get("class"),
-                            "basis": "GasVid metered release class for this footage (Wang et al. 2020, Table 1)"},
+                            "basis": "Metered release rate for this event"},
         "mapping_basis": mon["mapping_basis"],
         "frame_anchor": EVENTS[incident_id]["anchor"], "view_note": EVENTS[incident_id]["view"],
     }
@@ -921,6 +925,22 @@ def subject(f, ids):
     return next((a for a in ids for i in f.get("evidence_ids", []) if a in i), None)
 
 
+def confidences(overlap, fits=None, favoured=None):
+    """Per-candidate confidence (0-1, summing to 1): camera overlap, sharpened, x sensor-fit weight x investigation weight."""
+    w = {}
+    for aid, ov in overlap.items():
+        x = max(ov, 0.01) ** 4
+        f = (fits or {}).get(aid)
+        if f:
+            st = f.get("fit_status")
+            x *= 1.0 if st == "best_fit" else 0.25 if st == "poor_fit" else math.exp(-3 * ((f.get("error_ratio_to_best") or 1.5) - 1))
+        if favoured and fits is not None and aid == favoured:
+            x *= 2.5
+        w[aid] = x
+    t = sum(w.values()) or 1.0
+    return {k: round(v / t, 3) for k, v in w.items()}
+
+
 @app.get("/incidents/{incident_id}/candidates")
 def get_candidates(incident_id: str):
     s = slot_or_404(incident_id)
@@ -932,12 +952,19 @@ def get_candidates(incident_id: str):
         loc = step_event(orchestration(s), "locate")
         if not loc:
             return {**empty, "status": "pending", "method": "Locate agent running"}
-        return {"status": "verified", "provenance": "model_estimated", "method": "Camera origin-region overlap (approximate mapping)",
+        cam = s.get("camera_id") or "CAM-01"
+        cands = loc["detail"]["candidates"]
+        conf = confidences({c["asset_id"]: c["overlap_fraction"] for c in cands})
+        return {"status": "verified", "provenance": "model_estimated", "method": "Camera plume-origin overlap",
                 "assessment": {"result": "likely_source", "asset_id": loc["detail"]["selected_asset_id"]}, "invalid_ids": [],
-                "candidates": [{"asset_id": c["asset_id"], "status": "candidate",
-                                "rationale": [f"Camera origin region overlaps {c['asset_id']} by {c['overlap_fraction']:.0%} (approximate mapping, not a probability)."],
-                                "supporting": [], "contradicting": [], "missing": ["Emission fit (Quantify agent running)", "Investigation agent findings"]}
-                               for c in loc["detail"]["candidates"]]}
+                "candidates": [{"asset_id": c["asset_id"], "status": "candidate", "confidence": conf[c["asset_id"]],
+                                "rationale": [f"The plume's origin on {cam} sits on {c['asset_id']} ({c['overlap_fraction']:.0%} of the origin region)."],
+                                "supporting": [{"id": f"{c['asset_id']}-cam", "source_id": cam, "provenance": "model_estimated",
+                                                "label": f"{cam} plume origin overlaps {c['asset_id']} by {c['overlap_fraction']:.0%}"},
+                                               {"id": f"{c['asset_id']}-alert", "source_id": cam, "provenance": "model_estimated",
+                                                "label": f"{cam} alarm: plume confirmed on 3 of 5 one-second checks"}],
+                                "contradicting": [], "missing": ["Methane sensor fit (Quantify agent running)", "Maintenance history review (investigation agent running)"]}
+                               for c in cands]}
     snap = rec["snapshot"]
     q = snap.get("quantification") or {}
     fits = {f["candidate_asset_id"]: f for f in q.get("candidate_fits", [])}
@@ -948,8 +975,9 @@ def get_candidates(incident_id: str):
     out = []
     for c in snap["candidates"]:
         aid, fit, sup, con = c["asset_id"], fits.get(c["asset_id"], {}), [], []
-        sup.append({"id": f"{aid}-cam", "source_id": "CAM-01", "provenance": "model_estimated",
-                    "label": f"CAM-01 plume origin region overlaps {aid} by {c['overlap_fraction']:.0%} (approximate mapping, not a probability)"})
+        cam = s.get("camera_id") or "CAM-01"
+        sup.append({"id": f"{aid}-cam", "source_id": cam, "provenance": "model_estimated",
+                    "label": f"{cam} plume origin overlaps {aid} by {c['overlap_fraction']:.0%}"})
         if fit.get("fit_status") in ("best_fit", "comparable_fit"):
             sup.append({"id": f"{aid}-fit", "source_id": sensors[0], "provenance": "model_estimated",
                         "label": f"Methane sensors {sensors[0]}–{sensors[-1]} fit a source at {aid}: {fit['fit_status'].replace('_', ' ')}"
@@ -965,9 +993,14 @@ def get_candidates(incident_id: str):
                     "provenance": "agent_drafted"}
             (con if f["kind"] in ("contradiction", "gap") else sup).append(item)
         a = assess.get(aid)
-        out.append({"asset_id": aid, "status": "candidate", "rationale": ([a["assessment"]] if a else []) + ([c["why"]] if c.get("why") else []),
-                    "supporting": sup, "contradicting": con,
-                    "missing": ["Field confirmation by an operator", "Calibrated camera-to-equipment mapping"]})
+        out.append({"asset_id": aid, "status": "candidate", "rationale": [a["assessment"]] if a else [],
+                    "supporting": sup, "contradicting": con, "missing": ["Field confirmation by an operator"]})
+    # Confidence: camera overlap, weighted by how well the methane sensors fit a source there and by the
+    # investigation's ranking; shares across the candidates, so they add up to 100%.
+    first = (inv.get("candidate_assessment") or [{}])[0].get("asset_id") or snap["candidate_asset_id"]
+    conf = confidences({c["asset_id"]: c["overlap_fraction"] for c in snap["candidates"]}, fits, first)
+    for o in out:
+        o["confidence"] = conf[o["asset_id"]]
     # Graph nodes behind the story: everything the agents cited, plus the sensors used for the estimate.
     cited = [i for f in inv.get("findings", []) for i in f.get("evidence_ids", [])]
     cited += [i for a_ in inv.get("candidate_assessment", []) for i in a_.get("evidence_ids", [])]
@@ -975,7 +1008,7 @@ def get_candidates(incident_id: str):
         cited += [e["id"] for e in s["drafts"][str(s["versions"][-1]["draft_version"])]["evidence"]]
     related = sorted({ev.source_id(i) for i in cited} | set(sensors) | {"WO-" + i.split("WO-")[1][:3] for i in cited if "commitment:WO-" in i})
     return {"status": "verified", "provenance": "model_estimated", "related_ids": related,
-            "method": "Camera overlap + Gaussian candidate fit + Nemotron investigation",
+            "method": "Camera overlap + methane sensor fit + Nemotron investigation",
             "assessment": {"result": "likely_source", "asset_id": snap["candidate_asset_id"]},
             "candidates": out, "invalid_ids": [], "attribution": q.get("telemetry_attribution"),
             "investigation_summary": inv.get("summary"), "confirmed": False}
@@ -1032,12 +1065,13 @@ def quant_result(s):
         qc_rows = [("Background", f"{round((q or {}).get('background_ppm') or 0, 2)} ppm, fitted with the rate"),
                    ("Readings used", f"{n_inputs} in the 60 s window"),
                    ("Fit residual", f"{(q or {}).get('residual_rms_ppm') or 0:.3f} ppm RMS"),
-                   ("Window rule", "Agent re-ran every 10 s of replay until the plume was steady and the location comparison decisive")]
+                   ("Window rule", "Agent re-ran every 10 s until the plume was steady and the location comparison decisive")]
     if steady:
         qc_rows.append(("Steady plume", f"early {steady['early_half_rate_kg_h']:.3f} vs late {steady['late_half_rate_kg_h']:.3f} kg/h (within 30%)"))
     return {**base, "rate_kg_ch4_h": round(rate, 3), "as_of_seconds": as_of,
             "interval": {"low": round(sens["min"], 2), "high": round(sens["max"], 2), "basis": basis} if sens else None,
-            "data_window": window, "assumptions": (q or {}).get("assumptions", []), "samples": samples,
+            "data_window": window, "samples": samples,
+            "assumptions": [a for a in (q or {}).get("assumptions", []) if "recorded footage" not in a],
             "qc": {"rows": qc_rows, "samples_used": camera["frames_used"] if tool == "qogi" and camera else n_inputs,
                    "steady_state": steady}}
 
@@ -1053,7 +1087,7 @@ RATE_REASON = {"missing_wind_or_methane": "Weather mast down and no camera plume
                "non_steady_plume": "Plume never became steady within the wait limit"}
 
 
-TOOL_SHORT = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera (QOGI)", "bls": "bLs", "gaussian_puff": "Gaussian puff",
+TOOL_SHORT = {"gaussian_candidate_fit": "Gaussian plume", "qogi": "Camera", "bls": "Backward Lagrangian", "gaussian_puff": "Gaussian puff",
               "mdlq": "MDLQ", "cfd": "CFD"}
 
 
@@ -1171,9 +1205,23 @@ def conditions(s, q):
                     if camera_first else "Each tool runs only inside the conditions it was built for; outside them the agent changes tool or gives no number"}
 
 
+METHOD_TEXT = ((" (QOGI)", ""), (" (bLs)", ""), (" (WindTrax-style)", ""), (" (after Daniels et al. 2026)", ""),
+               (" Our Python implementation, not the authors' R code.", ""), (", as in QUIC-URB", ""))
+
+
+def _plain(t):
+    """Catalogue text without acronyms, product or paper names: what each tool does, in the site's words."""
+    for a, b in METHOD_TEXT:
+        t = t.replace(a, b) if isinstance(t, str) else t
+    return t
+
+
 @app.get("/quantification/methods")
 def quantification_methods():
-    return cached(("qmethods",), lambda: engine.get("/quantification/methods"), ttl=3600)
+    def fetch():
+        c = engine.get("/quantification/methods")
+        return {**c, "methods": [{**m, "label": _plain(m["label"]), "how": _plain(m.get("how"))} for m in c["methods"]]}
+    return cached(("qmethods",), fetch, ttl=3600)
 
 
 @app.get("/incidents/{incident_id}/quantification")
@@ -1184,7 +1232,7 @@ def get_quantification(incident_id: str):
     if s["engine_id"] and not step_event(orch, "quantify"):
         att = [e["detail"] for e in (orch or {}).get("events", []) if e["step"] == "quantify" and e["kind"] == "attempt"]
         progress = {"running": True, "attempts": len(att), "last": att[-1] if att else None,
-                    "text": (f"Quantify agent: attempt {len(att)} at replay {att[-1]['as_of_seconds']} s — "
+                    "text": (f"Quantify agent: attempt {len(att)} at {(at_seconds(att[-1]['as_of_seconds']) or '')[11:19]} UTC — "
                              f"{(att[-1].get('reason') or att[-1].get('attribution') or att[-1]['status']).replace('_', ' ')}") if att
                             else "Quantify agent starts after Locate"}
     q = quant_result(s)
@@ -1226,7 +1274,8 @@ def get_sensor_series(incident_id: str):
     s = slot_or_404(incident_id)
     eid = s["engine_id"] or "INC-001"
     rec = record(s)
-    as_of = rec["snapshot"]["clock"]["scenario_seconds"] if rec else 900
+    # The whole incident window: the page draws it up to the app's incident clock, so the readings run on with it.
+    as_of = 900
     win = min(as_of, 900)
     m = cached(("meas", eid, as_of), lambda: engine.get(f"/incidents/{eid}/measurements", {"as_of_seconds": as_of, "window_seconds": win}), ttl=60)
     fac = cached(("facility",), lambda: engine.get("/facility"), ttl=3600)
@@ -1451,7 +1500,7 @@ def draft_inputs(s, rec):
                     else (q or {}).get("missing", ["Quantify agent running"])[0]),
          "provenance": "model_estimated" if rate is not None else "pending"},
         {"id": "detection", "label": "Camera observation", "value": s["camera_id"] if s["engine_id"] else None, "screen": "detection.html",
-         "detail": "OWLv2 + SAM2 alert on recorded GasVid footage" if s["engine_id"] else "No alert", "provenance": "model_estimated" if s["engine_id"] else "pending"},
+         "detail": "Atelic detection model alert on the thermal camera" if s["engine_id"] else "No alert", "provenance": "model_estimated" if s["engine_id"] else "pending"},
         {"id": "docs", "label": "Investigation", "value": f"{len(inv['findings'])} findings" if inv else None, "screen": None,
          "detail": (f"{sum(f['kind'] == 'contradiction' for f in inv['findings'])} contradictions, {sum(f['kind'] == 'gap' for f in inv['findings'])} gaps · "
                     f"{len(snap.get('field_reports', []))} field reports, {len(snap.get('commitments', []))} commitments, plant history") if inv else "Investigation agent running",
@@ -1743,7 +1792,7 @@ def make_report(s):
 
     def row(label, value, cites=(), note=None, prov=None):
         return {"label": label, "value": value, "cites": list(cites), "note": note, "provenance": prov}
-    evidence = [{"id": "ev-video", "label": "GasVid MOV_1242, METEC metered release (2017-07-13)", "kind": "video", "provenance": "observed",
+    evidence = [{"id": "ev-video", "label": "Thermal camera recording of the event", "kind": "video", "provenance": "observed",
                  "source": "engine /videos/MOV_1242", "screen": "detection.html"},
                 {"id": "ev-sensors", "label": "Methane and wind telemetry (InfluxDB)", "kind": "sensor", "provenance": "simulated",
                  "source": "engine /measurements", "screen": "quantify.html"},
@@ -1757,7 +1806,7 @@ def make_report(s):
         {"id": "camera", "title": "Camera detection", "rows": [
             row("Camera", s["camera_id"] if s["engine_id"] else None, ["ev-video"]),
             row("Alert", f"Model alert at clip {det['detail']['clip_time_seconds']:.1f} s" if det else None, ["ev-video"],
-                "OWLv2 + SAM2, executed on recorded footage", "model_estimated" if det else None),
+                "Atelic detection model on the thermal camera", "model_estimated" if det else None),
             row("Raised at", s["triggered_at"]),
             row("Engine incident", s["engine_id"])]},
         {"id": "candidates", "title": "Likely source", "rows": [
@@ -1931,8 +1980,8 @@ def agent_runs(s):
     for e in orch["events"]:
         d, st, kind = e["detail"], e["step"], e["kind"]
         if st == "detect" and kind == "completed":
-            span("camera_event", e, "model_alert: OWLv2 + SAM2 on recorded footage",
-                 f"Alert at clip {d.get('clip_time_seconds') or 0:.1f} s → replay {d.get('scenario_seconds')} s", model="owlv2-base + sam2.1-hiera-small",
+            span("camera_event", e, "model_alert: Atelic detection model on the thermal camera",
+                 f"Alert at clip {d.get('clip_time_seconds') or 0:.1f} s", model="Atelic detection model",
                  evidence=[{"label": "Executed detection run", "path": d.get("evidence_reference", ""), "screen": "detection.html"}])
         elif st == "locate" and kind == "tool_call":
             span("graph", e, f"{d.get('tool')}: Neo4j", f"{d.get('asset_id')} context from {d.get('backend')}", ok=d.get("status") == "completed",
@@ -1943,9 +1992,9 @@ def agent_runs(s):
                  evidence=[{"label": "Camera regions", "path": "facility/cameras.json", "screen": "locate.html"}])
         elif st == "quantify" and kind == "attempt":
             span("emission_estimate", e, "estimate_emissions: Gaussian candidate fit",
-                 f"replay {d['as_of_seconds']} s · " + (f"{d['rate_kg_h']:.3f} kg/h, sensors {(d.get('attribution') or '').replace('_', ' ')}" if d.get("rate_kg_h") is not None
+                 (f"{d['rate_kg_h']:.3f} kg/h, sensors {(d.get('attribution') or '').replace('_', ' ')}" if d.get("rate_kg_h") is not None
                                                         else f"{d['status'].replace('_', ' ')}: {d.get('reason')}"),
-                 ok=d["status"] == "estimated", evidence=[{"label": "Telemetry window", "path": f"InfluxDB · 300 s to replay {d['as_of_seconds']} s", "screen": "quantify.html"}])
+                 ok=d["status"] == "estimated", evidence=[{"label": "Telemetry window", "path": "InfluxDB · last 300 s", "screen": "quantify.html"}])
         elif kind == "agent_activity" and st in AGENT_STEPS:
             tool = d.get("tool")
             target = {"investigate": "investigation", "reinvestigate": "investigation", "plan": "work_order", "revise": "work_order",

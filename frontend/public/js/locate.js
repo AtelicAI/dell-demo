@@ -66,15 +66,23 @@
     if (!G) return;
     const W = box.clientWidth, H = box.clientHeight;
     if (!W || !H) return;
-    const pos = G.layout.positions;
+    // Rows of the schematic (detectors, vent header, vent branches, main line, process instruments, cameras), spaced
+    // so each row's labels clear the next row's symbols; anything placed past the edge comes back onto the drawing.
+    const ROW = { 7: 6, 24: 22, 26: 22, 46: 42, 72: 60, 84: 79, 98: 96 };
+    const pos = {};
+    Object.entries(G.layout.positions).forEach(([id, p]) => { pos[id] = { x: Math.max(3, Math.min(96, p.x)), y: ROW[Math.round(p.y)] ?? p.y }; });
     const P = (id) => [36 + pos[id].x / 100 * (W - 72), 30 + pos[id].y / 100 * (H - 66)];
+    // Pipes always; what monitors or observes only for the selected item (or the clicked connection), so the drawing
+    // is not crossed by every sensor and camera line at once.
+    const touches = (e) => e.from === selected || e.to === selected;
     const shown = G.edges.map((e, i) => ({ ...e, i })).filter((e) =>
-      ['CONNECTED_TO', 'MONITORS', 'CAN_OBSERVE'].includes(e.type) && pos[e.from] && pos[e.to]);
+      ['CONNECTED_TO', 'MONITORS', 'CAN_OBSERVE'].includes(e.type) && pos[e.from] && pos[e.to]
+      && (e.type === 'CONNECTED_TO' || touches(e) || e.i === edgeSel));
 
     const links = shown.map((e) => {
       const [x1, y1] = P(e.from), [x2, y2] = P(e.to);
       const cls = { CONNECTED_TO: '', MONITORS: 'mon', CAN_OBSERVE: 'obs' }[e.type];
-      const hl = (e.from === selected || e.to === selected) && e.type !== 'CAN_OBSERVE' || e.i === edgeSel ? ' hl' : '';
+      const hl = (touches(e) && e.type === 'CONNECTED_TO') || e.i === edgeSel ? ' hl' : '';
       const d = `M${x1} ${y1} L${(x1 + x2) / 2} ${(y1 + y2) / 2} L${x2} ${y2}`;
       return `<path class="lk ${cls}${hl}" d="${d}"${e.type === 'CONNECTED_TO' ? ' marker-mid="url(#flow)"' : ''}/>
         <path d="${d}" stroke="transparent" stroke-width="12" fill="none" style="cursor:pointer" data-edge="${e.i}"><title>${e.type}: ${e.from} → ${e.to}</title></path>`;
@@ -83,7 +91,10 @@
     const nodes = G.nodes.filter((n) => pos[n.asset_id]).map((n) => {
       const [x, y] = P(n.asset_id), r = rank.get(n.asset_id);
       const cand = r ? `<circle class="cring" r="25"/><text class="rank" x="19" y="-19">#${r}</text>` : '';
-      const ly = n.asset_type === 'Vent' ? 30 : 26;
+      // Labels: detectors above their symbol (the row under them is the vent header), the rest below; under the rings
+      // when the item is a candidate or selected, so the ring never crosses its name.
+      const ringed = r || n.asset_id === selected;
+      const ly = pos[n.asset_id].y < 10 ? -15 : ringed ? 41 : n.asset_type === 'Vent' ? 30 : 25;
       return `<g class="nd t-${n.asset_type}${n.asset_id === selected ? ' sel' : ''}" transform="translate(${x} ${y})" data-sel="${esc(n.asset_id)}" tabindex="0" role="button" aria-label="${esc(n.asset_id)} ${esc(n.display_name)}">
         <title>${esc(n.asset_id)} | ${esc(n.display_name)}</title>
         <circle class="ring" r="29"/>${cand}${shape(n.asset_type)}
@@ -130,7 +141,7 @@
     cav.textContent = MISSING_CAM;
 
     const eq = (G.camera_equipment || {}).equipment || [];
-    if ($('eq-list')) $('eq-list').innerHTML = eq.length ? eq.map((e) => `<span class="eqchip${e.kind === 'release_point' ? ' lp' : ''}" title="OWLv2 saw “${esc(e.detector_prompt.replace(/^an? /, ''))}” (score ${e.detector_score}), checked by eye">${esc(e.label)}${e.stands_in_for ? ` <em>→ ${esc(e.stands_in_for)} in the plant model</em>` : ''}</span>`).join('') : '<span class="note">None recognised</span>';
+    if ($('eq-list')) $('eq-list').innerHTML = eq.length ? eq.map((e) => `<span class="eqchip${e.kind === 'release_point' ? ' lp' : ''}" title="Recognised by the camera (score ${e.detector_score})">${esc(e.label)}</span>`).join('') : '<span class="note">None recognised</span>';
     if ($('eq-row')) $('eq-row').hidden = !eq.length;
 
     const svg = $('cam-svg');
@@ -152,7 +163,7 @@
     window.AtelicShell.modal({ title: `${CAM} · what the camera recognises`, okLabel: null, cancelLabel: 'Close', html: `<div class="eq-view">
       <div class="eq-big"><video muted autoplay loop playsinline src="${esc(video.currentSrc || video.src)}"></video>
         <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${boxes}</svg></div>
-      <p>${esc(eq.scene || '')}${eq.imaging_distance_m ? `, filmed from ${eq.imaging_distance_m} m` : ''}. Boxes are ${esc((eq.model || '').split('/').pop())} open-vocabulary detections on this camera's footage, each checked by eye. The release pipe is where METEC metered the gas out; in the plant model it stands in for XV-2104.</p></div>` });
+      <p>${esc(eq.scene || '')}${eq.imaging_distance_m ? `, ${eq.imaging_distance_m} m from the camera` : ''}. Equipment the camera recognises in its own view.</p></div>` });
     const v = document.querySelector('.eq-big video');
     if (v) v.addEventListener('loadedmetadata', () => { v.currentTime = video.currentTime || 0; }, { once: true });
   }
@@ -160,7 +171,7 @@
   function initCam(d) {
     const meta = d.metadata, ann = d.annotations;
     CAM = d.camera_id || CAM;
-    $('cam-name').textContent = `${CAM} replay`;
+    $('cam-name').textContent = CAM;
     // Same provenance rule as Screen 2: only a verified clip carries its stated provenance.
     const prov = meta.status === 'verified' && CLIP_PROV.has(meta.provenance) ? meta.provenance : meta.status === 'sample' ? 'simulated' : 'pending';
     $('cam-clip').textContent = window.AtelicShell.FACILITY.short;
@@ -188,10 +199,10 @@
       <canvas class="heat" id="cam-heat" aria-hidden="true"></canvas>
       <svg id="cam-svg" viewBox="0 0 1 1" preserveAspectRatio="none"></svg>
       <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br bR"></span>
-      <div class="cam-chip top"><span>${esc(CAM)} · REPLAY</span></div>
+      <div class="cam-chip top"><span>${esc(CAM)}</span></div>
       <div class="cam-chip bot">${first ? '<span><i></i>Plume region · manual</span>' : ''}</div>`;
     const m = Math.floor(frameTime / 60), s = (frameTime % 60).toFixed(2).padStart(5, '0');
-    $('cam-time').textContent = `· from ${String(m).padStart(2, '0')}:${s}, looped`;
+    $('cam-time').textContent = '';
     video = $('cam-video');
     $('cam-frame').title = 'Open the camera view with the equipment it recognises';
     $('cam-frame').onclick = bigCam;
@@ -239,23 +250,27 @@
       ? `<div class="caveat" style="margin-top:8px">Unknown IDs in candidate data: ${C.invalid_ids.map(esc).join(', ')}</div>` : '';
     $('assess').className = `assess${likely ? '' : ' unresolved'}`;
     // Same claim as before ("Likely source: X (unconfirmed)"), laid out as a verdict card.
-    $('assess').setAttribute('aria-label', likely ? `Likely source: ${likely} (unconfirmed)` : 'Source unresolved');
+    $('assess').setAttribute('aria-label', likely ? `Likely source: ${likely}${conf(likely) != null ? `, confidence ${pct(conf(likely))}` : ''}` : 'Source unresolved');
     $('assess').innerHTML = likely ? `
       <div class="v-k">Likely source</div>
-      <div class="v-row"><span class="v-id">${esc(likely)}</span><span class="pill"><i></i>Unconfirmed · needs field check</span></div>
+      <div class="v-row"><span class="v-id">${esc(likely)}</span>${conf(likely) != null ? `<span class="pill conf" title="Camera overlap, weighted by the methane sensor fit and the investigation's ranking"><i></i>Confidence ${pct(conf(likely))}</span>` : ''}</div>
       <div class="by"><span class="v-nm">${esc(name(likely) || '')}</span>${C.status === 'sample' || !C.method ? '' : ` · ${esc(C.method)}`}</div>${bad}`
       : `<div class="v-k">Source</div><div class="v-id">Unresolved</div>
       <div class="by">${C.status === 'sample' ? '' : esc(C.method || '')}</div>${bad}`;
   }
 
+  // Confidence per candidate (shares across the candidates, from the API).
+  const conf = (id) => { const c = (C && C.candidates || []).find((x) => x.asset_id === id); return c && c.confidence != null ? c.confidence : null; };
+  const pct = (v) => `${Math.round(v * 100)}%`;
+
   function renderCands() {
     if (!C) return;
     const list = C.candidates || [];
-    // Meter = count of evidence items in the data (one block each). Not a score or a confidence.
     const meter = (c) => {
       const f = (c.supporting || []).length, a = (c.contradicting || []).length;
-      return `<span class="meter" title="${f} supporting · ${a} against (evidence items, not a score)">${'<i class="f"></i>'.repeat(f)}${'<i class="a"></i>'.repeat(a)}</span>
-        <span class="ct">${f} for · ${a} against</span>`;
+      return c.confidence != null
+        ? `<span class="cbar" title="${f} supporting · ${a} against"><i style="width:${Math.round(c.confidence * 100)}%"></i></span><span class="ct">${pct(c.confidence)}</span>`
+        : `<span class="ct">${f} for · ${a} against</span>`;
     };
     $('cands').innerHTML = list.length ? `<span class="lbl">Ranked candidates</span>${list.map((c, i) => `
       <button class="cand${c.asset_id === selected ? ' sel' : ''}" data-sel="${esc(c.asset_id)}">

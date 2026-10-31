@@ -104,7 +104,7 @@ services:
       ENGINEER_TOKEN: ${ENGINEER_TOKEN}
       DATA_DIR: /data
       UI_STATE_FILE: /state/state.json
-      DEPLOYMENT_LABEL: Offline laptop (Docker Compose)
+      DEPLOYMENT_LABEL: Local server (Docker Compose)
       LOGIN_USER: ${LOGIN_USER:-atelic}
       LOGIN_PASSWORD: ${LOGIN_PASSWORD:?set LOGIN_PASSWORD}
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
