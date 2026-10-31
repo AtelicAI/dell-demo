@@ -63,13 +63,46 @@
     $('stamp').textContent = R.closure ? 'Closed' : final ? 'Final' : 'Draft';
     $('stamp').className = `stamp${final ? ' ok' : ''}`;
     $('doc-meta').innerHTML = `<span><b>${esc(R.local_incident_id)}</b></span><span>hash ${esc(R.report_hash)}</span><span>generated ${when(R.generated_at)} UTC</span>`;
+    // First the answers (what, how much, what was decided, where the repair stands), then each section folded
+    // to one line; a section opens on click and stays open across refreshes.
+    const hint = (s) => {
+      if (s.id === 'audit') return `${R.audit.length} event${R.audit.length === 1 ? '' : 's'}`;
+      const r = s.rows.find((x) => x.value);
+      return r ? `${r.label}: ${String(r.value).replace(/\s+/g, ' ').slice(0, 90)}` : 'Not available yet';
+    };
     $('doc-body').innerHTML = `<p class="pending-note${final ? ' ok' : ''}">${esc(R.status_text)}</p>
-      ${R.sections.map((s, i) => `<section class="sec" id="sec-${s.id}" aria-label="${esc(s.title)}">
-        <div class="sec-h"><span class="ix">${i + 1}</span><h3>${esc(s.title)}</h3>${SEC_STEP[s.id] ? window.AtelicShell.traceLink(SEC_STEP[s.id], 'Trace') : ''}
-          <span class="cnt">${s.id === 'audit' ? `${R.audit.length} event${R.audit.length === 1 ? '' : 's'}` : ((n) => `${n || 'no'} gap${n === 1 ? '' : 's'}`)(s.rows.filter((r) => r.value === null).length)}</span></div>
-        ${s.id === 'audit' ? timeline() : rows(s)}</section>`).join('')}
+      ${keyFacts()}
+      ${R.sections.map((s, i) => `<details class="sec" id="sec-${s.id}" aria-label="${esc(s.title)}"${openSecs.has(s.id) ? ' open' : ''}>
+        <summary class="sec-h"><span class="ix">${i + 1}</span><h3>${esc(s.title)}</h3>${SEC_STEP[s.id] ? window.AtelicShell.traceLink(SEC_STEP[s.id], 'Trace') : ''}
+          <span class="hint">${esc(hint(s))}</span>
+          <span class="cnt">${s.id === 'audit' ? '' : ((n) => `${n || 'no'} gap${n === 1 ? '' : 's'}`)(s.rows.filter((r) => r.value === null).length)}</span></summary>
+        ${s.id === 'audit' ? timeline() : rows(s)}</details>`).join('')}
       <div class="doc-foot"><span>${esc(R.footer)}</span><span>${esc(R.report_hash)}</span></div>`;
+    $('doc-body').querySelectorAll('details.sec').forEach((d) => d.addEventListener('toggle', () => {
+      const k = d.id.slice(4); if (d.open) openSecs.add(k); else openSecs.delete(k);
+    }));
   }
+
+  // Four answers at the top of the report: likely source, rate and impact, the decision, where the repair stands.
+  const openSecs = new Set();
+  const FU_STAGE = { approved: 'Approved · repair next', reported: 'Report issued · repair next', repair_recorded: 'Repair recorded · verifier checking',
+    verification_ready: 'Verified · ready to close', follow_up_required: 'Verifier: follow-up needed', closed: 'Closed' };
+  function keyFacts() {
+    const sec = (id) => (R.sections.find((x) => x.id === id) || { rows: [] }).rows;
+    const val = (id, label) => { const r = sec(id).find((x) => x.label === label); return r && r.value ? r.value : null; };
+    const fu = R.follow_up, stage = R.closure ? 'Closed' : fu && FU_STAGE[fu.state] || (R.status === 'final' ? 'Approved' : 'Awaiting engineer approval');
+    const tile = (k, v, sub, cls = '') => `<div class="kf${cls}"><span class="k">${k}</span><b>${v ? esc(v) : '—'}</b>${sub ? `<span class="s">${esc(sub)}</span>` : ''}</div>`;
+    const who = val('decision', 'Reviewer'), dec = val('decision', 'Decision');
+    return `<div class="kfacts">
+      ${tile('Likely source', val('candidates', 'Likely source'), val('candidates', 'Sensors vs camera'))}
+      ${tile('Emission rate', val('emissions', 'Rate'), val('emissions', 'Annual impact if unrepaired'))}
+      ${tile('Work order', dec ? `${dec}${who ? ` · ${who}` : ''}` : 'Not approved yet', val('action', 'Proposed inspection'))}
+      ${tile('Repair · verify · close', stage, val('followup', 'Verifier recommendation'), R.closure ? ' ok' : '')}
+    </div>`;
+  }
+  // Print / PDF: every section open, as in the exported report.
+  window.addEventListener('beforeprint', () => document.querySelectorAll('#doc details, #evidence').forEach((d) => { d.dataset.wasOpen = d.open ? '1' : ''; d.open = true; }));
+  window.addEventListener('afterprint', () => document.querySelectorAll('#doc details, #evidence').forEach((d) => { d.open = d.dataset.wasOpen === '1'; }));
 
   function renderSide() {
     if (!R) { $('st-body').innerHTML = '<p class="xp-msg err">Backend not reachable.</p>'; return; }
@@ -199,6 +232,7 @@
 
   function showEvidence(id) {
     document.querySelectorAll('.evt tr.hl').forEach((t) => t.classList.remove('hl'));
+    $('evidence').open = true;
     const tr = id && document.getElementById(`ev-${id}`);
     if (tr) { tr.classList.add('hl'); tr.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
     else $('evidence').scrollIntoView({ block: 'start', behavior: 'smooth' });

@@ -37,6 +37,27 @@
   .sec-h h3{margin:0;font-size:14.5px;font-weight:600}
   .sec-h .gb-link{margin-left:4px}
   .sec-h .cnt{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+  /* Folded sections: one line each (title + first answer); click to open */
+  details.sec > summary{list-style:none;cursor:pointer;margin-bottom:0;padding:2px 0 8px}
+  details.sec > summary::-webkit-details-marker{display:none}
+  details.sec > summary::after{content:"▸";font-size:11px;color:var(--ink-dim);margin-left:8px;transition:transform .15s}
+  details.sec[open] > summary::after{transform:rotate(90deg)}
+  details.sec[open] > summary{margin-bottom:6px}
+  details.sec .hint{font-size:12px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;margin-left:6px}
+  details.sec[open] .hint{visibility:hidden}
+  details.sec > summary:hover h3{color:var(--accent)}
+  .kfacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:12px 26px 6px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .kf{padding:12px 14px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+  .kf:first-child{border-left:0}
+  .kf .k{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+  .kf b{font-size:15px;font-weight:600;line-height:1.3}
+  .kf .s{font-size:11.5px;color:var(--ink-mute);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .kf.ok b{color:var(--good,#15803d)}
+  details.fold > summary{list-style:none;cursor:pointer}
+  details.fold > summary::-webkit-details-marker{display:none}
+  details.fold > summary h2::after{content:" ▸";color:var(--ink-dim);font-size:.8em}
+  details.fold[open] > summary h2::after{content:" ▾"}
+  #fu-panel{margin-top:4px}
   .rows{width:100%;border-collapse:collapse;font-size:12.5px;line-height:1.5}
   .rows td{padding:7px 0;border-bottom:1px dashed var(--line);vertical-align:top}
   .rows tr:last-child td{border-bottom:0}
@@ -133,6 +154,10 @@
 
   <div class="stepper compact" id="stepper"></div>
 
+  <section class="panel rise" style="animation-delay:100ms;margin-bottom:18px" id="fu-panel" aria-label="Repair, verification and closure" hidden>
+    <div class="panel-head"><h2>Repair, verification and closure</h2><span class="meta" id="fu-meta">—</span><span class="gb-slot" data-trace="verification" data-trace-text="Trace"></span></div>
+    <div style="padding:14px 16px"><div id="fu-body"></div><div id="qa" hidden></div></div>
+  </section>
   <div class="rp-grid">
     <article class="panel doc rise" id="doc" aria-label="Incident report">
       <div class="doc-head">
@@ -151,8 +176,8 @@
         <div class="panel-head"><h2>Report status</h2><span class="meta" id="st-meta">—</span></div>
         <div class="sd-body" id="st-body"><p class="xp-msg">Loading…</p></div>
       </section>
-      <section class="panel" aria-label="Export">
-        <div class="panel-head"><h2>Export</h2><span class="meta">Same content as this page</span></div>
+      <details class="panel fold" aria-label="Export">
+        <summary class="panel-head"><h2>Export</h2><span class="meta">PDF · Markdown · JSON</span></summary>
         <div class="sd-body">
           <div class="xp">
             <button class="btn" data-export="pdf">Export PDF</button>
@@ -163,30 +188,26 @@
           <p class="xp-msg" id="xp-msg" role="status" aria-live="polite"></p>
           <ul class="xh" id="xh"></ul>
         </div>
-      </section>
-      <section class="panel" aria-label="Gaps">
-        <div class="panel-head"><h2>Gaps</h2><span class="meta" id="gap-meta">—</span></div>
+      </details>
+      <details class="panel fold" aria-label="Gaps">
+        <summary class="panel-head"><h2>Gaps</h2><span class="meta" id="gap-meta">—</span></summary>
         <div class="sd-body"><ul class="gaps" id="gaps"></ul></div>
-      </section>
+      </details>
     </aside>
   </div>
 
-  <section class="panel rise" style="animation-delay:100ms;margin-bottom:18px" id="fu-panel" aria-label="Repair, verification and closure" hidden>
-    <div class="panel-head"><h2>Repair, verification and closure</h2><span class="meta" id="fu-meta">—</span><span class="gb-slot" data-trace="verification" data-trace-text="Trace"></span></div>
-    <div style="padding:14px 16px"><div id="fu-body"></div><div id="qa" hidden></div></div>
-  </section>
   <section class="panel rise" style="animation-delay:110ms;margin-bottom:18px" id="ak-panel" aria-label="Answer key" hidden>
     <div class="panel-head"><h2>Answer key</h2><span class="meta">What the camera actually recorded</span></div>
     <div style="padding:14px 16px" id="ak-body"></div>
   </section>
 
-  <section class="panel evt rise" style="animation-delay:120ms" id="evidence" aria-label="Source evidence">
-    <div class="panel-head"><h2>Source evidence</h2><span class="meta" id="ev-meta">—</span></div>
+  <details class="panel evt fold rise" style="animation-delay:120ms" id="evidence" aria-label="Source evidence">
+    <summary class="panel-head"><h2>Source evidence</h2><span class="meta" id="ev-meta">—</span></summary>
     <table>
       <thead><tr><th>#</th><th>Source</th><th>Kind</th><th>Provenance</th><th>Location</th><th></th></tr></thead>
       <tbody id="ev-rows"></tbody>
     </table>
-  </section>
+  </details>
 </main>
 
 </body>

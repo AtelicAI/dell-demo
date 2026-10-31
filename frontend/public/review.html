@@ -51,6 +51,9 @@
   .plain{margin:0;padding:0;list-style:none}
   .plain li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 8px;padding:7px 0;font-size:13px;line-height:1.5;color:var(--ink);border-top:1px solid var(--line)}
   .plain li:first-child{border-top:0}
+  .plain li.more-li{display:block;padding:6px 0 0}
+  .more-pts summary{cursor:pointer;font-size:12.5px;color:var(--accent);font-weight:600;padding:2px 0}
+  .more-pts ul.plain{margin:6px 0 0;padding:0}
   .plain .mk{width:7px;height:7px;margin-top:7px;border-radius:2px;background:var(--ink-faint)}
   .plain li.hypothesis .mk{background:none;box-shadow:inset 0 0 0 1.5px var(--ink-dim)}
   .plain li.gap .mk{background:none;box-shadow:inset 0 0 0 1.5px var(--warn)}
@@ -162,7 +165,14 @@
         </details>
       </section>
 
-      <!-- 2 · the points that need the reviewer's judgement -->
+      <!-- 2 · the draft, with its step lists folded -->
+      <article class="panel rise" style="animation-delay:80ms" aria-label="Proposed work order">
+        <div class="card-h"><h2>Proposed work order</h2><span class="chip" id="wo-chip" hidden></span><span class="meta" id="doc-meta"></span></div>
+        <div id="rev-diff" style="padding:12px 16px 0"></div>
+        <div id="doc-body"><div class="empty">Loading…</div></div>
+      </article>
+
+      <!-- 3 · the points that need the reviewer's judgement -->
       <section class="panel attn rise" style="animation-delay:40ms" aria-label="Source uncertainty" id="attn" hidden>
         <div class="card-h"><h2>Source uncertainty</h2><span class="meta" id="n-uncertain"></span></div>
         <div class="body">
@@ -170,13 +180,6 @@
           <div class="legend"><span><i class="f"></i>Flagged on Plan</span><span><i class="h"></i>Hypothesis</span><span><i class="g"></i>Missing data</span></div>
         </div>
       </section>
-
-      <!-- 3 · the draft, with its step lists folded -->
-      <article class="panel rise" style="animation-delay:80ms" aria-label="Proposed work order">
-        <div class="card-h"><h2>Proposed work order</h2><span class="chip" id="wo-chip" hidden></span><span class="meta" id="doc-meta"></span></div>
-        <div id="rev-diff" style="padding:12px 16px 0"></div>
-        <div id="doc-body"><div class="empty">Loading…</div></div>
-      </article>
 
       <!-- 4 · investigation findings and questions to the agent -->
       <section class="panel rise" style="animation-delay:100ms" aria-label="Investigation and questions" id="inv-panel" hidden>

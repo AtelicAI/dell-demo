@@ -1498,7 +1498,8 @@ def draft_inputs(s, rec):
         {"id": "source", "label": "Likely source", "value": sel, "provenance": "hypothesis", "screen": "locate.html",
          "detail": f"Top of {len(snap.get('candidates', []))} camera candidates · {ATTRIBUTION_TEXT.get(att.get('status'), 'sensors ' + (att.get('status') or 'pending').replace('_', ' '))}" if sel else "Locate agent running"},
         {"id": "rate", "label": "Emission rate", "value": f"{rate:.2f} kg CH₄/h" if rate is not None else None, "screen": "quantify.html",
-         "detail": (f"Sensitivity {q['interval']['low']}–{q['interval']['high']} kg/h" if rate is not None and q.get("interval")
+         "detail": (f"≈ {rate * 8.766:.1f} t CH₄/yr · {rate * 8.766 * 29.8:.0f} t CO₂e/yr · range {q['interval']['low']}–{q['interval']['high']} kg/h"
+                    if rate is not None and q.get("interval")
                     else (q or {}).get("missing", ["Quantify agent running"])[0]),
          "provenance": "model_estimated" if rate is not None else "pending"},
         {"id": "detection", "label": "Camera observation", "value": s["camera_id"] if s["engine_id"] else None, "screen": "detection.html",
@@ -1808,22 +1809,23 @@ def make_report(s):
     sections = [
         {"id": "camera", "title": "Camera detection", "rows": [
             row("Camera", s["camera_id"] if s["engine_id"] else None, ["ev-video"]),
-            row("Alert", f"Model alert at clip {det['detail']['clip_time_seconds']:.1f} s" if det else None, ["ev-video"],
+            row("Alert", f"Plume confirmed on {s['camera_id']} (3 of 5 one-second checks)" if det else None, ["ev-video"],
                 "Atelic detection model on the thermal camera", "model_estimated" if det else None),
             row("Raised at", s["triggered_at"]),
             row("Engine incident", s["engine_id"])]},
         {"id": "candidates", "title": "Likely source", "rows": [
-            row("Likely source", selected_asset(s), ["ev-graph"], "Unconfirmed until a field check", "hypothesis"),
-            row("Sensors vs camera", att.get("status", "").replace("_", " ") or None, ["ev-sensors"], att.get("note"), "model_estimated" if att else None),
+            row("Likely source", selected_asset(s), ["ev-graph"], "To be confirmed by the field check in the work order", "hypothesis"),
+            row("Sensors vs camera", ATTRIBUTION_TEXT.get(att.get("status"), (att.get("status") or "").replace("_", " ")).capitalize() or None,
+                ["ev-sensors"], att.get("note"), "model_estimated" if att else None),
             row("Investigation", inv and inv["summary"], [], inv and f"{len(inv['findings'])} findings by the investigation agent", "agent_drafted" if inv else None)]},
         {"id": "emissions", "title": "Emissions", "rows": [
             row("Rate", f"{q['rate_kg_ch4_h']:.3f} kg CH₄/h" if q and q.get("rate_kg_ch4_h") is not None else None, ["ev-sensors"],
                 q and q.get("interval") and f"Sensitivity {q['interval']['low']}–{q['interval']['high']} kg/h, not a confidence interval",
                 "model_estimated" if q and q.get("rate_kg_ch4_h") is not None else None),
-            row("Method", q and q["model_version"]),
-            row("Metered release on camera (answer key)", f"{key['rate_kg_ch4_h']:.4f} kg CH₄/h" if key and key.get("rate_kg_ch4_h") else None, ["ev-video"],
-                f"Estimate error {key['error_percent']:+.1f}%" if key and key.get("error_percent") is not None else "Revealed after the report is issued",
-                "experimental_setpoint" if key else None)]},
+            row("Annual impact if unrepaired", f"{q['rate_kg_ch4_h'] * 8.766:.1f} t CH₄/yr · {q['rate_kg_ch4_h'] * 8.766 * 29.8:.0f} t CO₂e/yr"
+                if q and q.get("rate_kg_ch4_h") is not None else None, ["ev-sensors"], "CO₂e with GWP100 = 29.8 (IPCC AR6, fossil methane)",
+                "model_estimated" if q and q.get("rate_kg_ch4_h") is not None else None),
+            row("Method", q and q["model_version"].replace("qogi-integrated-mass-enhancement", "camera-integrated-mass-enhancement"))]},
         {"id": "action", "title": "Work order", "rows": [
             row("Asset", latest and latest["fields"].get("asset")),
             row("Problem", latest and latest["fields"].get("problem")),

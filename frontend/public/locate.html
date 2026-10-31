@@ -205,6 +205,11 @@
   .cand-actions small{display:block;text-align:center;margin-top:4px;font-size:11px;color:var(--ink-dim)}
 
   @media (max-width:1100px){.loc-grid{grid-template-columns:1fr}main.fit{height:auto}.canvas{height:420px;flex:none}}
+  details.more-ev > summary{cursor:pointer;list-style:none;font-family:var(--mono);font-size:10.5px;color:var(--accent);padding:4px 0 2px}
+  details.more-ev > summary::-webkit-details-marker{display:none}
+  details.more-ev > summary::before{content:"▸ "}
+  details.more-ev[open] > summary::before{content:"▾ "}
+  details.more-ev ul{margin-top:0}
 </style>
 </head>
 <body data-page="locate" data-stage="locate">

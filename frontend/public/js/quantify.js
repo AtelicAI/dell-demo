@@ -13,13 +13,18 @@
   const { badge } = window.AtelicShell;
   // Stacked strips on one time axis; methane gets the most height.
   const STRIPS = [
-    { q: 'methane_ppm', name: 'Methane concentration', unit: 'ppm', color: '--n-well', digits: 2, h: 160 },
-    { q: 'wind_speed_m_s', name: 'Wind speed', unit: 'm/s', color: '--n-equip', digits: 2, h: 104 },
-    { q: 'wind_dir_deg_from_north', name: 'Wind direction', unit: '° from north', color: '--n-wt', digits: 1, h: 104 },
-    { q: 'pressure_bara', name: 'Process pressure', unit: 'bar absolute', color: '--n-station', digits: 3, h: 104 },
-    { q: 'obukhov_m', name: 'Stability (Obukhov length)', unit: 'm, sonic', color: '--violet', digits: 1, h: 104 },
+    { q: 'methane_ppm', name: 'Methane concentration', unit: 'ppm', color: '--n-well', digits: 2, h: 124, core: true },
+    { q: 'wind_speed_m_s', name: 'Wind speed', unit: 'm/s', color: '--n-equip', digits: 2, h: 84, core: true },
+    { q: 'wind_dir_deg_from_north', name: 'Wind direction', unit: '° from north', color: '--n-wt', digits: 1, h: 84 },
+    { q: 'pressure_bara', name: 'Process pressure', unit: 'bar absolute', color: '--n-station', digits: 3, h: 84 },
+    { q: 'obukhov_m', name: 'Stability (Obukhov length)', unit: 'm, sonic', color: '--violet', digits: 1, h: 84 },
   ];
+  let allCh = false;
+  // What the rate means: the same number per day and per year, and against what a satellite can see.
+  const GWP100 = 29.8, CH4_KG_M3 = 0.668, SAT_KG_H = 100;
+  const sig2 = (v) => Number(v.toPrecision(2));
   const ROLE = { primary: 'Agent’s choice', cross_check: 'Cross-check', waiting: 'Waiting', not_needed: 'Not needed here', blocked: 'Cannot run', recommended: 'Would fit', pending: 'Pending' };
+  const ROLE_SHORT = { primary: 'Agent', cross_check: 'Cross-check', waiting: 'Waiting', not_needed: 'Not needed', blocked: 'Needs wind', recommended: 'Would fit', pending: 'Pending' };
   const AXIS_H = 28;
   const MONO = 'IBM Plex Mono, monospace';
   const METHOD_LABEL = {};
@@ -34,7 +39,7 @@
   const why = (s) => String(s || '').replace(/_on_this_edge_box/, '').replace(/_/g, ' ');
 
   // QD: the backend's quantification. Q: what the page shows at the current clock (QD, or the agent still working).
-  let S = null, QD = null, Q = null, traces = null, qcChart = null, H = null, histChart = null, aChart = null;
+  let S = null, QD = null, Q = null, traces = null, qcChart = null, H = null, histChart = null, aChart = null, trendChart = null;
   let alarmMs = null, catching = false;
   const nowMs = () => { const n = shell.replayNow(); return n ? n.getTime() : null; };
 
@@ -84,6 +89,7 @@
       return;
     }
     const rateBlock = (num, sub) => `<div class="rate"><span class="lbl">Rate (kg CH₄/h)</span>${num}${sub}</div>`;
+    $('impact').hidden = true;
     if (!r && Q.progress) {
       title.textContent = 'Quantify agent working';
       body.innerHTML = rateBlock('<div class="num none">…</div>', '') +
@@ -118,6 +124,7 @@
     body.innerHTML = rateBlock(`<div class="num">≈ ${avg.toFixed(2)}</div>`,
       `<div class="unit">kg CH₄/h · ${n > 1 ? `Average of ${n} methods` : esc(lbl(METHOD_LABEL[r.primary_tool] || r.primary_tool))}</div><div class="sub">${sub}</div>${ccLine}`) + compare(runs, n > 1 ? avg : null);
     requestAnimationFrame(() => requestAnimationFrame(() => body.querySelectorAll('.cband.pre').forEach((b) => b.classList.remove('pre'))));
+    renderImpact(avg);
 
     const w = r.data_window || {}, iv = r.interval;
     const f = (k, v, s) => `<div class="f"><span class="lbl">${k}</span><div class="v">${v}${s ? `<small>${s}</small>` : ''}</div></div>`;
@@ -129,8 +136,101 @@
       f('Model version', esc(mver(r)), esc(r.model_note || '')) +
       f('Case read by the agent', case_.wind !== 'available' ? `Weather mast offline${mastOff() ? ` since ${mastOff()} UTC` : ''}; no wind in the estimate window` : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} sensors`,
         case_.wind !== 'available' ? 'Camera sees the plume' : `${case_.camera_candidates} camera candidates · wind ${case_.wind_speed_m_s} m/s${cam ? ' · camera sees the plume' : ''}`) +
-      f('Assumptions', `<a href="#assumptions-panel">${(r.assumptions || []).length} listed</a>`, 'Geometry is draft');
+      f('Assumptions', `<a href="#assumptions-panel">${(r.assumptions || []).length} listed ↓</a>`, 'Geometry is draft');
     fields.hidden = false;
+  }
+
+  // The shown rate in the units people act on: per day, per year, CO₂-equivalent, gas volume; and against a satellite.
+  function renderImpact(rate) {
+    const el = $('impact');
+    if (!(rate > 0)) { el.hidden = true; return; }
+    const day = rate * 24, tYr = (rate * 8760) / 1000, co2 = tYr * GWP100, m3 = (rate * 8760) / CH4_KG_M3;
+    const fmt = (v, d) => v.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
+    const tile = (v, t) => `<div class="imp"><b>${v}</b><span>${t}</span></div>`;
+    el.innerHTML = `<span class="lbl">At this rate, around the clock</span>
+      <div class="imp-row">
+        ${tile(fmt(day, 1), 'kg CH₄ per day')}
+        ${tile(fmt(tYr, tYr < 10 ? 2 : 1), 'tonnes CH₄ per year')}
+        ${tile(fmt(co2, 0), 'tonnes CO₂e per year (GWP100 29.8)')}
+        ${tile(fmt(Math.round(m3 / 10) * 10, 0), 'm³ of gas lost per year')}
+      </div>
+      <p class="imp-note">About <b>1/${sig2(SAT_KG_H / rate).toLocaleString('en-US')}</b> of what a methane satellite can detect (≈${SAT_KG_H} kg/h): only on-site sensing catches a leak this size.</p>
+      <div class="imp-foot">Methane GWP100 29.8 (IPCC AR6, fossil) · gas at 0.668 kg/m³ (15 °C) · a leak that only runs part of the day emits less.</div>`;
+    el.hidden = false;
+  }
+
+  // Can I trust it: the checks the chosen tool needs, failures first, and whether the other methods agree.
+  function renderTrust() {
+    const c = Q && Q.conditions, el = $('trust');
+    if (!c) {
+      $('trust-meta').textContent = '';
+      el.innerHTML = `<div class="pending-box">${Q && Q.progress ? 'The checks appear once the agent has a steady window.' : 'Shown after an estimate runs.'}</div>`;
+      return;
+    }
+    // Cross-checks only for the methods shown beside the rate, so this card and the result card count the same runs.
+    const shownIds = new Set(runSet().filter((x) => !x.prim).map((x) => `check_${x.m.id}`));
+    const all = c.rows || [], base = all.filter((x) => !/^check_/.test(x.id)), cross = all.filter((x) => shownIds.has(x.id));
+    const rows = [...base, ...cross];
+    const pass = rows.filter((x) => x.ok).length, fail = rows.length - pass;
+    $('trust-meta').textContent = `${rows.length} checks`;
+    const ORDER = ['tracked', 'steady', 'wind', 'sensors', 'attribution', 'contrast', 'geometry', 'stability'];
+    const pick = [...base.filter((x) => !x.ok), ...ORDER.map((id) => base.find((x) => x.id === id && x.ok)).filter(Boolean)].slice(0, 4);
+    const li = (ok, t, d) => `<li class="${ok ? 'ok' : 'no'}"><span class="mk">${ok ? '✓' : '!'}</span><span>${esc(t)}<span class="d" title="${esc(d)}">${esc(d)}</span></span></li>`;
+    const xok = cross.filter((x) => x.ok).length;
+    const xLine = cross.length
+      ? li(xok === cross.length, `${xok} of ${cross.length} other methods agree`, cross.map((x) => `${lbl(x.label.replace(/ agrees$/, ''))}: ${x.detail.split(',')[0]}`).join(' · '))
+      : li(true, 'One method so far', 'Run another method beside the rate to cross-check it');
+    el.innerHTML = `<div class="t-sum ${fail ? 'no' : 'ok'}"><b>${pass}/${rows.length}</b><span>${fail ? `${fail} check${fail > 1 ? 's' : ''} fail: treat with care` : 'checks pass: within the tool’s conditions'}</span></div>
+      <ul class="tlist">${pick.map((x) => li(x.ok, x.label, x.detail)).join('')}${xLine}</ul>
+      <button class="t-more" type="button" data-open="cond-panel">All checks ↓</button>`;
+  }
+
+  // Is it getting worse: the site's methane episodes before the alarm, per week, and their link to load changes.
+  function renderTrend() {
+    const el = $('trend');
+    if (!H || !H.analysis) { el.innerHTML = '<div class="pending-box">No plant history for this incident.</div>'; return; }
+    const a = H.analysis, lc = a.load_change_alignment || {}, wk = a.episodes_by_week || {};
+    const keys = Object.keys(wk).sort();
+    const weeks = [];
+    if (keys.length) {
+      for (let t = Date.parse(keys[0]); t <= Date.parse(keys[keys.length - 1]); t += 7 * 864e5) {
+        const k = new Date(t).toISOString().slice(0, 10);
+        weeks.push({ k, n: (wk[k] || {}).episodes || 0, peak: (wk[k] || {}).max_peak_excess_ppm ?? null });
+      }
+    }
+    const withEp = weeks.filter((w) => w.n);
+    const early = withEp.slice(0, 2), late = withEp.slice(-2);
+    const pk = (ws) => Math.max(...ws.map((w) => w.peak || 0));
+    const p0 = early.length ? pk(early) : null, p1 = late.length ? pk(late) : null;
+    const dir = p0 && p1 ? (p1 > 1.5 * p0 ? 'up' : p1 < 0.67 * p0 ? 'down' : 'flat') : null;
+    const day = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const days = Math.round((Date.parse(a.period_end_utc) - Date.parse(a.period_start_utc)) / 864e5);
+    $('trend-meta').textContent = '';
+    el.innerHTML = `<div class="tr-wrap">${dir ? `<div class="tr-verdict ${dir}">${dir === 'up' ? 'Getting worse' : dir === 'down' ? 'Easing' : 'About the same'}: weekly peaks ${p0.toFixed(1)} → ${p1.toFixed(1)} ppm</div>` : ''}
+      <div class="tr-facts">
+        <div><b>${a.episode_count}</b><span>methane episodes in ${days} days (since ${esc(day(a.period_start_utc))})</span></div>
+        <div><b>${lc.episodes_starting_after_load_change ?? '—'}/${lc.episodes ?? '—'}</b><span>start within ${lc.window_minutes || 90} min of a K-201 load change (${Math.round((lc.share_expected_by_chance || 0) * 100)}% by chance)</span></div>
+      </div>
+      <div id="trend-spark" aria-label="Methane episodes per week and the weekly peak"></div>
+      <div class="tr-note">Bars: episodes per week · line: weekly peak above background (ppm)</div>
+      <button class="t-more" type="button" data-open="hist-panel">Plant history ↓</button></div>`;
+    if (trendChart) { trendChart.dispose(); trendChart = null; }
+    if (!weeks.length || typeof echarts === 'undefined') return;
+    trendChart = echarts.init($('trend-spark'), null, { renderer: 'canvas' });
+    trendChart.setOption({
+      animation: false, grid: { left: 4, right: 4, top: 6, bottom: 16 },
+      tooltip: { trigger: 'axis', textStyle: { fontFamily: MONO, fontSize: 11 },
+        formatter: (ps) => `Week of ${day(weeks[ps[0].dataIndex].k)}<br>${weeks[ps[0].dataIndex].n} episodes${weeks[ps[0].dataIndex].peak != null ? ` · peak ${weeks[ps[0].dataIndex].peak.toFixed(1)} ppm` : ''}` },
+      xAxis: { type: 'category', data: weeks.map((w) => day(w.k)), axisTick: { show: false }, axisLine: { lineStyle: { color: css('--ink-faint') } },
+        axisLabel: { color: css('--ink-dim'), fontFamily: MONO, fontSize: 9, interval: Math.max(0, Math.ceil(weeks.length / 4) - 1) } },
+      yAxis: [{ type: 'value', show: false }, { type: 'value', show: false }],
+      series: [
+        { type: 'bar', data: weeks.map((w) => w.n), barWidth: '55%', itemStyle: { color: css('--n-equip'), opacity: .35, borderRadius: [2, 2, 0, 0] } },
+        { type: 'line', yAxisIndex: 1, data: weeks.map((w) => w.peak), connectNulls: true, symbol: 'circle', symbolSize: 5,
+          lineStyle: { width: 2, color: css('--bad') || '#B42318' }, itemStyle: { color: css('--bad') || '#B42318' } },
+      ],
+    }, true);
+    requestAnimationFrame(() => trendChart && trendChart.resize());
   }
 
   // One strip per method run, on one kg/h scale: dot = its rate, band = its uncertainty, line = the average.
@@ -258,7 +358,11 @@
 
   function renderTraces() {
     const el = $('traces'), labels = $('labels');
-    have = STRIPS.filter((s) => S && (S.series[s.q] || []).length);
+    have = STRIPS.filter((s) => S && (S.series[s.q] || []).length && (allCh || s.core));
+    const extra = STRIPS.filter((s) => S && (S.series[s.q] || []).length && !s.core).length;
+    $('ch-tg').hidden = !extra;
+    $('ch-tg').textContent = allCh ? 'Show fewer channels' : `Show all channels (+${extra})`;
+    $('ch-tg').setAttribute('aria-pressed', String(allCh));
     if (!have.length) {
       labels.innerHTML = '';
       el.innerHTML = '<div class="traces-empty">No sensor data available for this incident.</div>';
@@ -343,20 +447,21 @@
     ms.forEach((m) => { METHOD_LABEL[m.id] = m.label; });
     const r = Q && Q.result, ready = Boolean(r && r.rate_kg_ch4_h != null);
     const ran = new Map(runSet().map((x) => [x.m.id, x]));
-    const probs = (o) => (o && o.sources ? `<span class="t-why">Leak probability: ${o.sources.slice(0, 3).map((x) => `${esc(x.asset_id)} ${x.leak_probability.toFixed(2)}`).join(' · ')}</span>` : '');
-    const out = (m) => {
-      const x = ran.get(m.id);
-      if (x) return `<span class="t-out${x.prim ? '' : ' mine'}">${x.prim ? 'Agent’s estimate' : 'Your run'}: ${x.v.toFixed(3)} kg/h</span>${probs(m.engineer_run && m.engineer_run.rate_kg_h != null ? null : m.output)}`;
-      const e = m.engineer_run;
-      return e && e.rate_kg_h == null ? `<span class="t-out mine">Your run: no rate (${esc(why(e.reason || e.status))})</span>` : '';
-    };
     const shown = Q && Q.methods ? Q.methods : ms;
-    $('methods').innerHTML = shown.map((m) => `<div class="tool r-${esc(m.role)}">
-        <div class="t-head"><b>${esc(lbl(m.label))}</b><span class="t-role">${esc(ROLE[m.role] || m.role)}</span></div>
-        <span class="t-why">${esc(m.reason)}</span>${ready ? out(m) : ''}
-        ${m.connected ? (ready && !ran.has(m.id) && m.role !== 'blocked' ? `<button class="t-run" data-tool="${esc(m.id)}">Run ${esc(lbl(m.label))}</button>` : '')
-          : '<span class="t-na">Not deployed</span>'}
-      </div>`).join('') || '<div class="note">No tools reported by the backend.</div>';
+    // One line per tool: name, the agent's decision, and its rate (or Run). Why, on hover and in the fold below.
+    const val = (m) => {
+      const x = ran.get(m.id), e = m.engineer_run;
+      if (x) return `<span class="t-val${x.prim ? '' : ' mine'}" title="${x.prim ? 'Agent’s estimate' : 'Your run'}">${x.v.toFixed(3)}</span>`;
+      if (e && e.rate_kg_h == null) return `<span class="t-val none" title="${esc(why(e.reason || e.status))}">no rate</span>`;
+      if (!m.connected) return '<span class="t-val none">not deployed</span>';
+      if (ready && m.role !== 'blocked') return `<button class="t-run" data-tool="${esc(m.id)}">Run</button>`;
+      return '<span class="t-val none">—</span>';
+    };
+    $('methods').innerHTML = shown.length ? shown.map((m) => `<div class="tool r-${esc(m.role)}" title="${esc(m.reason || '')}">
+        <b>${esc(lbl(m.label))}</b><span class="t-role">${esc(ROLE_SHORT[m.role] || ROLE[m.role] || m.role)}</span>${val(m)}
+      </div>`).join('') + `<details class="tools-help"><summary>Why each tool, for this incident</summary>${shown.map((m) => `<p><b>${esc(lbl(m.label))}</b> · ${esc(ROLE[m.role] || m.role)}. ${esc(m.reason || '')}</p>`).join('')}</details>`
+      : '<div class="note">No tools reported by the backend.</div>';
+    $('tools-meta').textContent = ready ? `${ran.size} of ${shown.filter((m) => m.connected).length} run · kg/h` : '';
     $('btn-run').disabled = !ready;
     $('btn-run').textContent = "Re-run the agent's choice";
     $('next-note').textContent = ready ? 'Estimate ready for engineer review.' : Q && Q.progress ? 'The quantify agent is still working.' : 'No rate: the plan proceeds without one.';
@@ -428,12 +533,14 @@
     const c = Q && Q.conditions;
     $('cond-panel').hidden = !c;
     if (!c) return;
-    $('cond-meta').textContent = c.all_ok ? 'All checks pass' : `${c.rows.filter((x) => !x.ok).length} check(s) fail`;
+    const shownIds = new Set(runSet().filter((x) => !x.prim).map((x) => `check_${x.m.id}`));
+    const rows = c.rows.filter((x) => !/^check_/.test(x.id) || shownIds.has(x.id)), bad = rows.filter((x) => !x.ok).length;
+    $('cond-meta').textContent = bad ? `${bad} of ${rows.length} fail` : `all ${rows.length} pass`;
     const r = Q.result;
     $('cond').innerHTML = `<p class="cond-sum">${r && r.rate_kg_ch4_h != null
-      ? (c.all_ok ? '<b>Within its conditions.</b> Every condition the chosen tool needs holds for this window.' : '<b>Treat with care.</b> Some conditions fail; the number is shown with them.')
+      ? (!bad ? '<b>Within its conditions.</b> Every condition the chosen tool needs holds for this window.' : '<b>Treat with care.</b> Some conditions fail; the number is shown with them.')
       : '<b>Rate not estimated.</b> The checks below say why; no number is better than a wrong one.'}</p>
-      <div class="cond">${c.rows.map((x) => `<div class="${x.ok ? 'ok' : 'no'}"><b>${esc(lbl(x.label.replace(/ agrees$/, '')))}${/ agrees$/.test(x.label) ? ' agrees' : ''}</b><span>${esc(x.detail)}</span></div>`).join('')}</div>
+      <div class="cond">${rows.map((x) => `<div class="${x.ok ? 'ok' : 'no'}"><b>${esc(lbl(x.label.replace(/ agrees$/, '')))}${/ agrees$/.test(x.label) ? ' agrees' : ''}</b><span>${esc(x.detail)}</span></div>`).join('')}</div>
       <p class="hist-note">${esc(c.note)}</p>`;
   }
 
@@ -497,7 +604,7 @@
 
   function renderAll() {
     view();
-    renderMethods(); renderHero(); renderInputs(); renderTraces(); renderLower(); renderConditions(); renderAttr(); renderCatalog(); renderHistory();
+    renderMethods(); renderHero(); renderTrust(); renderTrend(); renderInputs(); renderTraces(); renderLower(); renderConditions(); renderAttr(); renderCatalog(); renderHistory();
   }
 
   // The agent froze its estimate later on the incident clock than "now": play the clock forward to that moment while
@@ -513,7 +620,7 @@
         const k = Math.min(1, (t - t0) / dur);
         shell.setReplayNow(from + span * (1 - (1 - k) ** 2));
         const seen = visibleAttempts().length;
-        if (seen !== lastSeen) { lastSeen = seen; view(); renderHero(); renderLog(); }
+        if (seen !== lastSeen) { lastSeen = seen; view(); renderHero(); renderTrust(); renderLog(); }
         if (k < 1) requestAnimationFrame(step); else done();
       };
       requestAnimationFrame(step);
@@ -556,10 +663,25 @@
     run(tool, el);
   };
   $('btn-run').addEventListener('click', () => run());
+  $('ch-tg').addEventListener('click', () => { allCh = !allCh; renderTraces(); });
+  // "All checks ↓" / "Plant history ↓": open that fold and bring it into view.
+  document.querySelector('main').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-open], a[href^="#"]');
+    if (!b) return;
+    const d = $(b.dataset.open || b.getAttribute('href').slice(1));
+    if (!d || d.tagName !== 'DETAILS') return;
+    e.preventDefault();
+    d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // Charts inside a fold are drawn at zero size while it is closed: size them when it opens.
+  document.querySelectorAll('.more details').forEach((d) => d.addEventListener('toggle', () => {
+    if (d.open) requestAnimationFrame(() => [qcChart, histChart, aChart].forEach((c) => c && c.resize()));
+  }));
   $('methods').addEventListener('click', (e) => { const b = e.target.closest('.t-run'); if (b) busy(b, b.dataset.tool); });
   $('hero-body').addEventListener('click', (e) => { const b = e.target.closest('.crun'); if (b) busy(b, b.dataset.tool); });
   $('btn-plan').addEventListener('click', (e) => { if ($('btn-plan').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
-  window.addEventListener('resize', () => { [traces, qcChart, histChart, aChart].forEach((c) => c && c.resize()); });
+  window.addEventListener('resize', () => { [traces, qcChart, histChart, aChart, trendChart].forEach((c) => c && c.resize()); });
   // The QC chart fills its stretched panel, whose height settles after the assumptions render.
   new ResizeObserver(() => { if (qcChart) qcChart.resize(); }).observe($('qc'));
 

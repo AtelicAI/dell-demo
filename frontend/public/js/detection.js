@@ -69,18 +69,18 @@
       <div id="status-block"></div>
       <div class="origin-line"><b>OGI camera: ${esc(meta.camera_type || 'Not recorded')}</b>${origin}</div>
       <div class="kv">
-        <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
-        ${heat ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
-        ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
-        ${row('Source', `${CAM} · ${meta.camera_type ? `${meta.camera_type} · ` : ''}${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
+        ${row('Camera', `${CAM} · ${window.AtelicShell.FACILITY.short}`, prov)}
         ${meta.view_note ? row('Camera view', meta.view_note, prov) : ''}
-        ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
-        ${meta.metered_release && meta.metered_release.rate_g_h ? row('Release on camera', `${meta.metered_release.rate_g_h} g/h metered`, 'experimental_setpoint', 'v-release') : ''}
-        ${d.alert && d.alert.clip_time_seconds ? row('Model alert', `Clip ${d.alert.clip_time_seconds.toFixed(1)} s · ${d.monitor && d.monitor.policy ? `${d.monitor.policy.min_positive_samples} positive one-second checks within ${d.monitor.policy.window_samples} s` : 'plume confirmed'}`, 'model_estimated') : ''}
+        ${d.alert && d.alert.clip_time_seconds ? row('Model alert', d.monitor && d.monitor.policy ? `${d.monitor.policy.min_positive_samples} of ${d.monitor.policy.window_samples} one-second checks positive` : 'Plume confirmed', 'model_estimated') : ''}
       </div>
       <details class="more">
-        <summary>More details <span>confidence, recording, camera, model</span></summary>
+        <summary>More details <span>plume region, method, camera, model</span></summary>
         <div class="kv">
+          <div class="k">Plume region</div><div class="v na" id="v-region"><span>${observed ? '—' : 'Not available'}</span></div>
+          ${heat ? row('Heat map', 'Pixel change, computed live', 'model_estimated') : ''}
+          ${observed && !heat ? row('Plume rendering', 'Atelic detection model · pre-rendered', 'model_estimated') : ''}
+          ${row('Detection method', MODES[meta.detection_mode] || null, prov)}
+          ${row('Site', `${window.AtelicShell.FACILITY.short}, ${window.AtelicShell.FACILITY.location}`, prov)}
           <div class="k">Confidence (if supplied)</div><div class="v na" id="v-conf"><span>Not supplied</span></div>
           ${row('Recording time', meta.recording_date, prov)}
           ${row('Camera type', meta.camera_type, prov)}

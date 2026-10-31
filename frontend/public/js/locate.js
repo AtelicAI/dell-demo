@@ -281,7 +281,9 @@
   }
 
   const li = (mk, cls, html) => `<li><span class="mk ${cls}">${mk}</span><span class="tx">${html}</span></li>`;
-  const ev = (e) => `${esc(e.label)}<span class="src">${assetLink(e.source_id)} <span class="pdot"${e.provenance === 'synthetic' || e.provenance === 'simulated' ? '' : ` title="${BADGE[e.provenance] || ''}"`}></span></span>`;
+  // Evidence source as a short chip: CAM-01/region/XV-2104 → CAM-01 (the full ID stays in the tooltip).
+  const srcLink = (id) => { const short = String(id || '').split('/')[0]; return `<button class="linkish" data-sel="${esc(byId.has(short) ? short : id)}" title="${esc(id)}">${esc(short)}</button>`; };
+  const ev = (e) => `${esc(e.label)}<span class="src">${srcLink(e.source_id)} <span class="pdot"${e.provenance === 'synthetic' || e.provenance === 'simulated' ? '' : ` title="${BADGE[e.provenance] || ''}"`}></span></span>`;
   const list = (items, empty) => items.length ? `<ul>${items.join('')}</ul>` : `<div class="empty">${empty}</div>`;
 
   function evidenceTab(id) {
@@ -294,7 +296,10 @@
       return `<h4>${esc(id)}</h4><div class="empty">${C ? 'This asset is not a source candidate.' : 'Candidate data not available.'}</div>
         <h4>Other possible sources</h4>${others}`;
     }
-    const group = (cls, mk, title, items, empty) => `<div class="eg ${cls}"><h4><span class="mk">${mk}</span>${title}<span class="n">${items.length}</span></h4>${items.length ? `<ul>${items.join('')}</ul>` : `<div class="empty">${empty}</div>`}</div>`;
+    // Three items per group up front; the rest behind "Show N more" so the tab stays readable.
+    const group = (cls, mk, title, items, empty) => `<div class="eg ${cls}"><h4><span class="mk">${mk}</span>${title}<span class="n">${items.length}</span></h4>${items.length
+      ? `<ul>${items.slice(0, 3).join('')}</ul>${items.length > 3 ? `<details class="more-ev"><summary>Show ${items.length - 3} more</summary><ul>${items.slice(3).join('')}</ul></details>` : ''}`
+      : `<div class="empty">${empty}</div>`}</div>`;
     const item = (html) => `<li>${html}</li>`;
     return `${(c.rationale || []).length ? `<p class="why">${c.rationale.map(esc).join(' ')}</p>` : ''}
       ${group('for', '✓', 'Why this component?', (c.supporting || []).map((e) => item(ev(e))), 'No supporting evidence.')}

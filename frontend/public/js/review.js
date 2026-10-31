@@ -53,7 +53,7 @@
       <span class="lbl">${label}</span><span class="v${cls ? ' ' + cls : ''}" title="${esc(v)}">${esc(v)}</span><span class="d">${esc(sub2)}</span></${href ? 'a' : 'div'}>`;
     const flags = d ? Object.keys(W.flags).length : 0;
     $('tiles').innerHTML = [
-      tile('Likely source', (inp.source && inp.source.value) || '—', 'Unconfirmed · needs field check', 'locate.html'),
+      tile('Likely source', (inp.source && inp.source.value) || '—', 'Top candidate · to confirm in the field', 'locate.html'),
       tile('Emission rate', (inp.rate && inp.rate.value) || '—', (inp.rate && inp.rate.detail) || '', 'quantify.html'),
       tile('Priority', (d && d.fields.priority) || 'Not set', d && d.fields.priority ? 'Set by the engineer on Plan' : 'Set on Plan before submitting', null, d && d.fields.priority ? '' : 'warn'),
       tile('Flagged claims', String(flags), flags ? 'Marked unsupported on Plan' : 'None marked on Plan', null, flags ? 'bad' : ''),
@@ -72,7 +72,10 @@
     $('attn').hidden = !d;
     if (!d) return;
     const cs = (d.sections.uncertain || []).slice().sort((a, b) => (W.flags[b.id] ? 1 : 0) - (W.flags[a.id] ? 1 : 0));
-    $('sec-uncertain').innerHTML = cs.map(line).join('');
+    // Flagged points and the first three on show; the rest one click away.
+    const top = cs.slice(0, Math.max(3, cs.filter((c) => W.flags[c.id]).length)), more = cs.slice(top.length);
+    $('sec-uncertain').innerHTML = top.map(line).join('') + (more.length
+      ? `<li class="more-li"><details class="more-pts"><summary>Show ${more.length} more point${more.length === 1 ? "" : "s"}</summary><ul class="plain">${more.map(line).join('')}</ul></details></li>` : '');
     $('n-uncertain').textContent = `${plural(cs.length, 'point')} to weigh`;
   }
 

@@ -40,7 +40,10 @@
       const h = t.match(/^(HIST-[A-Z0-9-]+):(\d{4}-\d\d-\d\d):(\d{4}-\d\d-\d\d)/);
       return h ? `${h[1]} · ${h[2]} to ${h[3]}` : t.replace(/(\d{4}-\d\d-\d\d)T[\d:.]+(\+00:00|Z)?/g, '$1');
     };
-    return (ids || []).length ? `<span class="st-cites">${ids.map((i) => `<code title="${esc(i)}">${esc(show(i))}</code>`).join('')}</span>` : '';
+    // At most two chips; the rest as one "+N" chip listing them on hover.
+    const list = ids || [], head = list.slice(0, 2), rest = list.slice(2);
+    return list.length ? `<span class="st-cites">${head.map((i) => `<code title="${esc(i)}">${esc(show(i))}</code>`).join('')}${rest.length
+      ? `<code class="more" title="${esc(rest.map(show).join('\n'))}">+${rest.length}</code>` : ''}</span>` : '';
   }
 
   function investigation(inv) {
@@ -57,12 +60,15 @@
         <ul>${(inv.changes || []).map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
       <p class="inv-sum">${esc(inv.summary)}</p>
       ${inv.source_origin !== 'llm' ? '<p class="inv-tools">The model was unavailable, so this is a rule-based listing. Use Research again on Approve to rerun the investigation with the model.</p>' : ''}
-      <ul class="inv-f">${fs.map((f) => {
-        const [cls, label] = KIND[f.kind] || ['ctx', f.kind];
-        return `<li class="${cls}"><span class="k">${label}</span><span class="t">${esc(f.statement)}${cites(f.evidence_ids)}</span></li>`;
-      }).join('')}</ul>
+      ${(() => {
+        // Contradictions and gaps first, then supporting: the first four on show, the rest one click away.
+        const li = (f) => { const [cls, label] = KIND[f.kind] || ['ctx', f.kind];
+          return `<li class="${cls}"><span class="k">${label}</span><span class="t">${esc(f.statement)}${cites(f.evidence_ids)}</span></li>`; };
+        const top = fs.slice(0, 4), more = fs.slice(4);
+        return `<ul class="inv-f">${top.map(li).join('')}</ul>${more.length ? `<details class="inv-more"><summary>Show ${more.length} more finding${more.length === 1 ? "" : "s"}</summary><ul class="inv-f">${more.map(li).join('')}</ul></details>` : ''}`;
+      })()}
       ${(inv.open_questions || []).length ? `<details class="inv-q"><summary>Open questions <b>${inv.open_questions.length}</b></summary><ul>${inv.open_questions.map((q) => `<li>${esc(q)}</li>`).join('')}</ul></details>` : ''}
-      ${(inv.tools || []).length ? `<p class="inv-tools">Tools the agent called: ${[...new Set(inv.tools)].map((t) => `<code>${esc(t)}</code>`).join(' ')}</p>` : ''}
+      ${(inv.tools || []).length ? `<details class="inv-q"><summary>Tools the agent called <b>${new Set(inv.tools).size}</b></summary><p class="inv-tools">${[...new Set(inv.tools)].map((t) => `<code>${esc(t)}</code>`).join(' ')}</p></details>` : ''}
     </div>`;
   }
 

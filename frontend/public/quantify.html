@@ -16,11 +16,67 @@
 
   /* PRD Screen 4 (scrolling page): result card + sensor charts on the left, method/inputs/QC on the right
      (stretched to the same height), assumptions full width below */
-  .q-layout{display:flex;flex-direction:column;gap:18px}
-  .top{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:stretch}
-  .q-col{display:flex;flex-direction:column;gap:18px;min-width:0}
-  .q-col .traces{flex:1;display:flex;flex-direction:column}
-  .q-col .traces .time-rd{margin-top:auto}
+  /* Question-led: how much (hero), can I trust it + is it getting worse (right), then the evidence, then the folds */
+  .q-layout{display:flex;flex-direction:column;gap:16px}
+  .top{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:stretch}
+  .q-right{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .qcard{flex:0 0 auto;display:flex;flex-direction:column}
+  #trend-card{flex:1 0 auto}
+  .qbody{padding:12px 16px 14px;flex:1}
+  .mid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+  .mid .traces{display:flex;flex-direction:column;min-width:0}
+  .mid .traces .time-rd{margin-top:auto}
+  .ch-tg{margin-left:12px;font-size:11.5px}
+
+  /* impact: the rate in the units people act on */
+  .impact{border-top:1px solid var(--line-strong);padding:12px 20px 14px;background:var(--panel-2)}
+  .imp-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .imp{display:grid;gap:2px}
+  .imp b{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+  .imp span{font-size:11px;color:var(--ink-mute);line-height:1.3}
+  .imp-note{margin:9px 0 0;font-size:12px;color:var(--ink-mute);line-height:1.45}
+  .imp-note b{color:var(--ink)}
+  .imp-foot{margin-top:4px;font-size:10.5px;color:var(--ink-dim)}
+
+  /* trust + trend cards */
+  .t-sum{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .t-sum b{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em}
+  .t-sum span{font-size:12px;color:var(--ink-mute)}
+  .t-sum.ok b{color:var(--good)}.t-sum.no b{color:var(--warn)}
+  .tlist{list-style:none;margin:0;padding:0;display:grid;gap:0}
+  .tlist li{display:grid;grid-template-columns:16px 1fr;gap:6px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px;line-height:1.35}
+  .tlist li:last-child{border-bottom:0}
+  .tlist .mk{font-weight:700;color:var(--good)}
+  .tlist li > span:last-child{min-width:0}
+  .tlist li.no .mk{color:var(--warn)}
+  .tlist .d{display:block;font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t-more{display:inline-block;margin-top:8px;font-size:11.5px;color:var(--accent);text-decoration:none;cursor:pointer;background:none;border:0;padding:0;font-family:inherit}
+  .t-more:hover{text-decoration:underline}
+  .tr-facts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+  .tr-facts div{display:grid;gap:1px}
+  .tr-facts b{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em}
+  .tr-facts span{font-size:11px;color:var(--ink-mute);line-height:1.3}
+  .tr-verdict{font-size:12.5px;font-weight:600;margin:2px 0 4px}
+  .tr-verdict.up{color:var(--bad)}.tr-verdict.flat{color:var(--ink-mute)}.tr-verdict.down{color:var(--good)}
+  #trend .tr-wrap{display:flex;flex-direction:column;height:100%}
+  #trend-spark{flex:1;min-height:78px;margin:0 -4px}
+  #trend-card .qbody{display:flex;flex-direction:column}
+  .tr-note{font-size:10.5px;color:var(--ink-dim);margin-top:2px}
+
+  /* rate tools: compact rows, the decision and the value at a glance */
+  .side .panel-head .meta{margin-left:auto}
+
+  /* everything behind the number, folded */
+  .more .dsec{border-top:1px solid var(--line)}
+  .more .dsec:first-of-type{border-top:0}
+  .more summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:10px;padding:11px 18px;font-size:13px;font-weight:600}
+  .more summary::-webkit-details-marker{display:none}
+  .more summary::before{content:'›';display:inline-block;width:10px;color:var(--ink-dim);transition:transform var(--t)}
+  .more details[open] > summary::before{transform:rotate(90deg)}
+  .more summary span{font-weight:400;font-size:11.5px;color:var(--ink-dim)}
+  .more summary:hover{background:var(--panel-2)}
+  .dbody{padding:4px 18px 16px}
+  .more #qc{display:block}
   .q-layout .panel{overflow:hidden;animation:rise var(--t-slow) both}
   .side{animation-delay:60ms}
   .traces{animation-delay:100ms}
@@ -30,7 +86,8 @@
   .caveat{margin:0;padding:7px 12px;border-radius:4px;border:1px solid var(--line-strong);border-left:3px solid var(--warn);font-size:12px;color:var(--ink-mute);line-height:1.45;background:var(--panel)}
 
   /* ----- result card: a calc sheet ----- */
-  .hero{background:var(--panel)}
+  .hero{background:var(--panel);display:flex;flex-direction:column}
+  .hero .fields{margin-top:auto}
   .hero-head{display:flex;align-items:flex-start;gap:12px;padding:16px 20px 0}
   .hero-head .badges{margin-left:auto;display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
   .hero-head .gb-slot{padding-top:2px}
@@ -139,9 +196,18 @@
   .side .sec:last-child{border-bottom:0}
   .side .lbl{display:block}
   .side .sec{padding:12px 16px;border-bottom:1px solid var(--line)}
-  .tool{padding:7px 10px;margin-top:6px;border:1px solid var(--line);border-radius:4px;display:grid;gap:2px}
-  .tool .t-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-  .tool b{font-size:12.5px;font-weight:600}
+  .tool{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:6px 8px;margin-top:4px;border:1px solid var(--line);border-radius:4px}
+  .tool .t-head{display:contents}
+  .tool b{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool .t-val{font-family:var(--mono);font-size:11.5px;color:var(--ink);text-align:right;min-width:52px}
+  .tool .t-val.mine{color:var(--accent)}
+  .tool .t-val.none{color:var(--ink-dim)}
+  .tool .t-run{margin-top:0;justify-self:end;padding:2px 8px}
+  .tools-help{margin-top:8px}
+  .tools-help summary{cursor:pointer;font-size:11.5px;color:var(--accent);list-style:none}
+  .tools-help summary::-webkit-details-marker{display:none}
+  .tools-help p{margin:6px 0 0;font-size:11px;color:var(--ink-mute);line-height:1.45}
+  .tools-help p b{color:var(--ink);font-weight:600}
   .t-role{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim);white-space:nowrap}
   .tool .t-why{font-size:11px;color:var(--ink-mute);line-height:1.4}
   .tool .t-out{font-family:var(--mono);font-size:11px;color:var(--ink)}
@@ -157,7 +223,7 @@
   .r-blocked .t-role{color:var(--warn)}
   .tool.r-not_needed,.tool.r-blocked,.tool.r-pending{background:var(--panel-2)}
   .tool.r-not_needed b,.tool.r-blocked b{color:var(--ink-mute)}
-  .alog{list-style:none;margin:6px 0 0;padding:0;max-height:220px;overflow:auto;font-size:11.5px}
+  .alog{list-style:none;margin:6px 0 0;padding:0;max-height:170px;overflow:auto;font-size:11.5px}
   .alog li{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);color:var(--ink-mute)}
   .alog li.ok{color:var(--ink)}
   .alog .at{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim)}
@@ -192,7 +258,7 @@
   .next .txt b{display:block;font-size:13.5px;font-weight:600}
   .next .txt span{font-size:12px;color:var(--ink-mute)}
 
-  @media (max-width:1100px){.top,.assume{grid-template-columns:1fr}.next{flex-wrap:wrap}.hero-body{grid-template-columns:1fr}.assume li:nth-last-child(2){border-bottom:1px dashed var(--line)}}
+  @media (max-width:1100px){.top,.mid,.imp-row,.assume{grid-template-columns:1fr}.next{flex-wrap:wrap}.hero-body{grid-template-columns:1fr}.assume li:nth-last-child(2){border-bottom:1px dashed var(--line)}}
 </style>
 </head>
 <body data-page="quantify" data-stage="quantify">
@@ -208,45 +274,56 @@
   <div class="stepper compact" id="stepper"></div>
 
   <div class="q-layout">
+    <!-- 1-3: how much, can I trust it, is it getting worse -->
     <div class="top">
-      <div class="q-col">
-        <!-- result card -->
-        <section class="panel hero" aria-label="Emission-rate result">
-          <div class="hero-head">
-            <div><span class="lbl">Result · <span data-inc></span></span><h2 id="res-title">Emission rate not estimated yet</h2></div>
-            <span class="badges" id="res-badges"></span><span class="gb-slot" data-trace="emission_estimate"></span>
-          </div>
-          <div class="hero-body" id="hero-body"><div class="note">Loading…</div></div>
-          <div class="fields" id="fields" hidden></div>
-        </section>
+      <section class="panel hero" aria-label="Emission-rate result">
+        <div class="hero-head">
+          <div><span class="lbl">How much is leaking · <span data-inc></span></span><h2 id="res-title">Emission rate not estimated yet</h2></div>
+          <span class="badges" id="res-badges"></span><span class="gb-slot" data-trace="emission_estimate"></span>
+        </div>
+        <div class="hero-body" id="hero-body"><div class="note">Loading…</div></div>
+        <div class="impact" id="impact" hidden></div>
+        <div class="fields" id="fields" hidden></div>
+      </section>
 
-        <!-- time-aligned sensor charts -->
-        <section class="panel traces" aria-label="Sensor traces">
-          <div class="panel-head">
-            <h2>Sensor traces</h2>
-            <span class="meta" id="series-meta">—</span>
-          </div>
-          <div class="traces-sub">
-            <div class="t-legend" id="t-legend" hidden>
-              <span><i class="lw"></i>Data window</span>
-              <span><i class="lu"></i>Used sample</span>
-              <span><i class="lx"></i>Excluded (off plume axis)</span>
-            </div>
-          </div>
-          <div class="strips">
-            <div class="labels" id="labels"></div>
-            <div id="traces"></div>
-          </div>
-          <div class="time-rd" id="time-rd">Hover the traces to read values</div>
+      <div class="q-right">
+        <section class="panel qcard" aria-label="Can this rate be trusted" id="trust-card">
+          <div class="panel-head"><h2>Can I trust it?</h2><span class="meta" id="trust-meta"></span></div>
+          <div class="qbody" id="trust"><div class="pending-box">Shown after an estimate runs.</div></div>
+        </section>
+        <section class="panel qcard" aria-label="Is it getting worse" id="trend-card">
+          <div class="panel-head"><h2>Is it getting worse?</h2><span class="meta" id="trend-meta"></span></div>
+          <div class="qbody" id="trend"><div class="pending-box">Loading the plant history…</div></div>
         </section>
       </div>
+    </div>
 
-      <!-- method + inputs -->
-      <section class="panel side" aria-label="Method and inputs">
-        <div class="panel-head"><h2>Agent tools &amp; inputs</h2></div>
+    <!-- 4: evidence -->
+    <div class="mid">
+      <section class="panel traces" aria-label="Sensor traces">
+        <div class="panel-head">
+          <h2>Sensor traces</h2>
+          <span class="meta" id="series-meta">—</span>
+          <button class="linkish ch-tg" type="button" id="ch-tg" aria-pressed="false">Show all channels</button>
+        </div>
+        <div class="traces-sub">
+          <div class="t-legend" id="t-legend" hidden>
+            <span><i class="lw"></i>Data window</span>
+            <span><i class="lu"></i>Used sample</span>
+            <span><i class="lx"></i>Excluded (off plume axis)</span>
+          </div>
+        </div>
+        <div class="strips">
+          <div class="labels" id="labels"></div>
+          <div id="traces"></div>
+        </div>
+        <div class="time-rd" id="time-rd">Hover the traces to read values</div>
+      </section>
+
+      <section class="panel side" aria-label="Rate tools and agent steps">
+        <div class="panel-head"><h2>Rate tools</h2><span class="meta" id="tools-meta"></span></div>
         <div class="body">
           <div class="sec">
-            <span class="lbl">Rate tools the quantify agent can use</span>
             <div id="methods" aria-label="Rate tools and the agent's decision"></div>
             <button class="btn primary run" id="btn-run" disabled>Re-run the agent's choice</button>
             <div class="run-msg" id="run-msg" role="status" aria-live="polite"></div>
@@ -255,46 +332,20 @@
             <span class="lbl">Agent steps <span class="meta" id="log-meta"></span></span>
             <div id="agent-log"><div class="pending-box">Starts after Locate.</div></div>
           </div>
-          <div class="sec inputs">
-            <span class="lbl">Inputs</span>
-            <ul id="inputs"><li><span class="t">Loading…</span></li></ul>
-          </div>
-          <div class="sec qc">
-            <span class="lbl">Quality control</span>
-            <div id="qc"><div class="pending-box">Shown after an estimate runs.</div></div>
-          </div>
         </div>
       </section>
     </div>
 
-    <!-- when the rate can be trusted, and the methods behind it -->
-    <section class="panel" aria-label="Can this rate be trusted" id="cond-panel" hidden style="margin-bottom:18px">
-      <div class="panel-head"><h2>Can this rate be trusted?</h2><span class="meta" id="cond-meta"></span></div>
-      <div style="padding:14px 16px" id="cond"></div>
-    </section>
-
-    <!-- sensors vs camera: every assumed source location fitted -->
-    <section class="panel" aria-label="Sensors versus camera" id="attr-panel" hidden style="margin-bottom:18px">
-      <div class="panel-head"><h2>Sensors vs camera</h2><span class="meta" id="attr-meta"></span></div>
-      <div style="padding:14px 16px" id="attr"></div>
-    </section>
-
-    <!-- rate tools: what each is built for and the agent's decision here -->
-    <section class="panel" aria-label="Rate methods" id="meth-panel" hidden style="margin-bottom:18px">
-      <div class="panel-head"><h2>Which tool for which case</h2><span class="meta" id="meth-meta"></span></div>
-      <div style="padding:14px 16px" id="meth"></div>
-    </section>
-
-    <!-- 47 days of plant history before the alert -->
-    <section class="panel" aria-label="Plant history" id="hist-panel" hidden style="margin-bottom:18px">
-      <div class="panel-head"><h2>Plant history before the alert</h2><span class="meta" id="hist-meta"></span><span class="gb-slot" data-trace="investigation" data-trace-text="How the agent used it"></span></div>
-      <div style="padding:14px 16px"><div class="hist-facts" id="hist-facts"></div><div class="hist-chart" id="hist-chart"></div><p class="hist-note" id="hist-note"></p></div>
-    </section>
-
-    <!-- assumptions (full width) -->
-    <section class="panel assumptions" aria-label="Assumptions" id="assumptions-panel">
-      <div class="panel-head"><h2>Assumptions</h2><span class="meta" id="assume-meta"></span></div>
-      <div id="assumptions"><div class="pending-box">Shown after an estimate runs.</div></div>
+    <!-- 5: everything behind the number, folded -->
+    <section class="panel more" aria-label="Details behind the number">
+      <div class="panel-head"><h2>Behind the number</h2><span class="meta">Open any section</span></div>
+      <details class="dsec" id="cond-panel" hidden><summary>All trust checks <span id="cond-meta"></span></summary><div class="dbody" id="cond"></div></details>
+      <details class="dsec" id="attr-panel" hidden><summary>Sensors vs camera <span id="attr-meta"></span></summary><div class="dbody" id="attr"></div></details>
+      <details class="dsec" id="hist-panel" hidden><summary>Plant history before the alert <span id="hist-meta"></span></summary><div class="dbody"><div class="hist-facts" id="hist-facts"></div><div class="hist-chart" id="hist-chart"></div><p class="hist-note" id="hist-note"></p></div></details>
+      <details class="dsec" id="meth-panel" hidden><summary>Which tool for which case <span id="meth-meta"></span></summary><div class="dbody" id="meth"></div></details>
+      <details class="dsec qc"><summary>Quality control <span>frames, contrast and per-sample spread</span></summary><div class="dbody" id="qc"><div class="pending-box">Shown after an estimate runs.</div></div></details>
+      <details class="dsec inputs"><summary>Inputs <span>sensors, camera, geometry, assumed source</span></summary><div class="dbody"><ul id="inputs"><li><span class="t">Loading…</span></li></ul></div></details>
+      <details class="dsec assumptions" id="assumptions-panel"><summary>Assumptions <span id="assume-meta"></span></summary><div id="assumptions"><div class="pending-box">Shown after an estimate runs.</div></div></details>
     </section>
 
     <!-- next step -->

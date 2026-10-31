@@ -20,6 +20,9 @@
   const FLAG_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 15V2M3 2h9l-2 3.5L12 9H3"/></svg>';
 
   let W = null, editing = false, editPriority = null, fnNo = {}, evById = {}, lineIx = 0;
+  // The camera detection run is cited by its run id: show it as what it is, not as an unresolved source.
+  const shown = (e) => (/^detection\/runs\//.test(e.id) && e.kind === 'source'
+    ? { ...e, kind: 'detection', group: 'Camera · detection run', label: 'Atelic detection model alert on the thermal camera', excerpt: null } : e);
   // The name the person typed on Approve (or a dialog) earlier, remembered per browser.
   function readName() { try { return localStorage.getItem('atelic.reviewer') || ''; } catch (e) { return ''; } }
 
@@ -38,7 +41,7 @@
 
   function indexEvidence(d) {
     fnNo = {}; evById = {};
-    d.evidence.forEach((e) => (evById[e.id] = e));
+    d.evidence.forEach((e) => (evById[e.id] = shown(e)));
     let n = 0;
     ORDER.forEach((s) => (d.sections[s] || []).forEach((c) => c.cites.forEach((id) => { if (!fnNo[id]) fnNo[id] = ++n; })));
   }
@@ -122,16 +125,18 @@
         : esc(v || '—');
     return `<div class="box full"><span class="lbl">${label}</span><div class="val">${val}</div></div>`;
   }
-  function section(ix, title, key, listClass) {
+  function section(ix, title, key, listClass, folded) {
     const cs = W.draft.sections[key] || [];
     const dom = dominant(cs);
     const first = cs.find((c) => c.provenance === dom && c.cites.length);
     const src = first ? evById[first.cites[0]].group.split(' · ')[0] : '';
-    return `<section class="dsec" aria-label="${title}">
-      <div class="dsec-h"><span class="ix">${ix}</span><h3>${title}</h3>
-        <span class="src">${src ? `from ${esc(src)}` : ''}${dom ? badge(dom) : ''}</span></div>
-      <ul class="lines ${listClass}">${cs.map((c) => line(c, dom)).join('')}</ul>
-    </section>`;
+    const head = `<span class="ix">${ix}</span><h3>${title}</h3>${folded ? `<span class="n">${cs.length}</span>` : ''}
+        <span class="src">${src ? `from ${esc(src)}` : ''}${dom ? badge(dom) : ''}</span>`;
+    const list = `<ul class="lines ${listClass}">${cs.map((c) => line(c, dom)).join('')}</ul>`;
+    // Secondary lists (isolation, safety) fold: the inspection steps are what the plan is about.
+    return folded
+      ? `<details class="dsec fold-sec" aria-label="${title}"><summary class="dsec-h">${head}</summary>${list}</details>`
+      : `<section class="dsec" aria-label="${title}"><div class="dsec-h">${head}</div>${list}</section>`;
   }
 
   function renderDoc() {
@@ -175,8 +180,8 @@
         ${textBox('required_permits', 'Required permits', f.required_permits, 3)}
       </div>
       ${section('A', 'Recommended inspection', 'inspection', 'steps')}
-      ${section('B', 'Isolation prerequisites', 'isolation', 'boxes')}
-      ${section('C', 'Safety considerations', 'safety', 'bullets')}
+      ${section('B', 'Isolation prerequisites', 'isolation', 'boxes', true)}
+      ${section('C', 'Safety considerations', 'safety', 'bullets', true)}
       <p class="warning">No equipment action will be executed.</p>
       <details class="fold">
         <summary>Version history<span class="meta">${W.versions.length} version${W.versions.length > 1 ? 's' : ''}</span></summary>
@@ -199,7 +204,7 @@
     const d = W && W.draft;
     if (!d) { $('evidence').innerHTML = '<div class="ev-empty">Sources appear here once the draft cites them.</div>'; $('ev-meta').textContent = '—'; return; }
     const groups = [];
-    d.evidence.slice().sort((a, b) => (fnNo[a.id] || 1e9) - (fnNo[b.id] || 1e9)).forEach((e) => {
+    d.evidence.map(shown).sort((a, b) => (fnNo[a.id] || 1e9) - (fnNo[b.id] || 1e9)).forEach((e) => {
       let g = groups.find((x) => x.name === e.group);
       if (!g) groups.push(g = { name: e.group, items: [] });
       g.items.push(e);
@@ -317,6 +322,7 @@
       box.scrollTo({ top: it.offsetTop - box.offsetTop - box.clientHeight / 3, behavior: 'smooth' });
     }
     if (from === 'rail' && lines[0]) {
+      lines.forEach((l) => { const fold = l.closest('details'); if (fold) fold.open = true; });
       const r = lines[0].getBoundingClientRect();
       if (r.top < 70 || r.bottom > innerHeight - 100) lines[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
