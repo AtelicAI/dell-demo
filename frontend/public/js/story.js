@@ -13,7 +13,7 @@
       return `<div class="ag-banner bad" role="alert"><b>Agents stopped</b><span>${esc(agent.detail || agent.status)}</span>
         ${opts.restart ? '<button class="btn sm" data-ag-restart>Restart agents</button>' : ''}</div>`;
     }
-    if (agent.status !== 'running') return '';
+    if (agent.status !== 'running' || !agent.text) return '';  // waiting on a person (e.g. the approval gate): no spinner
     return `<div class="ag-banner" role="status"><span class="ag-spin" aria-hidden="true"></span><b>${esc(agent.text || 'Agents working')}</b>
       ${trace(agent)}<span>NVIDIA Nemotron agents with read-only tools. This page updates by itself.</span></div>`;
   }
@@ -115,7 +115,9 @@
 
   // Simulated / synthetic provenance stays in the data but is not shown (team decision, 26 Oct).
   const SHOWN_PROV = { model_estimated: 'Model estimated', observed: 'Observed', experimental_setpoint: 'Experimental setpoint', provider_reported: 'Provider reported' };
-  function answerBody(q, tray, canAsk) {
+  // An answer as a card: the verdict first (its opening sentence), any checked facts as chips, the key points with
+  // citations, and the full text folded away.
+  function answerBody(q, tray, canAsk, facts) {
     const src = q.sources || {}, no = {};
     let n = 0;
     (q.claims || []).forEach((c) => (c.evidence_ids || []).forEach((id) => { if (!no[id]) no[id] = ++n; }));
@@ -127,9 +129,15 @@
     const fu = (q.suggested_follow_up || []).map((x) => (typeof x === 'string' ? x : x.statement || '')).filter(Boolean);
     const cd = q.cannot_determine === true ? 'The agent could not answer this from the frozen evidence.'
       : Array.isArray(q.cannot_determine) ? q.cannot_determine.join('; ') : typeof q.cannot_determine === 'string' ? q.cannot_determine : '';
-    return `<div class="qa-a"><span class="lbl">Agent answer · Nemotron</span><p>${esc(q.answer)}</p>
+    const text = String(q.answer || '');
+    const m = text.match(/^([\s\S]{20,}?[.!?])\s+(?=[A-Z(])/);
+    const verdict = m ? m[1] : text, rest = m ? text.slice(m[0].length) : '';
+    const chips = (facts || []).map((f) => `<span class="qa-fact ${f.ok ? 'ok' : 'no'}">${f.ok ? '✓' : '✕'} ${esc(f.text)}</span>`).join('');
+    return `<div class="qa-a card"><span class="lbl">Agent answer · Nemotron</span><p class="qa-v">${esc(verdict)}</p>
+      ${chips ? `<div class="qa-facts">${chips}</div>` : ''}
       ${cd ? `<p class="qa-cd"><b>Cannot determine from the evidence:</b> ${esc(cd)}</p>` : ''}
       ${(q.claims || []).length ? `<ul class="qa-cl">${q.claims.map((c) => `<li>${esc(c.statement)}${sup(c.evidence_ids)}</li>`).join('')}</ul>` : ''}
+      ${rest ? `<details class="qa-full"><summary>Full answer</summary><p>${esc(rest)}</p></details>` : ''}
       ${n ? `<details class="qa-srcs"><summary>Sources <b>${n}</b></summary><ol class="qa-src">${Object.keys(no).map((id) => { const e = src[id] || {}, p = SHOWN_PROV[e.provenance];
         return `<li value="${no[id]}"><b>${esc(e.group || id)}</b> ${esc(e.label && e.label !== id ? e.label : '')}${p ? ` <span class="qa-prov">${p}</span>` : ''}</li>`; }).join('')}</ol></details>` : ''}
       ${fu.length ? `<div class="qa-fu"><span class="lbl">Suggested next steps</span><ul>${fu.map((t) => `<li><span class="qa-fu-t">${esc(t)}</span>
@@ -146,14 +154,17 @@
     const agent = opts.agent;
     // The answer agent works the oldest unanswered question first; its live steps show there.
     const working = agent && agent.current_step === 'answer' ? ((list || []).find((q) => q.status !== 'answered') || {}).id : null;
-    const items = (list || []).slice().reverse().map((q) => `<li class="qa ${q.status}">
+    const facts = (q) => (opts.facts && /baseline|sensor|reading/i.test(q.question) ? opts.facts : null);
+    const items = (list || []).slice().reverse().map((q, i) => (opts.collapseOld && i > 0 && q.status === 'answered'
+      ? `<li class="qa ${q.status}"><details class="qa-old"><summary><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}: ${esc(q.question)}</summary>${answerBody(q, opts.tray, canAsk, facts(q))}</details></li>`
+      : `<li class="qa ${q.status}">
       <div class="qa-q"><b>${esc(q.asked_by)}</b> asked ${hm(q.asked_at)}<p>${esc(q.question)}</p></div>
       ${q.status === 'answered' && q.source_origin !== 'llm' ? `<div class="qa-a"><span class="lbl">Not answered</span>
         <p>The model was unavailable when this was asked, so no answer was generated.${canAsk ? ` <button class="linkish" type="button" data-ask="${esc(q.question)}">Ask again</button>` : ''}</p></div>`
-      : q.status === 'answered' ? answerBody(q, opts.tray, canAsk)
+      : q.status === 'answered' ? answerBody(q, opts.tray, canAsk, facts(q))
         : q.id === working ? `<div class="qa-a pending live">${trace(agent)}</div>`
         : `<div class="qa-a pending"><span class="ag-spin"></span>Queued: the agent answers questions in order…<span class="qa-tn">usually 30–80 s each</span></div>`}
-    </li>`).join('');
+    </li>`)).join('');
     const asked = new Set((list || []).map((q) => q.question));
     const chips = (opts.chips || CHIPS).filter((c) => !asked.has(c));
     const off = opts.offline;
@@ -292,7 +303,7 @@
     if (!question) return null;
     msg.textContent = 'Sending…';
     const r = await fetch(`${window.AtelicShell.API}/incidents/${incidentId}/questions`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, asked_by: name || 'Engineer' }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, asked_by: name || '' }),
     });
     const data = await r.json();
     if (!r.ok) { msg.textContent = typeof data.detail === 'string' ? data.detail : 'Could not send'; return null; }
@@ -319,6 +330,10 @@
     const v = fu.verification, rep = fu.repair, cl = fu.closure;
     const checks = (fu.approved_checks || []).map((c, i) => `(${i + 1}) ${c}`).join('\n');
     const tpl = `Field crew completed the approved checks:\n${checks}\nResult: `;
+    // Sensors are back to baseline but the verifier keeps it open for follow-ups: the close form says so, not "signed off".
+    const owed = !!(v && v.recovery_check === 'background_restored' && v.recommendation !== 'close');
+    const why = owed ? 'Sensors back to baseline after the repair. The open follow-ups stay open under their work orders.'
+      : 'Verifier and post-repair readings agree; approved checks signed off.';
     return `<div class="fu">
       <ol class="fu-steps">
         <li class="${rep ? 'done' : fu.can_record_repair ? 'now' : ''}"><b>Record the repair</b><span>Human account of the field work. The system performs no physical action.</span></li>
@@ -331,14 +346,14 @@
         <button class="btn primary" id="fu-repair" type="button">Record repair</button><span class="qa-msg" id="fu-msg" role="status"></span></div>` : ''}
       ${rep && !v ? '<div class="ag-banner"><span class="ag-spin"></span><b>Verifier agent checking post-repair readings…</b></div>' : ''}
       ${v ? `<div class="fu-ver ${v.recommendation === 'close' ? 'ok' : 'warn'}"><span class="lbl">Verifier · ${esc(v.source_origin === 'llm' ? 'Nemotron' : 'template')}</span>
-        <p class="big">Recommends: <b>${esc((v.recommendation || '').replace('_', ' '))}</b> · readings ${esc(({ background_restored: 'back to baseline', above_baseline: 'still above baseline' })[v.recovery_check] || (v.recovery_check || '').replace(/_/g, ' '))}${v.consistency === 'conflicts_with_deterministic_check' ? (v.recovery_check === 'background_restored' && v.recommendation !== 'close' ? ' · kept open for the follow-ups still owed' : ' · <b class="bad">the sensor check does not support this</b>') : ''}</p>
+        <p class="big">Recommends: <b>${esc((v.recommendation || '').replace('_', ' '))}</b> · readings ${esc(({ background_restored: 'back to baseline', above_baseline: 'still above baseline' })[v.recovery_check] || (v.recovery_check || '').replace(/_/g, ' '))}${owed ? ' · follow-ups still owed · closing is the engineer’s call' : v.consistency === 'conflicts_with_deterministic_check' ? ' · <b class="bad">the sensor check does not support this</b>' : ''}</p>
         <p>${esc(v.summary)}</p>
         ${(v.sensors || []).length ? `<table class="fu-s"><tr><th>Sensor</th><th>Baseline max</th><th>Post-repair max</th><th></th></tr>${v.sensors.map((x) => `<tr><td>${esc(x.sensor_id)}</td><td>${x.baseline_max_ppm.toFixed(2)} ppm</td><td>${x.post_repair_max_ppm.toFixed(2)} ppm</td><td>${x.within_baseline ? '✓ within baseline' : '✕ above'}</td></tr>`).join('')}</table>` : ''}
         ${(v.residual_risks || []).length ? `<details><summary>Residual risks <b>${v.residual_risks.length}</b></summary><ul>${v.residual_risks.map((r) => `<li>${esc(typeof r === 'string' ? r : r.statement || '')}</li>`).join('')}</ul></details>` : ''}
         <p class="fu-warn">${esc(v.warning || '')}</p></div>` : ''}
       ${fu.can_close ? `<div class="fu-form"><label for="fu-cby">Your name</label><input id="fu-cby" value="${esc(name)}" maxlength="80">
-        <label for="fu-why">Reason</label><textarea id="fu-why" rows="2">Verifier and post-repair readings agree; approved checks signed off.</textarea>
-        <div class="acts"><button class="btn go" data-close="close" type="button">Close incident</button><button class="btn" data-close="keep_open" type="button">Keep open</button></div>
+        <label for="fu-why">Reason</label><textarea id="fu-why" rows="2">${esc(why)}</textarea>
+        <div class="acts"><button class="btn go" data-close="close" type="button">${owed ? 'Close incident (follow-ups stay open)' : 'Close incident'}</button><button class="btn" data-close="keep_open" type="button">Keep open</button></div>
         <span class="qa-msg" id="fu-cmsg" role="status"></span></div>` : ''}
       ${cl ? `<div class="fu-ver ok"><span class="lbl">Closure · ${hm(cl.at)}</span><p class="big"><b>${cl.decision === 'close' ? 'Closed' : 'Kept open'}</b></p><p>${esc(cl.rationale)}</p>
         ${fu.graph_memory ? `<p class="fu-mem">Knowledge graph: ${esc(fu.graph_memory.status)} ${esc(fu.graph_memory.node || '')}. The next investigation on these assets will see this incident.</p>` : ''}</div>` : ''}

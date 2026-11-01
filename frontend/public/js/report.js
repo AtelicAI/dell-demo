@@ -86,7 +86,7 @@
   // Four answers at the top of the report: likely source, rate and impact, the decision, where the repair stands.
   const openSecs = new Set();
   const FU_STAGE = { approved: 'Approved · repair next', reported: 'Report issued · repair next', repair_recorded: 'Repair recorded · verifier checking',
-    verification_ready: 'Verified · ready to close', follow_up_required: 'Verifier: follow-up needed', closed: 'Closed' };
+    verification_ready: 'Verified · engineer decides', follow_up_required: 'Verifier: follow-up needed', closed: 'Closed' };
   function keyFacts() {
     const sec = (id) => (R.sections.find((x) => x.id === id) || { rows: [] }).rows;
     const val = (id, label) => { const r = sec(id).find((x) => x.label === label); return r && r.value ? r.value : null; };
@@ -97,7 +97,7 @@
       ${tile('Likely source', val('candidates', 'Likely source'), val('candidates', 'Sensors vs camera'))}
       ${tile('Emission rate', val('emissions', 'Rate'), val('emissions', 'Annual impact if unrepaired'))}
       ${tile('Work order', dec ? `${dec}${who ? ` · ${who}` : ''}` : 'Not approved yet', val('action', 'Proposed inspection'))}
-      ${tile('Repair · verify · close', stage, val('followup', 'Verifier recommendation'), R.closure ? ' ok' : '')}
+      ${tile('Repair · verify · close', stage, (() => { const r = val('followup', 'Verifier recommendation'); return r ? `Verifier: ${String(r).replace(/_/g, ' ')}` : null; })(), R.closure ? ' ok' : '')}
     </div>`;
   }
   // Print / PDF: every section open, as in the exported report.
@@ -148,7 +148,11 @@
     // After the repair, the engineer can question the verifier's evidence before closing.
     $('qa').hidden = !(fu && fu.repair);
     if (fu && fu.repair && !(document.activeElement && document.activeElement.id === 'qa-text')) {
-      $('qa').innerHTML = S.questions(fu.questions, fu.can_ask, { chips: S.VERIFY_CHIPS, offline: fu.offline, offText: fu.closure ? 'The incident is closed; questions are closed.' : 'Questions open once the verifier has finished.' });
+      // Checked facts beside the agent's words: the recovery check's per-sensor result, not the model's.
+      const vs = (fu.verification && fu.verification.sensors) || [];
+      const within = vs.filter((x) => x.within_baseline).length;
+      const facts = vs.length ? [{ ok: within === vs.length, text: `${within} of ${vs.length} sensors within the pre-incident baseline (recovery check)` }] : null;
+      $('qa').innerHTML = S.questions(fu.questions, fu.can_ask, { chips: S.VERIFY_CHIPS, offline: fu.offline, facts, collapseOld: true, offText: fu.closure ? 'The incident is closed; questions are closed.' : 'Questions open once the verifier has finished.' });
     }
     $('ak-panel').hidden = true;  // ground-truth panel: not shown
     if (R && R.status === 'final') {

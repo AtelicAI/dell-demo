@@ -303,13 +303,11 @@
     let played = false;
     try { played = sessionStorage.getItem(key) === '1'; sessionStorage.setItem(key, '1'); } catch (e) { /* ignore */ }
     box.hidden = false;
-    box.innerHTML = `<div class="ar-h"><span class="ar-st"><span class="ag-spin"></span></span><b>Investigation agent</b><span class="ar-n">Nemotron · ${thoughts} reasoning steps · ${tools.length} tools</span></div>
+    box.innerHTML = `<div class="ar-h"><span class="ar-st"><span class="ar-ok">✓</span></span><b>Investigation agent · done</b><span class="ar-n">Nemotron · ${thoughts} reasoning steps · ${tools.length} tools checked</span></div>
       <div class="ar-tools">${tools.map((t) => `<span class="ar-t${played ? ' on' : ''}">${esc(t)}</span>`).join('')}</div>`;
-    const done = () => { box.querySelector('.ar-st').innerHTML = '<span class="ar-ok">✓</span>'; };
-    if (played) return done();
-    const chips = [...box.querySelectorAll('.ar-t')];
-    chips.forEach((c, i) => setTimeout(() => c.classList.add('on'), 500 + i * 450));
-    setTimeout(done, 700 + chips.length * 450);
+    if (played) return;
+    // Its finished run, replayed step by step the first time the page opens: what it looked at, in order.
+    [...box.querySelectorAll('.ar-t')].forEach((c, i) => setTimeout(() => c.classList.add('on'), 400 + i * 380));
   }
 
   // Confidence per candidate (shares across the candidates, from the API).
@@ -379,12 +377,20 @@
         ? `Monitors ${assetLink(e.to)} · ${esc(s.measures || '')}`
         : `${assetLink(e.from)} ${esc(s.display_name)} · ${esc(s.measures || '')}`);
     });
-    const rel = es.map((e) => li('·', 'miss', `<b class="id">${e.type}</b> ${esc(e.from)} → ${esc(e.to)}<span class="src">${esc(e.source)} · ${esc(METHOD[e.method] || e.method)}</span>`));
+    // The graph relationships behind this asset, grouped by kind in plain words (the raw rows stay one click away).
+    const KIND = { HAS_DOCUMENT: 'Documents', HAS_WORK_ORDER: 'Work orders', CONNECTED_TO: 'Connected to', MONITORS: 'Sensors',
+      CAN_OBSERVE: 'Seen by cameras', ON_ASSET: 'Field reports', COMMITTED_TO: 'Commitments', LOCATED_IN: 'Located in', PART_OF: 'Part of', CONTAINS: 'In area' };
+    const groups = {};
+    es.forEach((e) => { const k = KIND[e.type] || e.type.replace(/_/g, ' ').toLowerCase(); const other = e.from === id ? e.to : e.from; (groups[k] = groups[k] || new Set()).add(other); });
+    const rel = Object.entries(groups).map(([k, set]) => li('·', 'miss', `<b>${esc(k)}</b> ${[...set].map((x) => (byId.has(x) ? assetLink(x) : esc(x))).join(', ')}`));
+    const src = [...new Set(es.map((e) => e.source))].filter(Boolean).join(', ');
+    const raw = es.map((e) => `<li class="raw"><span class="mono">${esc(e.type)}</span> ${esc(e.from)} → ${esc(e.to)}</li>`).join('');
     return `<h4>Asset details</h4>${kv([['Asset ID', n.asset_id], ['Name', n.display_name], ['Type', n.asset_type], ['Source', n.source], ['Mapping version', n.mapping_version]])}
       <h4>Connected equipment</h4>${list(pipe, NO_REL)}
       <h4>Camera visibility</h4>${list(cams, 'No camera mapping covers this asset.')}${camNote}
       <h4>Measurements</h4>${list(meas, 'No sensor is linked to this asset.')}${meas.length ? '<div class="empty">Readings are reviewed in the Quantify stage.</div>' : ''}
-      <h4>Source of relationship</h4>${list(rel, NO_REL)}`;
+      <h4>Graph relationships${src ? ` <span class="n" style="text-transform:none;letter-spacing:0">${esc(src)}</span>` : ''}</h4>${list(rel, NO_REL)}
+      ${es.length ? `<details class="rawrel"><summary>${es.length} raw relationships</summary><ul>${raw}</ul></details>` : ''}`;
   }
 
   function maintenanceTab(id) {

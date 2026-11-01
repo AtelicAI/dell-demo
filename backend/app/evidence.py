@@ -23,7 +23,34 @@ def pretty_text(t):
     """Raw IDs and codes inside a sentence, as people read them."""
     t = re.sub(r"HIST-([A-Z0-9-]+):(\d{4}-\d\d-\d\d):(\d{4}-\d\d-\d\d)T[\d:.]+(\+00:00|Z)?", r"HIST-\1 (\2 to \3)", t)
     t = re.sub(r"(\d{4}-\d\d-\d\d)T(\d\d:\d\d):\d\d(\.\d+)?(\+00:00|Z)", r"\1 \2 UTC", t)
+    # Tool-result references the agents cite inline, as what they are.
+    t = re.sub(r"`?measurements:SCN-\d+:baseline:[\d:]+`?", "pre-incident baseline readings", t)
+    t = re.sub(r"`?measurements:SCN-\d+:post_repair:[\d:]+`?", "post-repair readings", t)
+    t = re.sub(r"`?measurements:SCN-\d+:[\d:]+`?", "sensor readings", t)
+    t = re.sub(r"`?calculation:INC-\d+-M\d+:recovery:\d+`?", "the recovery check", t)
+    t = re.sub(r"`?calculation:INC-\d+-M\d+:\d+:([A-Z0-9-]+)`?", r"the emission estimate for \1", t)
+    t = re.sub(r"\bscenario[ _]seconds? (\d+)", r"\1 s into the incident", t)
+    t = re.sub(r"\bscenario[ _]seconds?\b", "seconds into the incident", t)
+    t = re.sub(r"\bSCN-\d+\b", "the site record", t)
+    t = re.sub(r"`?\b([a-z]+(?:_[a-z]+)+)\.([a-z]+(?:_[a-z]+)*)\b`?", lambda m: f"{m.group(1)} {m.group(2)}".replace("_", " "), t)
+    t = re.sub(r"`?\bwithin_baseline\b`?:? ?(true|false)?", lambda m: "within baseline" + (": yes" if m.group(1) == "true" else ": no" if m.group(1) == "false" else ""), t)
     return re.sub(r"\b(not_done|best_fit|poor_fit|comparable_fit|background_restored|closed_with_exception)\b", lambda m: m.group(1).replace("_", " "), t)
+
+
+RAW_KEYS = {"evidence_ids", "id", "ids", "source_id", "asset_id", "kind", "status", "evidence_id", "citation"}
+
+
+def pretty_deep(x, key=None):
+    """pretty_text over every human-facing string in a structure; IDs used for citations stay raw."""
+    if key in RAW_KEYS:
+        return x
+    if isinstance(x, str):
+        return pretty_text(x)
+    if isinstance(x, list):
+        return [pretty_deep(v, key) for v in x]
+    if isinstance(x, dict):
+        return {k: pretty_deep(v, k) for k, v in x.items()}
+    return x
 
 
 class Evidence:

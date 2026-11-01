@@ -170,7 +170,7 @@
     const pinIcon = () => L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15],
       html: `<div class="origin-pin${selected ? ' selected' : ''}" style="width:30px;height:30px"><span class="ring"></span><span class="core"></span><span class="dot"></span></div>` });
     const pin = L.marker([lat, lon], { icon: pinIcon(), keyboard: true, title: 'Select observation', zIndexOffset: 1000 })
-      .bindTooltip(esc(rec.satellite_observation_id), { permanent: true, direction: 'bottom', offset: [0, 14], className: 'origin-tag' })
+      .bindTooltip(esc(`Tanager-1 · ${String(rec.observed_at || '').slice(0, 10)}`), { permanent: true, direction: 'bottom', offset: [0, 14], className: 'origin-tag' })
       .addTo(map);
     pin.on('click', () => {
       selected = !selected;
@@ -196,8 +196,8 @@
   // "Explore on-site investigation": the local incident is a separate example, so say so before leaving.
   function wireModal() {
     $('btn-explore').addEventListener('click', () => window.AtelicShell.modal({
-      title: 'Separate local example',
-      html: `<p>This local investigation follows a camera alert at a ${window.AtelicShell.FACILITY.name.toLowerCase()} in ${window.AtelicShell.FACILITY.location}. It is not the satellite-observed facility.</p>`,
+      title: 'Different facility',
+      html: `<p>The on-site investigation follows a camera alert at a ${window.AtelicShell.FACILITY.name.toLowerCase()} in ${window.AtelicShell.FACILITY.location}. The satellite observation here is regional context from another facility.</p>`,
       cancelLabel: 'Stay on overview', okLabel: 'Continue to camera observation', okHref: 'detection.html',
     }));
   }

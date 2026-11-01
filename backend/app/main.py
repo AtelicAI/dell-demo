@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
 from app import engine
-from app.evidence import Evidence, pretty_text
+from app.evidence import Evidence, pretty_deep, pretty_text
 
 DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parents[2] / "data"))
 STATE_FILE = Path(os.getenv("UI_STATE_FILE", DATA_DIR.parent / ".ui-state" / "state.json"))
@@ -36,7 +36,7 @@ app = FastAPI(title="Atelic x Dell x NVIDIA — Methane Incident Intelligence (U
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"])
 
 STAGES = ["detect", "locate", "quantify", "plan", "approve", "report", "close"]
-OPERATOR = "Operator (not signed in)"
+OPERATOR = "Control-room engineer"  # the signed-in role shown in the sidebar
 
 
 def actor(body):
@@ -283,16 +283,17 @@ def stages_for(s):
     rv = latest_review(s)
     if state in APPROVED_OR_LATER:
         st["plan"]["status"] = st["approve"]["status"] = "completed"
-        st["report"]["status"] = "completed" if state in REPORTED else "in_progress"
-        st["close"]["status"] = "completed" if state == "closed" else "in_progress" if state in REPORTED else "not_started"
+        # Report is done once the repair is verified; the record is locked at repair time but the story is not over until then.
+        verified = state in ("verification_ready", "closed", "follow_up_required")
+        st["report"]["status"] = "completed" if verified else "in_progress"
+        st["close"]["status"] = "completed" if state == "closed" else "in_progress" if verified else "not_started"
     elif state == "rejected":
         st["plan"]["status"], st["approve"]["status"] = "completed", "blocked"
     elif "quantify" in done:
         busy = status_ == "running" and cur in ("freeze", "investigate", "reinvestigate", "plan", "revise", "submit")
-        st["plan"]["status"] = ("blocked" if failed else "ready_for_review" if s["submitted"] and not busy else "in_progress")
+        st["plan"]["status"] = ("blocked" if failed else "completed" if s["submitted"] and not busy else "in_progress")
         st["approve"]["status"] = ("ready_for_review" if s["submitted"] else
                                    "blocked" if rv and rv["decision"] != "approve" else "not_started")
-        st["report"]["status"] = "in_progress"
     return stages
 
 
@@ -304,7 +305,7 @@ def closure_of(s, rec=None):
         return None
     by, _, why = (c.get("rationale") or "").partition(": ")
     ui = CLOSED.get(s["engine_id"], {})
-    return {"by": ui.get("closed_by") or (by if why else "Engineer"), "rationale": ui.get("rationale") or why or c.get("rationale"),
+    return {"by": ui.get("closed_by") or (by if why else OPERATOR), "rationale": ui.get("rationale") or why or c.get("rationale"),
             "at": utc(c["recorded_at"])}
 
 
@@ -342,7 +343,7 @@ def list_incidents():
         live.append({"incident_id": iid, "camera_id": s["camera_id"], "triggered": v["triggered"],
                      "clip_available": True, "triggered_at": s["triggered_at"], "stages": v["stages"],
                      "asset_id": selected_asset(s), "asset_provenance": "hypothesis",
-                     "rate_kg_ch4_h": q and q.get("rate_kg_ch4_h"), "review": latest_review(s),
+                     "rate_kg_ch4_h": (combined_rate(s, q) or [None])[0], "review": latest_review(s),
                      "dismissal": s["dismissal"], "closure": closure_of(s), "engine_incident_id": s["engine_id"],
                      "frame_anchor": EVENTS[iid]["anchor"]})
     return {"live": live, "history": incident_history()}
@@ -363,11 +364,14 @@ def incident_history():
         closer, why = (ui.get("closed_by") or (closer if why else None)), (ui.get("rationale") or why or p.get("closure_rationale"))
         verified = p.get("verification_recommendation") == "close" and p.get("recovery_check") == "background_restored"
         false_alarm = p.get("outcome") == "false_alarm"
+        restored = p.get("recovery_check") == "background_restored"
         rows.append({
             "incident_id": p["id"], "camera_id": ui.get("camera_id") or p.get("camera_id") or "Not recorded", "asset_id": p.get("selected_asset_id"),
             "opened_utc": opened or closed or "", "closed_utc": closed,
-            "outcome": "false_alarm" if false_alarm else "repaired",
+            "outcome": "false_alarm" if false_alarm else "repaired" if verified or not p.get("verification_recommendation") or p.get("historical")
+                       else "repaired_followups" if restored else "repaired_unverified",
             "outcome_label": "False alarm" if false_alarm else "Repaired and verified" if verified
+                             else "Repaired · follow-ups open" if restored and p.get("verification_recommendation")
                              else "Repaired · verifier " + (p.get("verification_recommendation") or "not run").replace("_", " "),
             "summary": " ".join(x for x in (p.get("approved_plan_title") and f"Plan: {p['approved_plan_title']}.",
                                              p.get("work_performed") and f"Repair: {p['work_performed']}") if x)
@@ -377,7 +381,7 @@ def incident_history():
                          "reason": ui.get("approval_reason")},
             "closure": {"by": closer or "Engineer (name not kept)", "rationale": why,
                         "verifier": p.get("verification_recommendation"), "recovery_check": p.get("recovery_check")},
-            "work_order": p.get("work_order_id"),
+            "work_order": p.get("work_order_id") or ui.get("work_order_label"),
             "rate": f"{p['rate_kg_h']:.2f} kg CH₄/h (model estimate)" if isinstance(p.get("rate_kg_h"), (int, float)) else None,
             "timeline": [x for x in ({"at_utc": opened, "event": "Camera alert raised"},
                                      {"at_utc": closed, "event": f"Closed by {closer or 'an engineer'}" + (" as a false alarm" if false_alarm else "; written to graph memory")}) if x["at_utc"]],
@@ -450,7 +454,8 @@ def sync(s):
                     "investigate": "Investigation agent reported findings",
                     "answer": "Agent answered an engineer question",
                     "reinvestigate": f"Investigation agent finished research round {d.get('round')}",
-                    "verify": f"Verifier recommends {(d.get('recommendation') or '').replace('_', ' ')} (sensors {(d.get('recovery_check') or '').replace('background_restored', 'back to baseline').replace('_', ' ')})"}[e["step"]]
+                    "verify": ("Verifier: readings back to baseline; follow-ups still open" if d.get("recovery_check") == "background_restored" and d.get("recommendation") != "close"
+                               else f"Verifier recommends {(d.get('recommendation') or '').replace('_', ' ')} (sensors {(d.get('recovery_check') or '').replace('background_restored', 'back to baseline').replace('_', ' ')})")}[e["step"]]
             # Credit the model only when it produced the step; the engine's fallback is named as such.
             who = hit[1] if hit[1] != "Nemotron agent" or d.get("source_origin") == "llm" else "Deterministic template (model unavailable)"
             audit(s, hit[0], who, text, at=utc(e["recorded_at"]))
@@ -1023,6 +1028,27 @@ def get_candidates(incident_id: str):
 
 # ----- Quantify -----
 
+def combined_rate(s, q):
+    """The rate every screen shows: the agent's frozen estimate averaged with each extra method the engineer ran
+    (same rule as the Quantify page). Returns (rate, n_methods, low, high) or None."""
+    if not q or q.get("rate_kg_ch4_h") is None:
+        return None
+    vals = {q.get("primary_tool"): q["rate_kg_ch4_h"]}
+    for tool, run in (s.get("tool_runs") or {}).items():
+        if run.get("rate_kg_h") is not None:
+            vals[tool] = run["rate_kg_h"]
+    v = list(vals.values())
+    return sum(v) / len(v), len(v), min(v), max(v)
+
+
+def rate_detail(c, q):
+    rate, n, lo, hi = c
+    yr = f"≈ {rate * 8.766:.1f} t CH₄/yr · {rate * 8.766 * 29.8:.0f} t CO₂e/yr"
+    if n > 1:
+        return f"Average of {n} methods ({lo:.2f}–{hi:.2f} kg/h) · {yr}"
+    return f"{yr} · range {q['interval']['low']}–{q['interval']['high']} kg/h" if q.get("interval") else yr
+
+
 def quant_result(s):
     """The frozen estimate, or the last attempt while the agent waits for a usable window."""
     if not s["engine_id"]:
@@ -1104,8 +1130,9 @@ def attempt_text(a):
     label = TOOL_SHORT.get(t, t or "Gaussian plume")
     mast_down = (a.get("tool_roles") or {}).get("gaussian_candidate_fit") == "blocked"
     if a["status"] == "estimated":
-        extra = "".join(f"; {TOOL_SHORT.get(c['tool'], c['tool'])} {c['rate_kg_h']:.3f} kg/h ({c['ratio']:.2f}×, {'agrees' if c['agrees'] else 'disagrees'})"
-                        for c in a.get("cross_checks") or [])
+        cc = a.get("cross_checks") or []
+        agree = sum(1 for c in cc if c.get("agrees"))
+        extra = f"; {agree} of {len(cc)} cross-checks agree" if cc else ""
         att = a.get("attribution")
         decided = "" if att in (None, "agrees_single", "not_assessed") else f", candidates {att.replace('_', ' ')}: keep going"
         decided = decided.replace("candidates", "sensors: candidates")
@@ -1190,7 +1217,8 @@ def conditions(s, q):
         {"id": "wind", "label": "Steady wind", "ok": bool(case.get("wind_steady")),
          "detail": f"{case.get('wind_speed_m_s')} m/s, direction spread {spread}° (needs at least 1 m/s, at most 30°)"},
         {"id": "sensors", "label": "Sensors downwind with signal", "ok": detected >= 2,
-         "detail": f"{detected} methane sensors above their detection limit" if fits else "Not assessed"},
+         "detail": (f"{detected} of {case.get('methane_sensors_reporting')} methane sensors above their detection limit"
+                    if case.get("methane_sensors_reporting") else f"{detected} methane sensors above their detection limit") if fits else "Not assessed"},
         {"id": "stability", "label": "Stability measured", "ok": bool(sonic.get("obukhov_m")),
          "detail": (f"Sonic anemometer: {case.get('stability', '').replace('_', ' ')} air, L = {sonic['obukhov_m']:+.0f} m, u* = {sonic.get('ustar_m_s', 0):.2f} m/s"
                     + (f" at {local} local time" if local else "") if sonic.get("obukhov_m") else "No sonic readings")},
@@ -1239,8 +1267,7 @@ def get_quantification(incident_id: str):
     if s["engine_id"] and not step_event(orch, "quantify"):
         att = [e["detail"] for e in (orch or {}).get("events", []) if e["step"] == "quantify" and e["kind"] == "attempt"]
         progress = {"running": True, "attempts": len(att), "last": att[-1] if att else None,
-                    "text": (f"Quantify agent: attempt {len(att)} at {(at_seconds(att[-1]['as_of_seconds']) or '')[11:19]} UTC — "
-                             f"{(att[-1].get('reason') or att[-1].get('attribution') or att[-1]['status']).replace('_', ' ')}") if att
+                    "text": (f"Check {len(att)} at {(at_seconds(att[-1]['as_of_seconds']) or '')[11:19]} UTC: {attempt_text(att[-1])}") if att
                             else "Quantify agent starts after Locate"}
     q = quant_result(s)
     return {"result": q, "methods": quant_methods(s), "release_check": release_check(s), "progress": progress,
@@ -1394,10 +1421,10 @@ def investigation_view(rec, names=None):
     c = f.get("content") or {}
     req = inv.get("research_request") or {}
     return {"round": inv.get("round", 1), "changes": c.get("changes", []), "focus": req.get("focus") or None,
-            "requested_by": (names or {}).get(req.get("id"), "Engineer") if req else None,
+            "requested_by": (names or {}).get(req.get("id"), OPERATOR) if req else None,
             "earlier_rounds": len(rec.get("investigation_history", [])),
-            "summary": c.get("summary"), "findings": c.get("findings", []), "open_questions": c.get("open_questions", []),
-            "candidate_assessment": c.get("candidate_assessment", []), "source_origin": f.get("source_origin"),
+            "summary": pretty_deep(c.get("summary")), "findings": pretty_deep(c.get("findings", [])), "open_questions": pretty_deep(c.get("open_questions", [])),
+            "candidate_assessment": pretty_deep(c.get("candidate_assessment", [])), "source_origin": f.get("source_origin"),
             "model": f.get("model"), "deployment": f.get("deployment"), "recorded_at": utc(inv.get("recorded_at")),
             "replayed": bool(f.get("replay_of")),
             "tools": [a["tool"] for a in f.get("activity", []) if a["tool"] != "model_inference"]}
@@ -1445,12 +1472,12 @@ def agent_status(s):
     replayed = running and f"{s['engine_id'].rsplit('-M', 1)[0]}.{step}" in recs and not (step == "plan" and (record(s) or {}).get("draft_version"))
     return {"status": orch["status"], "current_step": step, "replayed": bool(replayed),
             "trace": step_trace(orch) if running else None,
-            "text": AGENT_TEXT.get(orch.get("current_step"), orch.get("current_step")) if running else None,
+            "text": AGENT_TEXT.get(orch.get("current_step")) if running else None,
             "failed": orch["status"] in ("failed", "interrupted"), "detail": (orch.get("result") or {}).get("detail")}
 
 
 def field_notes_view(s, rec):
-    return [{"id": n["evidence_id"], "text": n["text"], "recorded_by": s["names"].get(n["id"], "Engineer"),
+    return [{"id": n["evidence_id"], "text": n["text"], "recorded_by": s["names"].get(n["id"], OPERATOR),
              "recorded_at": utc(n.get("recorded_at"))} for n in (rec or {}).get("field_notes", [])]
 
 
@@ -1460,7 +1487,7 @@ def research_view(s, rec):
         return None
     req = rec.get("research_request")
     return {"requested": bool(req), "round": req and req["round"], "focus": req and req["focus"],
-            "requested_by": req and s["names"].get(req["id"], "Engineer"),
+            "requested_by": req and s["names"].get(req["id"], OPERATOR),
             "can_request": rec["state"] == "pending_review" and not req and bool(s["submitted"]),
             "next_round": len(rec.get("investigation_history", [])) + 2}
 
@@ -1476,10 +1503,10 @@ def questions_view(s, rec):
             ev = evidence_for(rec)
         # Each cited ID is looked up in the frozen snapshot the agent read; unresolved IDs stay listed as such.
         sources = {i: ev.entries[ev.add(i)] for i in ids} if ids else {}
-        out.append({"id": q["id"], "question": q["question"], "asked_by": s["names"].get(q["id"], "Engineer"),
-                    "status": q["status"], "asked_at": utc(q.get("recorded_at")), "answer": c.get("answer"),
-                    "claims": claims, "sources": sources, "cannot_determine": c.get("cannot_determine_from_evidence"),
-                    "suggested_follow_up": c.get("suggested_follow_up", []), "source_origin": a.get("source_origin"), "model": a.get("model")})
+        out.append({"id": q["id"], "question": q["question"], "asked_by": s["names"].get(q["id"], OPERATOR),
+                    "status": q["status"], "asked_at": utc(q.get("recorded_at")), "answer": pretty_deep(c.get("answer")),
+                    "claims": pretty_deep(claims), "sources": sources, "cannot_determine": pretty_deep(c.get("cannot_determine_from_evidence")),
+                    "suggested_follow_up": pretty_deep(c.get("suggested_follow_up", [])), "source_origin": a.get("source_origin"), "model": a.get("model")})
     return out
 
 
@@ -1498,14 +1525,13 @@ def draft_inputs(s, rec):
     snap = (rec or {}).get("snapshot", {})
     att = (q or {}).get("attribution") or {}
     inv = investigation_view(rec)
-    rate = q and q.get("rate_kg_ch4_h")
+    comb = combined_rate(s, q)
+    rate = comb[0] if comb else None
     return [
         {"id": "source", "label": "Likely source", "value": sel, "provenance": "hypothesis", "screen": "locate.html",
          "detail": f"Top of {len(snap.get('candidates', []))} camera candidates · {ATTRIBUTION_TEXT.get(att.get('status'), 'sensors ' + (att.get('status') or 'pending').replace('_', ' '))}" if sel else "Locate agent running"},
         {"id": "rate", "label": "Emission rate", "value": f"{rate:.2f} kg CH₄/h" if rate is not None else None, "screen": "quantify.html",
-         "detail": (f"≈ {rate * 8.766:.1f} t CH₄/yr · {rate * 8.766 * 29.8:.0f} t CO₂e/yr · range {q['interval']['low']}–{q['interval']['high']} kg/h"
-                    if rate is not None and q.get("interval")
-                    else (q or {}).get("missing", ["Quantify agent running"])[0]),
+         "detail": (rate_detail(comb, q) if comb else (q or {}).get("missing", ["Quantify agent running"])[0]),
          "provenance": "model_estimated" if rate is not None else "pending"},
         {"id": "detection", "label": "Camera observation", "value": s["camera_id"] if s["engine_id"] else None, "screen": "detection.html",
          "detail": "Atelic detection model alert on the thermal camera" if s["engine_id"] else "No alert", "provenance": "model_estimated" if s["engine_id"] else "pending"},
@@ -1691,7 +1717,7 @@ def post_review(incident_id: str, body: dict = Body(...)):
 def post_question(incident_id: str, body: dict = Body(...)):
     """Ask the agent about the frozen evidence. The answer arrives about a minute later and never changes the draft."""
     s = slot_or_404(incident_id)
-    question, by = (body.get("question") or "").strip()[:2000], (body.get("asked_by") or "").strip()[:80] or "Engineer"
+    question, by = (body.get("question") or "").strip()[:2000], (body.get("asked_by") or "").strip()[:80] or OPERATOR
     if not question:
         raise HTTPException(status_code=400, detail="Type a question")
     rec = record(s)
@@ -1712,7 +1738,7 @@ def post_question(incident_id: str, body: dict = Body(...)):
 def post_field_note(incident_id: str, body: dict = Body(...)):
     """An engineer's field observation, added beside the frozen evidence. Agents read it from then on."""
     s = slot_or_404(incident_id)
-    text, by = (body.get("text") or "").strip()[:3000], (body.get("recorded_by") or "").strip()[:80] or "Engineer"
+    text, by = (body.get("text") or "").strip()[:3000], (body.get("recorded_by") or "").strip()[:80] or OPERATOR
     if not text:
         raise HTTPException(status_code=400, detail="Type the field note")
     rec = record(s)
@@ -1734,7 +1760,7 @@ def post_research(incident_id: str, body: dict = Body(...)):
     """Another research round: the investigator reruns with the field notes and answers so far, then the planner
     revises the draft. The draft under review is withdrawn until the revision arrives, and needs approval again."""
     s = slot_or_404(incident_id)
-    focus, by = (body.get("focus") or "").strip()[:2000], (body.get("requested_by") or "").strip()[:80] or "Engineer"
+    focus, by = (body.get("focus") or "").strip()[:2000], (body.get("requested_by") or "").strip()[:80] or OPERATOR
     rec = record(s)
     if not rec or rec["state"] != "pending_review" or not s["submitted"]:
         raise HTTPException(status_code=409, detail="A research round can start while a draft awaits review")
@@ -1774,8 +1800,8 @@ def follow_up(s, rec):
     return {"state": st, "can_issue": st == "approved", "can_record_repair": st in ("approved", "reported", "follow_up_required"),
             "can_close": st == "verification_ready", "approved_checks": checks,
             "repair": rec.get("repair") and {"work_performed": rec["repair"]["work_performed"], "at": utc(rec["repair"]["recorded_at"])},
-            "verification": (v or None) and {"recommendation": recm.get("recommendation"), "summary": recm.get("summary"),
-                                             "residual_risks": recm.get("residual_risks", []), "claims": recm.get("claims", []),
+            "verification": (v or None) and {"recommendation": recm.get("recommendation"), "summary": pretty_deep(recm.get("summary")),
+                                             "residual_risks": pretty_deep(recm.get("residual_risks", [])), "claims": pretty_deep(recm.get("claims", [])),
                                              "recovery_check": rc.get("status"), "sensors": rc.get("sensors", []),
                                              "post_repair_rate": rc.get("post_repair_rate"), "consistency": v.get("consistency"),
                                              "warning": rc.get("warning"), "source_origin": (v.get("recommendation") or {}).get("source_origin")},
@@ -1789,6 +1815,7 @@ def make_report(s):
     sync(s)
     rec, orch = record(s), orchestration(s)
     q = quant_result(s)
+    comb = combined_rate(s, q)
     latest = s["versions"][-1] if s["versions"] else None
     rv = latest_review(s)
     st = rec["state"] if rec else None
@@ -1824,11 +1851,12 @@ def make_report(s):
                 ["ev-sensors"], att.get("note"), "model_estimated" if att else None),
             row("Investigation", inv and inv["summary"], [], inv and f"{len(inv['findings'])} findings by the investigation agent", "agent_drafted" if inv else None)]},
         {"id": "emissions", "title": "Emissions", "rows": [
-            row("Rate", f"{q['rate_kg_ch4_h']:.3f} kg CH₄/h" if q and q.get("rate_kg_ch4_h") is not None else None, ["ev-sensors"],
-                q and q.get("interval") and f"Sensitivity {q['interval']['low']}–{q['interval']['high']} kg/h, not a confidence interval",
-                "model_estimated" if q and q.get("rate_kg_ch4_h") is not None else None),
-            row("Annual impact if unrepaired", f"{q['rate_kg_ch4_h'] * 8.766:.1f} t CH₄/yr · {q['rate_kg_ch4_h'] * 8.766 * 29.8:.0f} t CO₂e/yr"
-                if q and q.get("rate_kg_ch4_h") is not None else None, ["ev-sensors"], "CO₂e with GWP100 = 29.8 (IPCC AR6, fossil methane)",
+            row("Rate", f"{comb[0]:.2f} kg CH₄/h" if comb else None, ["ev-sensors"],
+                (f"Average of {comb[1]} methods, {comb[2]:.2f}–{comb[3]:.2f} kg/h" if comb and comb[1] > 1 else
+                 q and q.get("interval") and f"Sensitivity {q['interval']['low']}–{q['interval']['high']} kg/h, not a confidence interval"),
+                "model_estimated" if comb else None),
+            row("Annual impact if unrepaired", f"{comb[0] * 8.766:.1f} t CH₄/yr · {comb[0] * 8.766 * 29.8:.0f} t CO₂e/yr"
+                if comb else None, ["ev-sensors"], "CO₂e with GWP100 = 29.8 (IPCC AR6, fossil methane)",
                 "model_estimated" if q and q.get("rate_kg_ch4_h") is not None else None),
             row("Method", q and q["model_version"].replace("qogi-integrated-mass-enhancement", "camera-integrated-mass-enhancement"))]},
         {"id": "action", "title": "Work order", "rows": [
@@ -1845,7 +1873,7 @@ def make_report(s):
         {"id": "followup", "title": "Repair, verification and closure", "rows": [
             row("Repair record", (fu.get("repair") or {}).get("work_performed"), [], "Human account of field work; the system performs no physical action",
                 "human_decision" if fu.get("repair") else None),
-            row("Verifier recommendation", ver.get("recommendation"), [], ver.get("summary"), "agent_drafted" if ver else None),
+            row("Verifier recommendation", (ver.get("recommendation") or "").replace("_", " ") or None, [], ver.get("summary"), "agent_drafted" if ver else None),
             row("Post-repair readings", (ver.get("recovery_check") or "").replace("_", " ") or None, ["ev-sensors"], ver.get("warning"), "simulated" if ver else None),
             row("Closure", (fu.get("closure") or {}).get("decision"), [], (fu.get("closure") or {}).get("rationale"), "human_decision" if fu.get("closure") else None)]},
         {"id": "audit", "title": "Audit trail", "rows": []},
@@ -1950,7 +1978,8 @@ def post_close(incident_id: str, body: dict = Body(...)):
     if decision == "close":
         approval = next((r for r in reversed(s["reviews"]) if r["decision"] == "approve"), None)
         CLOSED[s["engine_id"]] = {"camera_id": s["camera_id"], "closed_by": by, "rationale": why,
-                                  "approved_by": approval and approval["reviewer"], "approval_reason": approval and approval["reason"]}
+                                  "approved_by": approval and approval["reviewer"], "approval_reason": approval and approval["reason"],
+                                  "work_order_label": f"Work order v{s['versions'][-1]['version']}" if s.get("versions") else None}
     audit(s, "incident_closed" if decision == "close" else "incident_kept_open", by, why[:200])
     forget(s)
     for k in (("plant",), ("graph-ui",)):

@@ -206,9 +206,7 @@
     incident_dismissed: { page: 'incidents', kind: 'good', title: () => 'Closed as a false alarm' },
     incident_reopened: { page: 'detection', kind: 'warn', title: () => 'Reopened after a false-alarm close' },
     agent_investigation: { page: 'plan', kind: 'good', title: () => 'Investigation agent reported findings' },
-    draft_version: { page: 'plan', kind: 'warn', title: (e) => `Work order v${e.version} drafted`, only: (e) => !String(e.actor).startsWith('Operator') },
-    agent_answer: { page: 'review', kind: 'good', title: () => 'Agent answered your question' },
-    report_issued: { page: 'report', kind: 'good', title: () => 'Final report issued' },
+    draft_version: { page: 'plan', kind: 'warn', title: (e) => `Work order v${e.version} drafted`, only: (e) => !String(e.actor).startsWith('Operator') && e.actor !== 'Control-room engineer' },
     agent_verification: { page: 'report', kind: 'warn', title: (e) => e.detail },
     incident_closed: { page: 'report', kind: 'good', title: () => 'Incident closed and written to the knowledge graph' },
   };
@@ -229,20 +227,27 @@
   }
   function ago(at) {
     const s = (Date.now() - Date.parse(at)) / 1000;
-    return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : `${at.slice(11, 16)} UTC`;
+    return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : `${siteIso(at).slice(11, 16)} UTC`;
   }
 
   async function loadNotes() {
     let events;
     try { events = (await get('/audit')).events; } catch (e) { return; }
     noteEvents = events.filter((e) => NOTE[e.event] && (!NOTE[e.event].only || NOTE[e.event].only(e)));
+    // A request for approval is settled by the review that follows it: no lingering dot on Approve.
+    const reviewed = new Map();
+    noteEvents.forEach((e) => { if (/^review_/.test(e.event)) reviewed.set(e.incident_id, Math.max(reviewed.get(e.incident_id) || 0, e.seq)); });
+    noteEvents = noteEvents.filter((e) => !(e.event === 'submitted_for_review' && (reviewed.get(e.incident_id) || 0) > e.seq));
     const here = document.body.dataset.page;
     if (noteKnown === null) {
       // First load on this page: no toasts; what targets this screen is being looked at now.
       markSeen(noteEvents.filter((e) => NOTE[e.event].page === here && e.incident_id === INCIDENT_ID).map(noteKey));
     } else {
       const fresh = noteEvents.filter((e) => !noteKnown.has(noteKey(e)));
-      fresh.forEach(toast);
+      // While someone is still on the detection / locate / quantify screens, later hand-offs (findings, drafts) wait in
+      // the bell instead of popping up ahead of the story; the alert itself always pops.
+      const early = ['detection', 'locate', 'quantify'].includes(here);
+      fresh.filter((e) => !early || NOTE[e.event].page === here || e.event === 'alert_triggered').forEach(toast);
       // Already on the screen it points at (e.g. the alert you just raised): pop it up, but no unread dot.
       markSeen(fresh.filter((e) => NOTE[e.event].page === here && e.incident_id === INCIDENT_ID).map(noteKey));
     }
@@ -307,11 +312,12 @@
     const n = NOTE[e.event], nav = navOf(n.page), t = document.createElement('div');
     t.className = `nt-toast ${n.kind}`;
     t.innerHTML = `<span class="nt-d"></span><div><b>${escAttr(n.title(e))}</b><span class="nt-x">${escAttr(e.incident_id)} · ${escAttr(e.actor)}</span>
-      <a href="${noteHref(e)}" data-nt-key="${escAttr(noteKey(e))}">Open ${nav.label} →</a></div><button type="button" aria-label="Dismiss">×</button>`;
-    t.querySelector('a').addEventListener('click', () => markSeen([noteKey(e)]));
+      ${n.page === document.body.dataset.page && e.incident_id === INCIDENT_ID ? '' : `<a href="${noteHref(e)}" data-nt-key="${escAttr(noteKey(e))}">Open ${nav.label} →</a>`}</div><button type="button" aria-label="Dismiss">×</button>`;
+    const a = t.querySelector('a');
+    if (a) a.addEventListener('click', () => markSeen([noteKey(e)]));
     t.querySelector('button').addEventListener('click', () => t.remove());
     box.appendChild(t);
-    setTimeout(() => t.remove(), 9000);
+    setTimeout(() => t.remove(), 7000);
   }
 
   let lastStatus = null;
@@ -393,6 +399,15 @@
   function toReplay(iso) {
     const now = replayNow(), t = Date.parse(iso);
     return now && !Number.isNaN(t) ? new Date(now.getTime() - (Date.now() - t)) : new Date(iso);
+  }
+  // Any timestamp as an ISO string on the site clock. Times stamped by this session (real "now"-ish) are moved onto
+  // the site clock; site-time and historical stamps are already right and pass through.
+  function siteIso(iso) {
+    const t = Date.parse(iso);
+    if (!iso || Number.isNaN(t)) return iso;
+    if (Math.abs(Date.now() - t) > 2 * 864e5) return new Date(t).toISOString();
+    const d = toReplay(iso);
+    return d && !Number.isNaN(d.getTime()) ? d.toISOString() : iso;
   }
   const fmtUtc = (d, withDate) => `${withDate ? `${d.toISOString().slice(0, 10)} ` : ''}${d.toISOString().slice(11, 19)} UTC`;
   function tickReplay() {
@@ -867,7 +882,7 @@
   }
 
   window.AtelicShell = {
-    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, setReplayNow, resetReplay, toReplay, setIncident, fmtUtc, traceLink,
+    API, INCIDENT_ID, FACILITY, get, setReplayStatus, refresh, replayNow, setReplayNow, resetReplay, toReplay, siteIso, setIncident, fmtUtc, traceLink,
     BADGE, badge, modal, closeModal, cameFrom, backBar, dropdown, dismissDialog, reopenDialog, incHref, whereNow, confirmSwitch,
   };
   // Deferred script: the DOM is parsed already, so render now (before first paint) to keep the

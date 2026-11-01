@@ -10,7 +10,7 @@
    "imaging_distance_m": 6.9,
    "equipment": [
     {
-     "label": "XV-2104 · leak point",
+     "label": "XV-2104",
      "kind": "release_point",
      "box_normalized": [
       0.5273,
@@ -24,7 +24,7 @@
      "note": "The plume leaves this point"
     },
     {
-     "label": "Separator vessel",
+     "label": "Separator",
      "kind": "vessel",
      "box_normalized": [
       0.7831,
@@ -43,7 +43,7 @@
    "imaging_distance_m": 12.6,
    "equipment": [
     {
-     "label": "XV-2104 · leak point",
+     "label": "XV-2104",
      "kind": "release_point",
      "box_normalized": [
       0.5332,
@@ -57,7 +57,7 @@
      "note": "The plume leaves this point"
     },
     {
-     "label": "Separator vessel",
+     "label": "Separator",
      "kind": "vessel",
      "box_normalized": [
       0.6763,

@@ -95,6 +95,13 @@
   // Status at the current replay moment: observed only once the replay reaches the first
   // annotated frame. Before that nothing has been detected yet, so the details stay hidden.
   let noDetectionNote = '';
+  function confirming(line) {
+    const el = $('status-block');
+    if (!el || dismissal || closure || (el.className === 'status confirming' && el.dataset.line === line)) return;
+    el.dataset.line = line;
+    el.className = 'status confirming';
+    el.innerHTML = `<div class="lbl">Status</div><div class="big"><span class="sig"></span>Possible plume · confirming</div><div class="by">${esc(line)}</div>`;
+  }
   function renderStatus(now) {
     const el = $('status-block');
     if (!el) return;
@@ -138,7 +145,7 @@
     el.className = 'status closed';
     el.innerHTML = `<div class="lbl">Status</div>
       <div class="big"><span class="sig"></span>Closed as a false alarm</div>
-      <div class="by">${esc(d.reason_label)} · by ${esc(d.by)} · ${esc(d.at.slice(11, 16))} UTC</div>
+      <div class="by">${esc(d.reason_label)} · by ${esc(d.by)} · ${esc(window.AtelicShell.siteIso(d.at).slice(11, 16))} UTC</div>
       <div class="said">“${esc(d.comment)}”</div>
       <div class="reopen"><button class="linkish" type="button" id="btn-reopen">Reopen incident</button></div>`;
     $('btn-reopen').addEventListener('click', () => window.AtelicShell.reopenDialog(window.AtelicShell.INCIDENT_ID, () => location.reload()));
@@ -154,7 +161,7 @@
     el.className = 'status closed';
     el.innerHTML = `<div class="lbl">Status</div>
       <div class="big"><span class="sig"></span>Incident closed</div>
-      <div class="by">Repaired and verified · closed by ${esc(c.by)} · ${esc(String(c.at).slice(11, 16))} UTC</div>
+      <div class="by">Repaired and verified · closed by ${esc(c.by)} · ${esc(window.AtelicShell.siteIso(String(c.at)).slice(11, 16))} UTC</div>
       ${c.rationale ? `<div class="said">“${esc(c.rationale)}”</div>` : ''}
       <div class="reopen"><a class="linkish" href="${window.AtelicShell.incHref('report', window.AtelicShell.INCIDENT_ID)}">Open the report →</a></div>`;
   }
@@ -456,7 +463,7 @@
     if (!idle.some((l) => l.incident_id === pick)) {
       pick = (idle.find((l) => l.incident_id === window.AtelicShell.INCIDENT_ID) || idle[0] || {}).incident_id || null;
     }
-    if (ffOn) { box.innerHTML = '<span class="ctl-note">Fast-forwarding to the alert…</span>'; return; }
+    if (ffOn) { box.innerHTML = `<span class="ctl-note">Playback ${FF_RATE}×</span>`; return; }
     const open = live.filter((l) => l.triggered && l.incident_id !== pick).map((l) => l.incident_id);
     box.innerHTML = `${idle.length > 1 ? '<span class="ctl-pick" id="trig-pick"></span>' : ''}${pick
       ? `<button class="ctl" id="btn-trigger" type="button" title="${esc(open.length ? `Resets ${open.join(', ')} first (one incident at a time) · ` : '')}Shortcut: T">Trigger ${esc(live.find((l) => l.incident_id === pick).camera_id)} event <kbd>T</kbd></button>` : ''}${mode === 'event' || live.some((l) => l.triggered)
@@ -507,7 +514,7 @@
       requestAnimationFrame(clock);
     };
     requestAnimationFrame(clock);
-    say(`▶▶ Fast-forward ${FF_RATE}×`, 'ff');
+    say(`▶▶ ${FF_RATE}×`, 'ff');
     await Promise.all([ready(v), raw ? ready(raw) : null]);
     // Time passes on the quiet view while the clock catches up to the recording.
     if (q) { q.playbackRate = FF_RATE; await wait(Math.max(0, RACE_MS - (performance.now() - raced))); }
@@ -565,9 +572,12 @@
       // Once a plume has been seen the tag stays up until the alarm: a run of negative checks (CAM-02's footage
       // has one) reads as re-checking, not as the detection giving up.
       if (recent && !past) seen = true;
-      const text = confirmed ? `Plume confirmed (${need}/${need})`
-        : past || raised ? '' : recent ? `Possible plume · confirming (${Math.min(recent, need)}/${need})`
+      const W = m.policy.window_samples;
+      const text = confirmed ? `Plume confirmed · ${need} of last ${W} checks`
+        : past || raised ? '' : recent ? `Possible plume · ${Math.min(recent, need)} of last ${W} checks`
         : seen ? 'Possible plume · re-checking' : '';  // idle: the tile's "Watching" says it
+      // The status panel says the same thing as the tile while the detector is confirming.
+      if (!raised && !past && (recent || seen)) confirming(recent ? `${Math.min(recent, need)} of the last ${W} one-second checks positive; ${need} raise the alert` : 'Re-checking the last frames');
       if (tag && !tag.classList.contains('ff') && text !== shown) {
         shown = text;
         tag.textContent = text;

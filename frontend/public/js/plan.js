@@ -16,7 +16,7 @@
   // Footnotes are numbered in reading order: summary first, then the document.
   const ORDER = ['observed', 'uncertain', 'inspection', 'isolation', 'safety'];
   const PRIORITIES = ['Low', 'Medium', 'High'];
-  const hhmmss = (t) => (t ? `${t.slice(11, 19)} UTC` : '—');
+  const hhmmss = (t) => (t ? `${window.AtelicShell.siteIso(t).slice(11, 19)} UTC` : '—');
   const FLAG_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 15V2M3 2h9l-2 3.5L12 9H3"/></svg>';
 
   let W = null, editing = false, editPriority = null, fnNo = {}, evById = {}, lineIx = 0;
@@ -174,7 +174,7 @@
       <div class="wo">
         <div class="box"><span class="lbl">Asset</span><div class="val mono">${esc(f.asset || '—')}</div></div>
         ${priorityBox(f.priority)}
-        <div class="box"><span class="lbl">Status</span><div class="val mono">${esc(d.status)}</div></div>
+        <div class="box"><span class="lbl">Status</span><div class="val mono">${esc(approved ? 'Approved' : sub ? 'Submitted' : d.status)}</div></div>
         ${textBox('problem', 'Problem', f.problem, 2)}
         ${textBox('proposed_inspection', 'Proposed inspection', f.proposed_inspection, 2)}
         ${textBox('required_permits', 'Required permits', f.required_permits, 3)}

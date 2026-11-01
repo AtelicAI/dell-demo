@@ -90,6 +90,8 @@
     }
     const rateBlock = (num, sub) => `<div class="rate"><span class="lbl">Rate (kg CH₄/h)</span>${num}${sub}</div>`;
     $('impact').hidden = true;
+    // The stepper follows what this card shows: Quantify is in progress until the estimate is on screen.
+    window.AtelicShell.setReplayStatus('quantify', !r && Q.progress ? 'in_progress' : null);
     if (!r && Q.progress) {
       title.textContent = 'Quantify agent working';
       body.innerHTML = rateBlock('<div class="num none">…</div>', '') +
@@ -116,7 +118,7 @@
     const lead = cam ? 'the camera' : lbl(METHOD_LABEL[r.primary_tool] || r.primary_tool);
     // Every other method run, against the agent's choice (agreement: 0.67–1.5×).
     const others = runs.filter((x) => !x.prim), ok = others.filter((x) => { const k = x.v / r.rate_kg_ch4_h; return k >= AGREE[0] && k <= AGREE[1]; });
-    const ccLine = others.length ? `<div class="sub cc ${ok.length === others.length ? 'ok' : 'no'}">${ok.length} of ${others.length} ${others.length === 1 ? 'check agrees' : 'checks agree'} with ${esc(lead)}${ok.length < others.length
+    const ccLine = others.length ? `<div class="sub cc ${ok.length === others.length ? 'ok' : 'no'}">${ok.length} of ${others.length} other ${others.length === 1 ? 'method agrees' : 'methods agree'} with ${esc(lead)}${ok.length < others.length
       ? `; ${others.filter((x) => !ok.includes(x)).map((x) => esc(lbl(x.m.label))).join(', ')} ${others.length - ok.length === 1 ? 'disagrees' : 'disagree'}` : ''}</div>` : '';
     const sub = n > 1
       ? `Range ${Math.min(...vals).toFixed(2)}–${Math.max(...vals).toFixed(2)} kg/h · each method weighted equally`
@@ -130,11 +132,13 @@
     const f = (k, v, s) => `<div class="f"><span class="lbl">${k}</span><div class="v">${v}${s ? `<small>${s}</small>` : ''}</div></div>`;
     const case_ = r.case || {};
     fields.innerHTML =
-      f('Uncertainty interval', iv ? `${iv.low.toFixed(2)} – ${iv.high.toFixed(2)}` : 'Not computed', iv ? `kg/h · ${esc(iv.basis)}` : '') +
-      f('Tool chosen by the agent', esc(lbl(METHOD_LABEL[r.primary_tool] || r.primary_tool)), `Source: ${esc(r.source_asset_id)} (hypothesis)`) +
+      (n > 1
+        ? f('Spread across methods', `${Math.min(...vals).toFixed(2)} – ${Math.max(...vals).toFixed(2)}`, `kg/h · ${n} methods${iv ? ` · ${esc(lbl(METHOD_LABEL[r.primary_tool] || r.primary_tool))} alone ${iv.low.toFixed(2)}–${iv.high.toFixed(2)}` : ''}`)
+        : f('Uncertainty interval', iv ? `${iv.low.toFixed(2)} – ${iv.high.toFixed(2)}` : 'Not computed', iv ? `kg/h · ${esc(iv.basis)}` : '')) +
+      f(n > 1 ? 'Agent’s first tool' : 'Tool chosen by the agent', esc(lbl(METHOD_LABEL[r.primary_tool] || r.primary_tool)), `Source: ${esc(r.source_asset_id)} (hypothesis)`) +
       f('Data window', cam ? '90 s of camera frames' : '60 s of sensor readings', w.end_utc ? `ending ${hhmmss(w.end_utc)} UTC` : '') +
       f('Model version', esc(mver(r)), esc(r.model_note || '')) +
-      f('Case read by the agent', case_.wind !== 'available' ? `Weather mast offline${mastOff() ? ` since ${mastOff()} UTC` : ''}; no wind in the estimate window` : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} sensors`,
+      f('Case read by the agent', case_.wind !== 'available' ? `Weather mast offline${mastOff() ? ` since ${mastOff()} UTC` : ''}; no wind in the estimate window` : `${esc((case_.stability || '').replace('_', ' '))} air · ${case_.methane_sensors_reporting} methane sensors reporting`,
         case_.wind !== 'available' ? 'Camera sees the plume' : `${case_.camera_candidates} camera candidates · wind ${case_.wind_speed_m_s} m/s${cam ? ' · camera sees the plume' : ''}`) +
       f('Assumptions', `<a href="#assumptions-panel">${(r.assumptions || []).length} listed ↓</a>`, 'Geometry is draft');
     fields.hidden = false;
@@ -209,7 +213,7 @@
     el.innerHTML = `<div class="tr-wrap">${dir ? `<div class="tr-verdict ${dir}">${dir === 'up' ? 'Getting worse' : dir === 'down' ? 'Easing' : 'About the same'}: weekly peaks ${p0.toFixed(1)} → ${p1.toFixed(1)} ppm</div>` : ''}
       <div class="tr-facts">
         <div><b>${a.episode_count}</b><span>methane episodes in ${days} days (since ${esc(day(a.period_start_utc))})</span></div>
-        <div><b>${lc.episodes_starting_after_load_change ?? '—'}/${lc.episodes ?? '—'}</b><span>start within ${lc.window_minutes || 90} min of a K-201 load change (${Math.round((lc.share_expected_by_chance || 0) * 100)}% by chance)</span></div>
+        <div><b>${lc.episodes_starting_after_load_change ?? '—'}/${lc.episodes ?? '—'}</b><span>started within ${lc.window_minutes || 90} min of a K-201 load change (about ${Math.round((lc.share_expected_by_chance || 0) * 100)}% would if unrelated)</span></div>
       </div>
       <div id="trend-spark" aria-label="Methane episodes per week and the weekly peak"></div>
       <div class="tr-note">Bars: episodes per week · line: weekly peak above background (ppm)</div>
@@ -250,7 +254,7 @@
         <span class="tv">${x.v.toFixed(3)}</span></div>`).join('');
     const axis = `<div class="crow axis"><span></span><span class="tt">${ticks.join('')}</span><span class="tv">kg/h</span></div>`;
     const done = new Set(runs.map((x) => x.m.id));
-    const rest = ((Q.methods) || []).filter((m) => m.connected && !done.has(m.id));
+    let rest = ((Q.methods) || []).filter((m) => m.connected && !done.has(m.id));
     const chip = (m) => {
       // A method whose inputs are missing (e.g. no wind while the weather mast is down) cannot run: say so, no button.
       if (m.role === 'blocked') return `<span class="crun off" title="${esc(m.reason || '')}"><span>${esc(lbl(m.label))}</span><b>Needs wind</b></span>`;
@@ -258,6 +262,7 @@
       return `<button class="crun${failed ? ' failed' : ''}" type="button" data-tool="${esc(m.id)}" title="${esc(failed ? `No rate: ${why(e.reason || e.status)}` : m.reason || '')}">
         <span>${esc(lbl(m.label))}</span><b>${failed ? 'No rate · retry' : 'Run'}</b></button>`;
     };
+    rest = rest.filter((m) => m.role !== 'not_needed' && m.role !== 'primary');
     const runnable = rest.filter((m) => m.role !== 'blocked');
     return `<div class="cmp" aria-label="Rate from each method run, kg/h">
       <div class="crows">${rows}${axis}</div>
@@ -472,8 +477,14 @@
   // What the agent did on each 10 s step, up to the incident clock: the wait is visible, not a static refusal.
   function renderLog() {
     const att = visibleAttempts();
+    // Repeated waits collapse into one line with its time span and count, so the log reads as progress, not a loop.
+    const rows = [];
+    att.forEach((a) => {
+      const txt = a.text || a.status, last = rows[rows.length - 1];
+      if (last && last.txt === txt && a.status !== 'estimated') { last.n += 1; last.t1 = a.t; } else rows.push({ txt, n: 1, t0: a.t, t1: a.t, ok: a.status === 'estimated' });
+    });
     $('agent-log').innerHTML = att.length
-      ? `<ol class="alog">${att.map((a) => `<li class="${a.status === 'estimated' ? 'ok' : ''}"><span class="at">${hhmmss(a.t)}</span><span>${esc(a.text || a.status)}</span></li>`).join('')}</ol>`
+      ? `<ol class="alog">${rows.map((r) => `<li class="${r.ok ? 'ok' : ''}"><span class="at">${hhmmss(r.t0)}${r.n > 1 ? `–${hhmmss(r.t1)}` : ''}</span><span>${esc(r.txt)}${r.n > 1 ? ` <small>(${r.n} checks)</small>` : ''}</span></li>`).join('')}</ol>`
       : `<div class="pending-box">${Q && Q.progress ? esc(Q.progress.text) : 'Starts after Locate.'}</div>`;
     $('log-meta').textContent = att.length ? `${att.length} steps` : '';
     const box = $('agent-log').querySelector('.alog');

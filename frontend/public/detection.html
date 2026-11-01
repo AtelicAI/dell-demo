@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Camera observation — Atelic</title>
 <link href="/fonts/plex.css" rel="stylesheet">
-<link rel="stylesheet" href="css/theme.css?v=101">
-<link rel="stylesheet" href="css/shell.css?v=101">
-<script src="js/shell.js?v=107" defer></script>
-<script src="js/plumeheat.js?v=101" defer></script>
-<script src="js/detection.js?v=133" defer></script>
+<link rel="stylesheet" href="css/theme.css?v=102">
+<link rel="stylesheet" href="css/shell.css?v=102">
+<script src="js/shell.js?v=108" defer></script>
+<script src="js/plumeheat.js?v=102" defer></script>
+<script src="js/detection.js?v=134" defer></script>
 <style>
 
   /* PRD Screen 2: 65% video / 35% detection metadata */
@@ -161,6 +161,8 @@
   .status .big .sig{width:8px;height:8px;border-radius:1px;background:var(--ink-faint);flex-shrink:0}
   .status.observed .big .sig{background:var(--bad)}
   .status.unconfirmed .big{color:var(--ink-mute)}
+  .status.confirming .big .sig{background:var(--warn)}
+  .status.confirming .big{color:var(--warn)}
   .status.closed .big{color:var(--ink)}
   .status.closed .big .sig{background:var(--good);border-radius:50%}
   .status .said{margin:8px 0 0;padding:7px 10px;border-left:2px solid var(--good);background:var(--panel-2);font-size:12.5px;color:var(--ink);line-height:1.45}

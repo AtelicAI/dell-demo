@@ -10,7 +10,7 @@
     ran: 'Ran', not_run: 'Not run', approved: 'Approved', waiting: 'Waiting for engineer',
     returned: 'Returned', not_reached: 'Not reached', blocked: 'Blocked', manual: 'Manual trigger',
   };
-  const FILTERS = [['all', 'All'], ['ran', 'Ran'], ['not_run', 'Not run'], ['human', 'Human']];
+  const FILTERS = [['all', 'All steps'], ['ran', 'Ran'], ['not_run', 'Not run'], ['human', 'Human']];
   const EVENT = { submitted_for_review: 'Submitted for review', review_approve: 'Approved', review_request_changes: 'Changes requested', review_reject: 'Rejected',
     question_asked: 'Question asked', report_issued: 'Report issued', repair_recorded: 'Repair recorded', incident_closed: 'Closure decision' };
   const DELL = { running: 'Running', target_deployment: 'Target deployment' };
@@ -33,7 +33,7 @@
 
   let A = null, filter = 'all', open = new Set(), timer = null, active = null;
 
-  function fmtMs(ms) { return ms === null || ms === undefined ? '' : ms < 1 ? `${ms} ms` : `${Math.round(ms * 10) / 10} ms`; }
+  function fmtMs(ms) { return ms === null || ms === undefined ? '' : ms < 1 ? "&lt;1 ms" : `${Math.round(ms * 10) / 10} ms`; }
 
   function spanCard(sp, maxMs) {
     const w = sp.duration_ms ? Math.max(2, Math.round((sp.duration_ms / maxMs) * 70)) : 0;
@@ -97,17 +97,18 @@
 
     const h = A.hardware;
     const li = (k, v, cls, d) => `<li><span class="k">${k}</span><span class="v ${cls}">${esc(v)}</span>${d ? `<span class="d">${esc(d)}</span>` : ''}</li>`;
+    // What is running and connected first; the integrations not wired up yet sit in one quiet line at the end.
+    const up = (v) => /connected|ok|running/.test(String(v || ''));
+    const store = (name, v) => `${name} · ${String(v || 'unknown').replace(/^.*_(connected|disconnected)$/, '$1').replace(/^.*\((\w+?_)?(connected|disconnected)\)$/, '$2')}`;
     $('hw').innerHTML = [
-      li('Dell Edge', DELL[h.dell_edge] || 'Unknown', h.dell_edge === 'running' ? 'ok' : 'off', h.dell_edge === 'running' ? null : 'PowerEdge XR7620 is the target; not running on it yet.'),
-      li('Execution location', h.location.split(' (')[0], '', h.location),
-      li('NVIDIA inference', NVIDIA[h.nvidia_inference] || 'Unknown', h.nvidia_inference === 'not_connected' ? 'off' : 'ok',
-        h.nvidia_inference === 'not_connected' ? 'NVIDIA inference not connected in this run.' : null),
-      li('GPU', 'Not measured', 'off', 'No GPU metrics are collected in this run.'),
+      li('Agent models', h.nvidia_inference === 'not_connected' ? 'Not connected' : h.nvidia_inference === 'nemotron_runs' ? 'NVIDIA Nemotron' : `NVIDIA Nemotron · ${NVIDIA[h.nvidia_inference] || 'Unknown'}`, h.nvidia_inference === 'not_connected' ? 'off' : 'ok', null),
       li('Agent orchestrator', h.orchestrator || 'None', h.orchestrator ? 'ok' : 'off', h.orchestrator ? 'Runs Locate → Quantify → Investigate → Plan and stops at every human decision.' : null),
-      li('Knowledge graph', h.graph ? `Neo4j · ${h.graph}` : 'Unknown', h.graph === 'connected' ? 'ok' : 'off', null),
-      li('Telemetry', h.historian ? `InfluxDB · ${h.historian}` : 'Unknown', h.historian === 'connected' ? 'ok' : 'off', null),
-      li('Retriever', h.retriever || 'None', h.retriever ? 'ok' : 'off', 'Token-hash cosine over plant documents; NeMo Retriever not connected.'),
-      li('Guardrails', h.guardrails || 'None', h.guardrails ? 'ok' : 'off', 'NeMo Guardrails not connected; boundaries are enforced in the engine.'),
+      li('Knowledge graph', store('Neo4j', h.graph), up(h.graph) ? 'ok' : 'off', null),
+      li('Telemetry', store('InfluxDB', h.historian), up(h.historian) ? 'ok' : 'off', null),
+      li('Document search', store('Qdrant', h.retriever), up(h.retriever) ? 'ok' : 'off', null),
+      li('Guardrails', 'Enforced in the engine', 'ok', 'Read-only agent tools, citation checks, human approval gates.'),
+      li('Runs on', h.location.split(' (')[0], '', 'Deployment target: Dell PowerEdge XR7620'),
+      `<li class="hw-later"><span class="k">Not wired up yet</span><span class="d">NeMo Retriever, NeMo Guardrails, GPU metrics</span></li>`,
     ].join('');
     $('safety').textContent = A.safety;
   }

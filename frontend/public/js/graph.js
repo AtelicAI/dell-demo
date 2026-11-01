@@ -373,7 +373,7 @@
   function renderCtx() {
     const box = $('ctx'), { badge } = window.AtelicShell;
     const n = cy ? cy.nodes().not('.leaving').length : 0, e = cy ? cy.edges().not('.leaving').length : 0, more = extra.size || hidden.size ? `<button class="linkish" data-reset>Reset view</button>` : '';
-    const showing = `<span>· showing ${plural(n, 'node')}, ${plural(e, 'relationship')}</span>`;
+    const showing = `<span>· showing ${n} of ${G.nodes.length} nodes, ${e} of ${G.edges.length} relationships</span>`;
     if (mode === 'incident' && curInc()) {
       const I = curInc(), l = I.l, closed = l.dismissal || closedByEngine(l);
       box.innerHTML = `<i class="dot ${closed ? 'good' : 'bad'}"></i><b>${esc(l.incident_id)}</b><span>${esc(l.camera_id)} ${l.dismissal ? 'closed as a false alarm' : closed ? 'incident closed' : 'alarm open'} · ${plural(I.cands.size, 'candidate')}${I.source ? ` · likely source <b>${esc(I.source)}</b>` : ''}</span>${I.source ? badge('hypothesis') : ''}${showing}<span class="act">${more}</span>`;
@@ -736,7 +736,7 @@
       incSets[l.incident_id] = { l, c, camera: l.camera_id, nodes: new Set([...rel].filter((id) => byId.has(id))),
         cands: new Set(c.candidates.map((x) => x.asset_id)), source: c.assessment && c.assessment.result === 'likely_source' ? c.assessment.asset_id : null };
     });
-    $('stats').textContent = `${G.nodes.length} nodes · ${G.edges.length} relationships`;
+    $('stats').textContent = `${G.nodes.length} nodes · ${G.edges.length} relationships in the graph`;
     $('src').textContent = `Source: plant knowledge graph${(G.nodes[0] || {}).mapping_version ? ` · mapping v${G.nodes[0].mapping_version}` : ''}`;
     $('store').innerHTML = `Read from the plant knowledge graph. ${badge(G.nodes.some((n) => n.provenance !== 'synthetic') ? 'pending' : 'synthetic')}`;
 

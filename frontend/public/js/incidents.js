@@ -12,14 +12,14 @@
     plan: ['Plan', 'plan'], approve: ['Approve', 'review'], report: ['Report', 'report'], close: ['Close', 'report'] };
   const STATUS = { not_started: 'Not started', in_progress: 'In progress', ready_for_review: 'Ready for review', completed: 'Completed', blocked: 'Blocked', not_needed: 'Not needed' };
   const STATUS_KIND = { in_progress: 'good', ready_for_review: 'warn', completed: 'good', blocked: 'bad' };
-  const OUTCOME_KIND = { repaired: 'good', no_leak_found: '', false_alarm: '' };
+  const OUTCOME_KIND = { repaired: 'good', repaired_followups: 'warn', repaired_unverified: 'warn', no_leak_found: '', false_alarm: '' };
   const DECISION = { approve: 'Approved', request_changes: 'Changes requested', reject: 'Rejected', dismissed: 'Dismissed' };
 
   // Commitment status as recorded in the graph; open/not done are the ones still waiting.
   const COMMIT = { done: ['Done', 'good'], open: ['Open', 'warn'], not_done: ['Not done', 'bad'], deferred: ['Deferred', 'warn'] };
   let open = [], closed = [], past = [], selected = null;
   const params = new URLSearchParams(location.search);
-  const when = (iso) => (iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : '—');
+  const when = (iso) => { const s = iso && window.AtelicShell.siteIso(iso); return s ? `${s.slice(0, 10)} ${s.slice(11, 16)} UTC` : '—'; };
   const chip = (text, kind, live) => `<span class="chip ${kind || ''}${live ? ' live' : ''}"><i></i>${esc(text)}</span>`;
   const incLink = (l, page) => incHref(page, l.incident_id);
 
@@ -42,12 +42,12 @@
           <td class="id">${esc(l.incident_id)}${activeTag(l.incident_id)}</td>
           <td class="mono">${esc(l.camera_id)}</td>
           <td>${l.asset_id ? `<span class="mono">${esc(l.asset_id)}</span>${badge('hypothesis')}` : '<span class="dim">Not located yet</span>'}</td>
-          <td>${l.rate_kg_ch4_h != null ? `<span class="mono">${l.rate_kg_ch4_h} kg/h</span>${badge('model_estimated')}` : '<span class="dim">Not estimated</span>'}</td>
+          <td>${l.rate_kg_ch4_h != null ? `<span class="mono">${Number(l.rate_kg_ch4_h).toFixed(2)} kg/h</span>${badge('model_estimated')}` : '<span class="dim">Not estimated</span>'}</td>
           <td>${chip(c.text, c.kind, c.kind === 'warn')}</td>
           <td class="mono mute">${when(l.triggered_at)}</td>
         </tr>`;
       }).join('')}</tbody></table>`
-      : '<div class="empty-row">No open incidents. All cameras are watching.</div>';
+      : '<div class="empty-row">No open incidents. All cameras are watching. <a href="detection.html">View cameras (Detect) →</a></div>';
   }
 
   function renderClosed() {
@@ -59,15 +59,19 @@
           <td>${h.asset_id ? `<span class="mono">${esc(h.asset_id)}</span>` : '<span class="dim">—</span>'}</td>
           <td>${chip(h.outcome_label, OUTCOME_KIND[h.outcome])}</td>
           <td class="mute">${esc(h.decision.reviewer)}</td>
-          <td class="mono mute">${esc((h.closed_utc || '').slice(0, 10))}</td>
+          <td class="mono mute">${esc(when(h.closed_utc).slice(0, 10))}</td>
         </tr>`).join('')}</tbody></table>`
       : '<div class="empty-row">No closed incidents on file.</div>';
   }
 
+  let pastAll = false;
   function renderPast() {
     $('past-meta').textContent = `${past.length} work orders`;
+    // Newest five up front; the rest one click away.
+    const rows = [...past].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const shownPast = pastAll ? rows : rows.slice(0, 5);
     $('past').innerHTML = past.length ? `<table class="inc"><thead><tr><th>Work order</th><th>Date</th><th>Asset</th><th>What happened</th><th>Follow-ups</th></tr></thead><tbody>
-      ${past.map((w) => {
+      ${shownPast.map((w) => {
         const waiting = w.commitments.filter((c) => c.status !== 'done').length;
         return `<tr ${rowAttrs(w.id)}>
           <td class="id">${esc(w.id)}</td>
@@ -76,8 +80,10 @@
           <td class="wrap">${esc(w.issue)}<small class="wt">${esc(w.work_type)}</small></td>
           <td>${w.commitments.length ? chip(waiting ? `${waiting} due` : 'All done', waiting ? 'warn' : 'good') : '<span class="dim">—</span>'}</td>
         </tr>`;
-      }).join('')}</tbody></table>`
+      }).join('')}</tbody></table>${rows.length > 5 ? `<button class="linkish past-all" id="past-all" type="button">${pastAll ? 'Show fewer' : `Show all ${rows.length}`}</button>` : ''}`
       : '<div class="empty-row">No station history in the knowledge graph.</div>';
+    const b = $('past-all');
+    if (b) b.addEventListener('click', () => { pastAll = !pastAll; renderPast(); });
   }
 
   function renderPastDetail(w) {
@@ -117,7 +123,7 @@
             ['Camera', `<span class="mono">${esc(l.camera_id)}</span>`],
             ['Opened', `<span class="mono">${when(l.triggered_at)}</span>`],
             ['Likely source', l.asset_id ? `<a href="graph.html?asset=${encodeURIComponent(l.asset_id)}&from=incidents">${esc(l.asset_id)}</a> ${badge('hypothesis')}` : 'Not located yet'],
-            ['Emission rate', l.rate_kg_ch4_h != null ? `${l.rate_kg_ch4_h} kg CH₄/h ${badge('model_estimated')}` : 'Not estimated'],
+            ['Emission rate', l.rate_kg_ch4_h != null ? `${Number(l.rate_kg_ch4_h).toFixed(2)} kg CH₄/h ${badge('model_estimated')}` : 'Not estimated'],
             ['Review', rv ? `${DECISION[rv.decision]} by ${esc(rv.reviewer)}${rv.reason ? `<br><span style="color:var(--ink-mute)">“${esc(rv.reason)}”</span>` : ''}` : 'Not decided'],
           ])}
           <h4>Stages</h4>
@@ -143,7 +149,7 @@
             ...(d.reason ? [['Reason', esc(d.reason)]] : []),
             ...(h.closure ? [['Closed by', esc(h.closure.by)], ...(h.closure.rationale ? [['Closure reason', esc(h.closure.rationale)]] : [])] : []),
             ...(h.comment ? [['What was seen', esc(h.comment)]] : []),
-            ['Work order', h.work_order ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : '—'],
+            ['Work order', h.work_order ? (/^WO-/.test(h.work_order) ? `<a href="graph.html?asset=${encodeURIComponent(h.work_order)}&from=incidents">${esc(h.work_order)}</a>` : esc(h.work_order)) : '—'],
             ['Emission rate', h.rate != null ? esc(h.rate) : 'Not recorded'], // the API already gives unit and "(model estimate)"
           ])}
           <h4>Timeline</h4>

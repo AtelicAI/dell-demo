@@ -14,8 +14,9 @@
     reject: { label: 'Rejected', chip: 'bad' },
   };
   const STEPS = [['inspection', 'Recommended inspection', 'step'], ['isolation', 'Isolation prerequisites', 'check'], ['safety', 'Safety considerations', 'item']];
-  const when = (t) => (t ? `${t.slice(11, 16)} UTC` : '—');
-  const day = (t) => (t ? `${t.slice(0, 10)} ${t.slice(11, 16)} UTC` : '—');
+  const site = (t) => window.AtelicShell.siteIso(t);
+  const when = (t) => (t ? `${site(t).slice(11, 16)} UTC` : '—');
+  const day = (t) => (t ? `${site(t).slice(0, 10)} ${site(t).slice(11, 16)} UTC` : '—');
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const SHIELD = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5 2.5 3.5v4c0 3.3 2.3 5.8 5.5 7 3.2-1.2 5.5-3.7 5.5-7v-4z"/><path d="M5.5 8h5"/></svg>';
 
@@ -160,7 +161,7 @@
       ${W.stale ? '<p class="rd-note err">The emission estimate changed after this draft was made. It cannot be approved; request changes instead.</p>' : ''}
       <div class="field"><label for="rv-name">Your name</label>
         <input id="rv-name" autocomplete="name" maxlength="80" value="${esc(readName())}" placeholder="Full name">
-        <div class="hint">Recorded with the decision. Not tied to the sign-in.</div></div>
+</div>
       ${window.AtelicStory.tray.box(trayKey(), { send: true })}
       <div class="acts">
         <button class="btn go" data-decide="approve"${W.stale ? ' disabled title="Evidence changed after drafting"' : ''}>Approve draft</button>
